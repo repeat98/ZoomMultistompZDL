@@ -1,0 +1,854 @@
+
+OBJECT FILE:  exciter.zdl.code
+
+ Object File Information
+
+    File Name:           exciter.zdl.code       
+    Format:              ELF Version 1          
+    File Type:           shared object file     
+    Machine:             TI C6x                 
+    Machine Endian:      little endian          
+    Entry Point:         0x00000660             
+    Vendor:              Texas Instruments, Inc.
+    Producer:            Linker                 
+    Linker Version:      7.3.7                  
+    Number of Sections:  36                     
+    File Length:         9557                   
+    ELF Class:           32-bit objects         
+    ELF OSABI:           ELFOSABI_C6000_EABI    
+    ELF ABIVERSION:      0                      
+    ELF e_flags:         0x00000000             
+
+ Program Segment Table
+
+    id type       load addr  run addr   file size mem size flags align
+    -- ----       ---------  --------   --------- -------- ----- -----
+    0  PT_LOAD    0x00000000 0x00000000 0x6c0     0x6c0    r-x   32   
+    1  PT_LOAD    0x80000000 0x80000000 0x458     0x458    r--   8    
+    2  PT_LOAD    0x80000458 0x80000458 0x18      0x18     rw-   4    
+    3  PT_DYNAMIC 0x00000000 0x00000000 0xa8      0x0      rw-   0    
+
+ Section Information
+
+    id name                      load addr  run addr    size align alloc
+    -- ----                      ---------  --------    ---- ----- -----
+     0 (no name)                 0x00000000 0x00000000   0x0     0   N  
+     1 .rela.dyn                 0x00000000 0x00000000  0xc0     0   N  
+     2 .rela.plt                 0x00000000 0x00000000   0x0     0   N  
+     3 .audio                    0x00000000 0x00000000   0x0     1   N  
+     4 .text                     0x00000000 0x00000000 0x6c0    32   Y  
+     5 .stack                    0x00000000 0x00000000   0x0     1   N  
+     6 .args                     0x00000000 0x00000000   0x0     1   N  
+     7 .neardata                 0x00000000 0x00000000   0x0     1   N  
+     8 .rodata                   0x00000000 0x00000000   0x0     1   N  
+     9 .bss                      0x00000000 0x00000000   0x0     1   N  
+    10 .text                     0x00000000 0x00000000   0x0     1   N  
+    11 .cinit                    0x00000000 0x00000000   0x0     1   N  
+    12 .cio                      0x00000000 0x00000000   0x0     1   N  
+    13 .const                    0x80000000 0x80000000 0x458     8   Y  
+    14 .data                     0x00000000 0x00000000   0x0     1   N  
+    15 .switch                   0x00000000 0x00000000   0x0     1   N  
+    16 .sysmem                   0x00000000 0x00000000   0x0     1   N  
+    17 .far                      0x00000000 0x00000000   0x0     1   N  
+    18 .fardata                  0x80000458 0x80000458  0x18     4   Y  
+    19 .ppinfo                   0x00000000 0x00000000   0x0     1   N  
+    20 .ppdata                   0x00000000 0x00000000   0x0    32   N  
+    21 .debug_info               0x00000000 0x00000000 0x2f7     1   N  
+    22 .debug_line               0x00000000 0x00000000  0xcd     1   N  
+    23 .debug_abbrev             0x00000000 0x00000000  0xaf     1   N  
+    24 .debug_pubnames           0x00000000 0x00000000  0x63     1   N  
+    25 .debug_aranges            0x00000000 0x00000000  0x60     1   N  
+    26 .plt                      0x00000000 0x00000000   0x0    32   N  
+    27 .c6xabi.attributes        0x00000000 0x00000000  0x3e     0   N  
+    28 .symtab                   0x00000000 0x00000000 0x570     0   N  
+    29 .dynsym                   0x00000000 0x00000000 0x110     0   N  
+    30 .dynamic                  0x00000000 0x00000000  0xa8     1   N  
+    31 .dynstr                   0x00000000 0x00000000 0x15a     0   N  
+    32 .hash                     0x00000000 0x00000000  0x90     0   N  
+    33 .TI.section.flags         0x00000000 0x00000000  0x1a     0   N  
+    34 .strtab                   0x00000000 0x00000000 0x32e     0   N  
+    35 .shstrtab                 0x00000000 0x00000000 0x135     0   N  
+
+ Relocation Table in Section 0 (".rela.dyn")
+
+    id type            offset     sym name                     
+    -- ----            ------     --- ----                     
+     0 R_C6000_ABS_L16 0x000005d4   1 _Fx_FLT_Exciter_Coe      
+     1 R_C6000_ABS_H16 0x000005e0   1 _Fx_FLT_Exciter_Coe      
+     2 R_C6000_ABS_L16 0x00000664  11 SonicStomp               
+     3 R_C6000_ABS_L16 0x00000668  10 effectTypeImageInfo      
+     4 R_C6000_ABS_H16 0x0000066c  11 SonicStomp               
+     5 R_C6000_ABS_H16 0x00000674  10 effectTypeImageInfo      
+     6 R_C6000_ABS32   0x8000026c   9 Fx_FLT_Exciter_onf       
+     7 R_C6000_ABS32   0x8000029c   8 Fx_FLT_Exciter_init      
+     8 R_C6000_ABS32   0x800002a0   7 Fx_FLT_Exciter           
+     9 R_C6000_ABS32   0x800002cc   6 Fx_FLT_Exciter_loConto...
+    10 R_C6000_ABS32   0x800002fc   5 Fx_FLT_Exciter_process...
+    11 R_C6000_ABS32   0x8000032c   4 Fx_FLT_Exciter_outlv_edit
+    12 R_C6000_ABS32   0x80000354   3 picEffectType_Exciter    
+    13 R_C6000_ABS32   0x80000370   2 _infoEffectTypeKnob_A_2  
+    14 R_C6000_ABS32   0x80000380   2 _infoEffectTypeKnob_A_2  
+    15 R_C6000_ABS32   0x80000390   2 _infoEffectTypeKnob_A_2  
+
+ Relocation Table in Section 0 (".rela.plt")
+
+
+ Build Attributes in ".c6xabi.attributes"
+
+    Format Version:  'A'
+
+    <0>  Vendor Name:  "TI" (Texas Instruments, Inc.)
+
+         Tag_File:
+            Attributes:
+             Tag_Producer_Name        Linker  
+             Tag_Producer_VMajor      8       (Producer Major Version + 1)
+             Tag_Producer_VMinor      4       (Producer Minor Version + 1)
+             Tag_Producer_VPatch      8       (Producer Patch Version + 1)
+             Tag_ISA                  8       (C6740)
+             Tag_ABI                  2       (EABI)
+             Tag_Long_Precision_Bits  2       (32-bit long type)
+             Tag_Bitfield_layout      2       (compatible with any bitfield layout)
+             Tag_ABI_enum_size        3       (no enums that affect object file compatibility are used)
+
+    <1>  Vendor Name:  "c6xabi" (ABI for the Texas Instruments C6000 Architecture)
+
+         Tag_File:
+            Attributes:
+             Tag_ISA          8  (C6740)
+             Tag_ABI_wchar_t  1  (wchar_t size is 2)
+
+ Symbol Table ".symtab"
+
+    id name            value      kind      section         binding type    
+    -- ----            -----      ----      -------         ------- ----    
+     0 (no name)       0x00000000 undefined N/A             local   none    
+     1 .audio          0x00000000 defined   .audio          local   section 
+     2 .text           0x00000000 defined   .text           local   section 
+     3 .stack          0x00000000 defined   .stack          local   section 
+     4 .args           0x00000000 defined   .args           local   section 
+     5 .neardata       0x00000000 defined   .neardata       local   section 
+     6 .rodata         0x00000000 defined   .rodata         local   section 
+     7 .bss            0x00000000 defined   .bss            local   section 
+     8 .text           0x00000000 defined   .text           local   section 
+     9 .cinit          0x00000000 defined   .cinit          local   section 
+    10 .cio            0x00000000 defined   .cio            local   section 
+    11 .const          0x80000000 defined   .const          local   section 
+    12 .data           0x00000000 defined   .data           local   section 
+    13 .switch         0x00000000 defined   .switch         local   section 
+    14 .sysmem         0x00000000 defined   .sysmem         local   section 
+    15 .far            0x00000000 defined   .far            local   section 
+    16 .fardata        0x80000458 defined   .fardata        local   section 
+    17 .ppinfo         0x00000000 defined   .ppinfo         local   section 
+    18 .ppdata         0x00000000 defined   .ppdata         local   section 
+    19 .debug_info     0x00000000 defined   .debug_info     local   section 
+    20 .debug_line     0x00000000 defined   .debug_line     local   section 
+    21 .debug_abbrev   0x00000000 defined   .debug_abbrev   local   section 
+    22 .debug_pubnames 0x00000000 defined   .debug_pubnames local   section 
+    23 .debug_aranges  0x00000000 defined   .debug_aranges  local   section 
+    24 .plt            0x00000000 defined   .plt            local   section 
+    25 0156410         0x00000000 absolute  N/A             local   file    
+    26 SonicStomp      0x80000250 defined   .const          local   object  
+    27 picEffectTyp... 0x80000000 defined   .const          local   object  
+    28 _infoEffectT... 0x80000458 defined   .fardata        local   object  
+    29 .text           0x00000660 defined   .text           local   section 
+    30 .const:Sonic... 0x80000250 defined   .const          local   section 
+    31 .const:.stri... 0x80000000 defined   .const          local   section 
+    32 .fardata        0x80000458 defined   .fardata        local   section 
+    33 .const          0x80000340 defined   .const          local   section 
+    34 0333210         0x00000000 absolute  N/A             local   file    
+    35 _Fx_FLT_Exci... 0x80000414 defined   .const          local   object  
+    36 $C$RL11         0x00000538 defined   .text           local   function
+    37 $C$L1           0x0000053a defined   .text           local   function
+    38 $C$L2           0x00000560 defined   .text           local   function
+    39 .text           0x00000460 defined   .text           local   section 
+    40 .const          0x80000414 defined   .const          local   section 
+    41 Audio_Fx_FLT... 0x00000000 absolute  N/A             local   file    
+    42 $C$L1           0x00000070 defined   .text           local   function
+    43 $C$L2           0x0000008c defined   .text           local   function
+    44 $C$L7           0x00000390 defined   .text           local   function
+    45 .text           0x00000000 defined   .text           local   section 
+    46 call_stub.asm   0x00000000 absolute  N/A             local   file    
+    47 __stub_ret      0x00000638 defined   .text           local   function
+    48 .text:__call... 0x00000620 defined   .text           local   section 
+    49 .debug_info     0x00000000 defined   .debug_info     local   section 
+    50 .debug_line     0x00000000 defined   .debug_line     local   section 
+    51 .debug_abbrev   0x00000000 defined   .debug_abbrev   local   section 
+    52 .debug_aranges  0x00000000 defined   .debug_aranges  local   section 
+    53 .debug_pubnames 0x00000000 defined   .debug_pubnames local   section 
+    54 push.asm        0x00000000 absolute  N/A             local   file    
+    55 .text:__push... 0x000006a0 defined   .text           local   section 
+    56 .text:__pop_rts 0x00000680 defined   .text           local   section 
+    57 .debug_info     0x000000d9 defined   .debug_info     local   section 
+    58 .debug_info     0x0000019c defined   .debug_info     local   section 
+    59 .debug_line     0x0000004c defined   .debug_line     local   section 
+    60 .debug_line     0x0000008c defined   .debug_line     local   section 
+    61 .debug_abbrev   0x00000040 defined   .debug_abbrev   local   section 
+    62 .debug_abbrev   0x00000070 defined   .debug_abbrev   local   section 
+    63 .debug_aranges  0x00000020 defined   .debug_aranges  local   section 
+    64 .debug_aranges  0x00000040 defined   .debug_aranges  local   section 
+    65 .debug_pubnames 0x00000022 defined   .debug_pubnames local   section 
+    66 .debug_pubnames 0x00000043 defined   .debug_pubnames local   section 
+    67 .debug_abbrev   0x000000a0 defined   .debug_abbrev   local   section 
+    68 .debug_info     0x0000025d defined   .debug_info     local   section 
+    69 __TI_pprof_o... 0xffffffff absolute  N/A             global  none    
+    70 __TI_prof_da... 0xffffffff absolute  N/A             global  none    
+    71 __TI_prof_da... 0xffffffff absolute  N/A             global  none    
+    72 __TI_STATIC_... 0x00000000 defined   .bss            global  none    
+    73 effectTypeIm... 0x80000340 defined   .const          global  object  
+    74 Dll_Exciter     0x00000660 defined   .text           global  function
+    75 Fx_FLT_Excit... 0x000004b4 defined   .text           global  function
+    76 Fx_FLT_Excit... 0x00000504 defined   .text           global  function
+    77 Fx_FLT_Excit... 0x000005c0 defined   .text           global  function
+    78 Fx_FLT_Excit... 0x00000568 defined   .text           global  function
+    79 Fx_FLT_Excit... 0x00000460 defined   .text           global  function
+    80 Fx_FLT_Exciter  0x00000000 defined   .text           global  function
+    81 __c6xabi_cal... 0x00000620 defined   .text           global  function
+    82 __call_stub     0x00000620 defined   .text           global  function
+    83 __c6xabi_pus... 0x000006a0 defined   .text           global  function
+    84 __pop_rts       0x00000680 defined   .text           global  function
+    85 __c6xabi_pop... 0x00000680 defined   .text           global  function
+    86 __push_rts      0x000006a0 defined   .text           global  function
+
+ Symbol Table ".dynsym"
+
+    id name            value      kind      section         binding type    
+    -- ----            -----      ----      -------         ------- ----    
+     0 (no name)       0x00000000 undefined N/A             local   none    
+     1 _Fx_FLT_Exci... 0x80000414 defined   .const          local   object  
+     2 _infoEffectT... 0x80000458 defined   .fardata        local   object  
+     3 picEffectTyp... 0x80000000 defined   .const          local   object  
+     4 Fx_FLT_Excit... 0x000004b4 defined   .text           local   function
+     5 Fx_FLT_Excit... 0x00000460 defined   .text           local   function
+     6 Fx_FLT_Excit... 0x00000568 defined   .text           local   function
+     7 Fx_FLT_Exciter  0x00000000 defined   .text           local   function
+     8 Fx_FLT_Excit... 0x000005c0 defined   .text           local   function
+     9 Fx_FLT_Excit... 0x00000504 defined   .text           local   function
+    10 effectTypeIm... 0x80000340 defined   .const          local   object  
+    11 SonicStomp      0x80000250 defined   .const          local   object  
+    12 __TI_STATIC_... 0x00000000 defined   .bss            local   none    
+    13 __TI_pprof_o... 0xffffffff absolute  N/A             local   none    
+    14 __TI_prof_da... 0xffffffff absolute  N/A             local   none    
+    15 __TI_prof_da... 0xffffffff absolute  N/A             local   none    
+    16 Dll_Exciter     0x00000660 defined   .text           global  function
+
+ Symbol Hash Table in ".hash"
+
+    Row Symbol Name(s)
+    --- --------------
+      0 "_infoEffectTypeKnob_A_2"
+      1 
+      2 
+      3 "__TI_prof_data_size"
+      4 "__TI_pprof_out_hndl"
+      5 "_Fx_FLT_Exciter_Coe"
+      6 "Fx_FLT_Exciter_process_edit"
+      7 "Fx_FLT_Exciter_loContour_edit", "Fx_FLT_Exciter_onf"
+      8 "picEffectType_Exciter", "SonicStomp"
+      9 "__TI_prof_data_start"
+     10 "__TI_STATIC_BASE"
+     11 "effectTypeImageInfo"
+     12 "Fx_FLT_Exciter"
+     13 
+     14 "Fx_FLT_Exciter_init", "Dll_Exciter"
+     15 
+     16 "Fx_FLT_Exciter_outlv_edit"
+
+ Dynamic Information in ".dynamic"
+
+    id tag                  value              
+    -- ---                  -----              
+     0 DT_PLTRELSZ          0                  
+     1 DT_HASH              0x00001a28         
+     2 DT_STRTAB            0x000018cc         
+     3 DT_SYMTAB            0x000017bc         
+     4 DT_RELA              0x00000c18         
+     5 DT_RELASZ            192                
+     6 DT_RELAENT           12                 
+     7 DT_STRSZ             346                
+     8 DT_SYMENT            16                 
+     9 DT_SONAME            ZDL_FLT_Exciter.out
+    10 DT_PLTREL            7                  
+    11 DT_TEXTREL           (null)             
+    12 DT_JMPREL            0x00000cd8         
+    13 DT_FLAGS             4                  
+    14 DT_C6000_GSYM_OFFSET 256                
+    15 DT_C6000_GSTR_OFFSET 314                
+    16 DT_NULL              (null)             
+    17 DT_NULL              (null)             
+    18 DT_NULL              (null)             
+    19 DT_NULL              (null)             
+    20 DT_NULL              (null)             
+
+ String Table ".dynstr"
+
+    offset  string                         
+    ------  ------                         
+         0  ""                             
+         1  "_Fx_FLT_Exciter_Coe"          
+        21  "_infoEffectTypeKnob_A_2"      
+        45  "picEffectType_Exciter"        
+        67  "Fx_FLT_Exciter_outlv_edit"    
+        93  "Fx_FLT_Exciter_process_edit"  
+       121  "Fx_FLT_Exciter_loContour_edit"
+       151  "Fx_FLT_Exciter"               
+       166  "Fx_FLT_Exciter_init"          
+       186  "Fx_FLT_Exciter_onf"           
+       205  "effectTypeImageInfo"          
+       225  "SonicStomp"                   
+       236  "__TI_STATIC_BASE"             
+       253  "__TI_pprof_out_hndl"          
+       273  "__TI_prof_data_size"          
+       293  "__TI_prof_data_start"         
+       314  "Dll_Exciter"                  
+       326  "ZDL_FLT_Exciter.out"          
+
+ String Table ".strtab"
+
+    offset  string                                
+    ------  ------                                
+         0  ""                                    
+         1  ".audio"                              
+         8  ".text"                               
+        14  ".stack"                              
+        21  ".args"                               
+        27  ".neardata"                           
+        37  ".rodata"                             
+        45  ".bss"                                
+        50  ".cinit"                              
+        57  ".cio"                                
+        62  ".const"                              
+        69  ".data"                               
+        75  ".switch"                             
+        83  ".sysmem"                             
+        91  ".far"                                
+        96  ".fardata"                            
+       105  ".ppinfo"                             
+       113  ".ppdata"                             
+       121  ".debug_info"                         
+       133  ".debug_line"                         
+       145  ".debug_abbrev"                       
+       159  ".debug_pubnames"                     
+       175  ".debug_aranges"                      
+       190  ".plt"                                
+       195  "0156410"                             
+       203  "SonicStomp"                          
+       214  "picEffectType_Exciter"               
+       236  "_infoEffectTypeKnob_A_2"             
+       260  ".const:SonicStomp"                   
+       278  ".const:.string:picEffectType_Exciter"
+       315  "0333210"                             
+       323  "_Fx_FLT_Exciter_Coe"                 
+       343  "$C$RL11"                             
+       351  "$C$L1"                               
+       357  "$C$L2"                               
+       363  "Audio_Fx_FLT_Exciter.asm"            
+       388  "$C$L7"                               
+       394  "call_stub.asm"                       
+       408  "__stub_ret"                          
+       419  ".text:__call_stub"                   
+       437  "push.asm"                            
+       446  ".text:__push_rts"                    
+       463  ".text:__pop_rts"                     
+       479  "__TI_pprof_out_hndl"                 
+       499  "__TI_prof_data_start"                
+       520  "__TI_prof_data_size"                 
+       540  "__TI_STATIC_BASE"                    
+       557  "effectTypeImageInfo"                 
+       577  "Dll_Exciter"                         
+       589  "Fx_FLT_Exciter_outlv_edit"           
+       615  "Fx_FLT_Exciter_onf"                  
+       634  "Fx_FLT_Exciter_init"                 
+       654  "Fx_FLT_Exciter_loContour_edit"       
+       684  "Fx_FLT_Exciter_process_edit"         
+       712  "Fx_FLT_Exciter"                      
+       727  "__c6xabi_call_stub"                  
+       746  "__call_stub"                         
+       758  "__c6xabi_push_rts"                   
+       776  "__pop_rts"                           
+       786  "__c6xabi_pop_rts"                    
+       803  "__push_rts"                          
+
+ String Table ".shstrtab"
+
+    offset  string              
+    ------  ------              
+         0  ""                  
+         1  ".rela.dyn"         
+        11  ".rela.plt"         
+        21  ".audio"            
+        28  ".text"             
+        34  ".stack"            
+        41  ".args"             
+        47  ".neardata"         
+        57  ".rodata"           
+        65  ".bss"              
+        70  ".cinit"            
+        77  ".cio"              
+        82  ".const"            
+        89  ".data"             
+        95  ".switch"           
+       103  ".sysmem"           
+       111  ".far"              
+       116  ".fardata"          
+       125  ".ppinfo"           
+       133  ".ppdata"           
+       141  ".debug_info"       
+       153  ".debug_line"       
+       165  ".debug_abbrev"     
+       179  ".debug_pubnames"   
+       195  ".debug_aranges"    
+       210  ".plt"              
+       215  ".c6xabi.attributes"
+       234  ".symtab"           
+       242  ".dynsym"           
+       250  ".dynamic"          
+       259  ".dynstr"           
+       267  ".hash"             
+       273  ".TI.section.flags" 
+       291  ".strtab"           
+       299  ".shstrtab"         
+
+ DWARF Abbreviations Tables in Section 23 (".debug_abbrev")
+
+    --------------------------------------
+    Abbreviations Table at Offset 0x0
+    --------------------------------------
+
+    offset   code child tag/attribute           form          
+    -------- ---- ----- -------------           ----          
+    0x0         1 yes   DW_TAG_compile_unit                   
+    0x3                    DW_AT_name           DW_FORM_string
+    0x5                    DW_AT_stmt_list      DW_FORM_data4 
+    0x7                    DW_AT_low_pc         DW_FORM_addr  
+    0x9                    DW_AT_high_pc        DW_FORM_addr  
+    0xb                    DW_AT_comp_dir       DW_FORM_string
+    0xd                    DW_AT_producer       DW_FORM_string
+    0xf                    DW_AT_TI_version     DW_FORM_data1 
+    0x14        2 yes   DW_TAG_subprogram                     
+    0x17                   DW_AT_sibling        DW_FORM_ref4  
+    0x19                   DW_AT_name           DW_FORM_string
+    0x1b                   DW_AT_low_pc         DW_FORM_addr  
+    0x1d                   DW_AT_high_pc        DW_FORM_addr  
+    0x1f                   DW_AT_external       DW_FORM_flag  
+    0x21                   DW_AT_frame_base     DW_FORM_block1
+    0x23                   DW_AT_TI_symbol_name DW_FORM_string
+    0x26                   DW_AT_TI_asm         DW_FORM_flag  
+    0x29                   DW_AT_TI_skeletal    DW_FORM_flag  
+    0x2c                   DW_AT_TI_category    DW_FORM_string
+    0x31        3 no    DW_TAG_TI_branch                      
+    0x36                   DW_AT_name           DW_FORM_string
+    0x38                   DW_AT_low_pc         DW_FORM_addr  
+    0x3a                   DW_AT_TI_call        DW_FORM_flag  
+
+    --------------------------------------
+    Abbreviations Table at Offset 0x40
+    --------------------------------------
+
+    offset   code child tag/attribute           form          
+    -------- ---- ----- -------------           ----          
+    0x40        1 yes   DW_TAG_compile_unit                   
+    0x43                   DW_AT_name           DW_FORM_string
+    0x45                   DW_AT_stmt_list      DW_FORM_data4 
+    0x47                   DW_AT_low_pc         DW_FORM_addr  
+    0x49                   DW_AT_high_pc        DW_FORM_addr  
+    0x4b                   DW_AT_comp_dir       DW_FORM_string
+    0x4d                   DW_AT_producer       DW_FORM_string
+    0x4f                   DW_AT_TI_version     DW_FORM_data1 
+    0x54        2 no    DW_TAG_subprogram                     
+    0x57                   DW_AT_name           DW_FORM_string
+    0x59                   DW_AT_low_pc         DW_FORM_addr  
+    0x5b                   DW_AT_high_pc        DW_FORM_addr  
+    0x5d                   DW_AT_external       DW_FORM_flag  
+    0x5f                   DW_AT_frame_base     DW_FORM_block1
+    0x61                   DW_AT_TI_symbol_name DW_FORM_string
+    0x64                   DW_AT_TI_asm         DW_FORM_flag  
+    0x67                   DW_AT_TI_skeletal    DW_FORM_flag  
+    0x6a                   DW_AT_TI_category    DW_FORM_string
+
+    --------------------------------------
+    Abbreviations Table at Offset 0x70
+    --------------------------------------
+
+    offset   code child tag/attribute           form          
+    -------- ---- ----- -------------           ----          
+    0x70        1 yes   DW_TAG_compile_unit                   
+    0x73                   DW_AT_name           DW_FORM_string
+    0x75                   DW_AT_stmt_list      DW_FORM_data4 
+    0x77                   DW_AT_low_pc         DW_FORM_addr  
+    0x79                   DW_AT_high_pc        DW_FORM_addr  
+    0x7b                   DW_AT_comp_dir       DW_FORM_string
+    0x7d                   DW_AT_producer       DW_FORM_string
+    0x7f                   DW_AT_TI_version     DW_FORM_data1 
+    0x84        2 no    DW_TAG_subprogram                     
+    0x87                   DW_AT_name           DW_FORM_string
+    0x89                   DW_AT_low_pc         DW_FORM_addr  
+    0x8b                   DW_AT_high_pc        DW_FORM_addr  
+    0x8d                   DW_AT_external       DW_FORM_flag  
+    0x8f                   DW_AT_frame_base     DW_FORM_block1
+    0x91                   DW_AT_TI_symbol_name DW_FORM_string
+    0x94                   DW_AT_TI_asm         DW_FORM_flag  
+    0x97                   DW_AT_TI_skeletal    DW_FORM_flag  
+    0x9a                   DW_AT_TI_category    DW_FORM_string
+
+    --------------------------------------
+    Abbreviations Table at Offset 0xa0
+    --------------------------------------
+
+    offset   code child tag/attribute       form          
+    -------- ---- ----- -------------       ----          
+    0xa0        1 no    DW_TAG_compile_unit               
+    0xa3                   DW_AT_name       DW_FORM_string
+    0xa5                   DW_AT_comp_dir   DW_FORM_string
+    0xa7                   DW_AT_producer   DW_FORM_string
+    0xa9                   DW_AT_TI_version DW_FORM_data1 
+
+ DWARF Debugging Information Entries in Section 21 (".debug_info")
+
+    ----------------------------
+    DIE Table at Offset 00000000
+    ----------------------------
+
+    Length:                0xd5
+    Version:                  3
+    .debug_abbrev Offset:     0
+    Address Size:             4
+
+
+    0000000b   1 DW_TAG_compile_unit (.text)
+    0000000c        DW_AT_name       call_stub.asm
+    0000001a        DW_AT_stmt_list  .debug_line(22) + 0x0
+    0000001e        DW_AT_low_pc     0x620
+    00000022        DW_AT_high_pc    0x65c
+    00000026        DW_AT_comp_dir   /tmp/TI_MKLIBf7IgF8/SRC
+    0000003e        DW_AT_producer   TMS320C6x Compressor Unix v7.3
+                                     .7 Copyright (c) 1996-2012 Tex
+                                     as Instruments Incorporated
+    00000096        DW_AT_TI_version 1
+    00000097   2    DW_TAG_subprogram (.text)
+    00000098           DW_AT_sibling        (null)
+    0000009c           DW_AT_name           __call_stub
+    000000a8           DW_AT_low_pc         0x620
+    000000ac           DW_AT_high_pc        0x65c
+    000000b0           DW_AT_external       true
+    000000b1           DW_AT_frame_base     DW_OP_breg31 0
+    000000b4           DW_AT_TI_symbol_name __call_stub
+    000000c0           DW_AT_TI_asm         true
+    000000c1           DW_AT_TI_skeletal    true
+    000000c2           DW_AT_TI_reserved_11 TI Library
+    000000cd   3       DW_TAG_TI_reserved_3 (.text)
+    000000ce              DW_AT_name          b31
+    000000d2              DW_AT_low_pc        0x624
+    000000d6              DW_AT_TI_reserved_9 true
+
+    ----------------------------
+    DIE Table at Offset 000000d9
+    ----------------------------
+
+    Length:                0xbf
+    Version:                  3
+    .debug_abbrev Offset:    64
+    Address Size:             4
+
+
+    000000e4   1 DW_TAG_compile_unit (.text)
+    000000e5        DW_AT_name       push.asm
+    000000ee        DW_AT_stmt_list  .debug_line(22) + 0x4c
+    000000f2        DW_AT_low_pc     0x6a0
+    000000f6        DW_AT_high_pc    0x6b4
+    000000fa        DW_AT_comp_dir   /tmp/TI_MKLIBf7IgF8/SRC
+    00000112        DW_AT_producer   TMS320C6x Compressor Unix v7.3
+                                     .7 Copyright (c) 1996-2012 Tex
+                                     as Instruments Incorporated
+    0000016a        DW_AT_TI_version 1
+    0000016b   2    DW_TAG_subprogram (.text)
+    0000016c           DW_AT_name           __push_rts
+    00000177           DW_AT_low_pc         0x6a0
+    0000017b           DW_AT_high_pc        0x6b4
+    0000017f           DW_AT_external       true
+    00000180           DW_AT_frame_base     DW_OP_breg31 0
+    00000183           DW_AT_TI_symbol_name __push_rts
+    0000018e           DW_AT_TI_asm         true
+    0000018f           DW_AT_TI_skeletal    true
+    00000190           DW_AT_TI_reserved_11 TI Library
+
+    ----------------------------
+    DIE Table at Offset 0000019c
+    ----------------------------
+
+    Length:                0xbd
+    Version:                  3
+    .debug_abbrev Offset:   112
+    Address Size:             4
+
+
+    000001a7   1 DW_TAG_compile_unit (.text)
+    000001a8        DW_AT_name       push.asm
+    000001b1        DW_AT_stmt_list  .debug_line(22) + 0x8c
+    000001b5        DW_AT_low_pc     0x680
+    000001b9        DW_AT_high_pc    0x694
+    000001bd        DW_AT_comp_dir   /tmp/TI_MKLIBf7IgF8/SRC
+    000001d5        DW_AT_producer   TMS320C6x Compressor Unix v7.3
+                                     .7 Copyright (c) 1996-2012 Tex
+                                     as Instruments Incorporated
+    0000022d        DW_AT_TI_version 1
+    0000022e   2    DW_TAG_subprogram (.text)
+    0000022f           DW_AT_name           __pop_rts
+    00000239           DW_AT_low_pc         0x680
+    0000023d           DW_AT_high_pc        0x694
+    00000241           DW_AT_external       true
+    00000242           DW_AT_frame_base     DW_OP_breg31 0
+    00000245           DW_AT_TI_symbol_name __pop_rts
+    0000024f           DW_AT_TI_asm         true
+    00000250           DW_AT_TI_skeletal    true
+    00000251           DW_AT_TI_reserved_11 TI Library
+
+    ----------------------------
+    DIE Table at Offset 0000025d
+    ----------------------------
+
+    Length:                0x96
+    Version:                  3
+    .debug_abbrev Offset:   160
+    Address Size:             4
+
+
+    00000268   1 DW_TAG_compile_unit
+    00000269        DW_AT_name       __TI_internal
+    00000277        DW_AT_comp_dir   C:\Project\ZDL\D242\ZDL_FLT_Ex
+                                     citer\Debug
+    000002a1        DW_AT_producer   TI TMS320C6x Linker PC v7.3.7 
+                                     Copyright (c) 1996-2012 Texas 
+                                     Instruments Incorporated
+    000002f6        DW_AT_TI_version 1
+
+ DWARF Line Number Information in Section 22 (".debug_line")
+
+    --------------------------------------
+    Line Number Program at Offset 00000000
+    --------------------------------------
+
+    Header Information
+
+    Length:                     72                                    
+    Version:                    3                                     
+    Header Length:              36                                    
+    Minimum Instruction Length: 2                                     
+    Default is_stmt:            true                                  
+    Line Base:                  0                                     
+    Line Range:                 48                                    
+    Opcode Base:                13                                    
+    Standard Opcode Lengths:    { 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0 }
+
+    Include Directories
+
+    id name                   
+    -- ----                   
+     0 /tmp/TI_MKLIBf7IgF8/SRC
+
+    Files
+
+    id name          directory last mod  length   
+    -- ----          --------- --------- ---------
+     0 (unknown)     0         (unknown) (unknown)
+     1 call_stub.asm 0         (unknown) (unknown)
+
+    Line Number Program
+
+    address    file line col S B P E isa section      
+    ---------- ---- ---- --- - - - - --- -------      
+    0x00000620    1   54   0 Y N N N   0 .text        
+    0x00000624    1   55   0 Y N N N   0 .text        
+    0x0000062a    1   57   0 Y N N N   0 .text        
+    0x0000062c    1   58   0 Y N N N   0 .text        
+    0x0000062e    1   59   0 Y N N N   0 .text        
+    0x00000630    1   60   0 Y N N N   0 .text        
+    0x00000632    1   61   0 Y N N N   0 .text        
+    0x00000638    1   65   0 Y N N N   0 .text        
+    0x0000063a    1   66   0 Y N N N   0 .text        
+    0x00000640    1   67   0 Y N N N   0 .text        
+    0x00000644    1   68   0 Y N N N   0 .text        
+    0x00000648    1   69   0 Y N N N   0 .text        
+    0x0000064c    1   70   0 Y N N N   0 .text        
+    0x00000654    1   72   0 Y N N N   0 .text        
+    0x00000658    1   73   0 Y N N N   0 .text        
+    0x0000065c    1   73   0 N N N N   0 .text   (end)
+
+
+    --------------------------------------
+    Line Number Program at Offset 0000004c
+    --------------------------------------
+
+    Header Information
+
+    Length:                     60                                    
+    Version:                    3                                     
+    Header Length:              31                                    
+    Minimum Instruction Length: 2                                     
+    Default is_stmt:            true                                  
+    Line Base:                  0                                     
+    Line Range:                 60                                    
+    Opcode Base:                13                                    
+    Standard Opcode Lengths:    { 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0 }
+
+    Include Directories
+
+    id name                   
+    -- ----                   
+     0 /tmp/TI_MKLIBf7IgF8/SRC
+
+    Files
+
+    id name      directory last mod  length   
+    -- ----      --------- --------- ---------
+     0 (unknown) 0         (unknown) (unknown)
+     1 push.asm  0         (unknown) (unknown)
+
+    Line Number Program
+
+    address    file line col S B P E isa section      
+    ---------- ---- ---- --- - - - - --- -------      
+    0x000006a0    1   66   0 Y N N N   0 .text        
+    0x000006a4    1   68   0 Y N N N   0 .text        
+    0x000006aa    1   71   0 Y N N N   0 .text        
+    0x000006ac    1   73   0 Y N N N   0 .text        
+    0x000006ae    1   75   0 Y N N N   0 .text        
+    0x000006b0    1   77   0 Y N N N   0 .text        
+    0x000006b2    1   79   0 Y N N N   0 .text        
+    0x000006b4    1   79   0 N N N N   0 .text   (end)
+
+
+    --------------------------------------
+    Line Number Program at Offset 0000008c
+    --------------------------------------
+
+    Header Information
+
+    Length:                     61                                    
+    Version:                    3                                     
+    Header Length:              31                                    
+    Minimum Instruction Length: 2                                     
+    Default is_stmt:            true                                  
+    Line Base:                  0                                     
+    Line Range:                 81                                    
+    Opcode Base:                13                                    
+    Standard Opcode Lengths:    { 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0 }
+
+    Include Directories
+
+    id name                   
+    -- ----                   
+     0 /tmp/TI_MKLIBf7IgF8/SRC
+
+    Files
+
+    id name      directory last mod  length   
+    -- ----      --------- --------- ---------
+     0 (unknown) 0         (unknown) (unknown)
+     1 push.asm  0         (unknown) (unknown)
+
+    Line Number Program
+
+    address    file line col S B P E isa section      
+    ---------- ---- ---- --- - - - - --- -------      
+    0x00000680    1   91   0 Y N N N   0 .text        
+    0x00000682    1   93   0 Y N N N   0 .text        
+    0x00000684    1   95   0 Y N N N   0 .text        
+    0x00000686    1   97   0 Y N N N   0 .text        
+    0x00000688    1   99   0 Y N N N   0 .text        
+    0x0000068a    1  101   0 Y N N N   0 .text        
+    0x0000068e    1  104   0 Y N N N   0 .text        
+    0x00000690    1  106   0 Y N N N   0 .text        
+    0x00000694    1  106   0 N N N N   0 .text   (end)
+
+
+ DWARF Name Lookup Table in Section 24 (".debug_pubnames")
+
+    -----------------------------------
+    Public Names Set at Offset 00000000
+    -----------------------------------
+
+    Length:                    30
+    Version:                    3
+    .debug_info Offset:  00000000
+    .debug_info Length:       213
+
+
+      name         compile unit offset
+      ----         -------------------
+      __call_stub  00000097           
+
+    -----------------------------------
+    Public Names Set at Offset 00000022
+    -----------------------------------
+
+    Length:                    29
+    Version:                    3
+    .debug_info Offset:  000000d9
+    .debug_info Length:       191
+
+
+      name        compile unit offset
+      ----        -------------------
+      __push_rts  00000092           
+
+    -----------------------------------
+    Public Names Set at Offset 00000043
+    -----------------------------------
+
+    Length:                    28
+    Version:                    3
+    .debug_info Offset:  0000019c
+    .debug_info Length:       189
+
+
+      name       compile unit offset
+      ----       -------------------
+      __pop_rts  00000092           
+
+ DWARF Address Range Table in Section 25 (".debug_aranges")
+
+    ------------------------------------
+    Address Range Set at Offset 00000000
+    ------------------------------------
+
+    Length:                    28
+    Version:                    3
+    .debug_info Offset:  00000000
+    Address Size:               4
+    Segment Size:               0
+
+
+      initial location  address range
+      ----------------  -------------
+      0x00000620        60           
+
+    ------------------------------------
+    Address Range Set at Offset 00000020
+    ------------------------------------
+
+    Length:                    28
+    Version:                    3
+    .debug_info Offset:  000000d9
+    Address Size:               4
+    Segment Size:               0
+
+
+      initial location  address range
+      ----------------  -------------
+      0x000006a0        20           
+
+    ------------------------------------
+    Address Range Set at Offset 00000040
+    ------------------------------------
+
+    Length:                    28
+    Version:                    3
+    .debug_info Offset:  0000019c
+    Address Size:               4
+    Segment Size:               0
+
+
+      initial location  address range
+      ----------------  -------------
+      0x00000680        20           
