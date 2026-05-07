@@ -1,0 +1,30 @@
+{
+  "effect_name": "GAIN",
+  "comment": "Minimal 1-knob plugin. Validates the v2 full-ELF builder + tests whether firmware auto-populates params[5] under NOP handlers.",
+
+  "gid":  2,
+  "gid_comment": "0x02 = Filter category. SONAME prefix becomes ZDL_FLT_.",
+  "fxid": 400,
+  "fxid_comment": "0x0190 = above the highest stock effect (0x0180), avoids collisions.",
+
+  "fxid_version": "1.00",
+  "flags_byte":   1,
+
+  "params": [
+    {
+      "name":    "Level",
+      "max":     100,
+      "default": 50,
+      "comment": "params[5]. 0..100 → scaled to 0..1 by params[4]=1/100."
+    },
+    {
+      "name":    "Mix",
+      "max":     100,
+      "default": 100,
+      "comment": "params[6]. Dry/wet blend. Bumped from 1 to 2 knobs because the firmware does not appear to support nknobs=1 (no stock effect uses it; v2 GAIN with 1 knob froze on edit-mode entry)."
+    }
+  ],
+
+  "audio_nop": false,
+  "audio_nop_comment": "Set true to ship a UI-only smoke build (audio function replaced with NOP_RETURN). Useful when bisecting boot freezes."
+}

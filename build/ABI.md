@@ -8,6 +8,14 @@ instead of mystery-flashing. Everything below is derived from:
 * `working_zdls/MS-70CDR_EXCITER.ZDL` — the on-disk bytes, cross-checked
   against the relocations.
 * `working_zdls/MS-70CDR_LINESEL.ZDL` — second data point.
+* **The v1 project at `~/coding/airwindowsZoom/`** — most importantly
+  `ZDL_Findings.md` (descriptor format reverse-engineered from all 128
+  stock MS-70CDR ZDLs) and `build/link_zdl.py` (the linker that
+  successfully produced `TOTAPE9_AUDIO.ZDL`, which booted on real
+  hardware and was selectable in the FX menu). Every load-bearing
+  constant in v1's linker has a comment explaining the experiment that
+  pinned it down. Items below marked **[v1-empirical]** were verified
+  on hardware via bisection — change them only with proof.
 * `zoom-fx-modding-ref/library/CH_2.md` — conversational disassembly
   of LineSel; provides DSP-loop semantics.
 * `ZoomPedalFun-main/MS70CDR/DerivedData/2.10/checkme.py` — independent
@@ -71,60 +79,94 @@ The host firmware finds your DLL's entrypoints **by name** in the
 
 ## 3. `SonicStomp` — the plugin descriptor
 
-This is the centerpiece. It's a 240-byte struct in `.const`, structured
-as five 48-byte (`0x30`) entries:
+This is the centerpiece. It's a variable-length array in `.const` of
+48-byte (`0x30`) entries. The **last entry is marked by setting bit
+`0x04` in `pedal_flags` at offset `+0x2C`** — the firmware walks entries
+from the table start until it sees this sentinel. There is **no fixed
+entry count**: stock LO-FI Dly has 11 entries (OnOff + name + 9 knobs);
+HELLO/LineSel have 4. [v1-empirical, verified across all 128 stock ZDLs]
 
 ```
-SonicStomp                              ┐
-  Entry[0] OnOff   bytes   0..47       │  240 bytes
-  Entry[1] <Name>  bytes  48..95        │
-  Entry[2] knob1   bytes  96..143       │
-  Entry[3] knob2   bytes 144..191       │
-  Entry[4] knob3   bytes 192..239       ┘
+SonicStomp ::=  [OnOff entry]
+                [<Name> entry]
+                [knob entry]+        // one per parameter
+                                     // last knob has pedal_flags & 0x04
 ```
 
-Each entry has the same shape, with field meaning depending on entry kind:
+Each entry layout (corrected against v1's full survey of 128 ZDLs):
 
-```
+```c
 struct SonicStompEntry {                  // 48 bytes
-    char     name[12];        // +0   visible label, NUL-padded
-    uint32_t max;             // +12  max integer value (1 for OnOff, 100/150 for knobs)
-    uint32_t default_value;   // +16  default integer
-    uint32_t reserved_a[2];   // +20
-    uint32_t handler;         // +28  primary function pointer (see below)
-    uint32_t extra;           // +32  audio loop ptr (DLL entry only); else 0
-    uint32_t reserved_b[2];   // +36
-    uint32_t pedal_flag;      // +44  non-zero → controllable by expression pedal
-                              //      (per ZoomPedalFun's `checkme.py`)
+    char     name[12];        // +0x00  visible label, NUL-padded
+                              //        up to 12 chars on the name entry,
+                              //        up to 8 on parameter entries
+    uint32_t max_val;         // +0x0C  max integer value
+                              //        (0xFFFFFFFF on the name entry)
+    uint32_t default_val;     // +0x10  default integer
+    uint32_t pedal_max;       // +0x14  same as max_val if pedal-assignable,
+                              //        0 otherwise
+    uint32_t reserved_a;      // +0x18  usually 0; non-zero in some
+                              //        delay/pitch effects (sub-range?)
+    uint32_t func_ptr;        // +0x1C  PRIMARY handler (relocated, ABS32):
+                              //          OnOff entry  → onf
+                              //          name entry   → init
+                              //          knob entry   → <param>_edit
+    uint32_t audio_ptr;       // +0x20  audio loop ptr (relocated, ABS32);
+                              //        non-zero ONLY on the name entry,
+                              //        0 elsewhere
+    uint32_t getstr_ptr;      // +0x24  optional value-to-string formatter
+                              //        for display; 0 if none
+    uint32_t reserved_b;      // +0x28  usually 0
+    uint32_t pedal_flags;     // +0x2C  bitmask, see below
 };
 ```
 
-**Per-entry meaning of `handler`:**
+`pedal_flags` bitmask (`+0x2C`) — verified by reading
+`ZoomPedalFun-main`'s `ProcessFirmware1.py`:
 
-| Entry          | handler points to              | extra (+32)              |
-|----------------|--------------------------------|--------------------------|
-| `OnOff`        | `Fx_FLT_<Name>_onf`            | 0                        |
-| `<Name>` (DLL) | `Fx_FLT_<Name>_init`           | `Fx_FLT_<Name>` (audio)  |
-| knob entries   | `Fx_FLT_<Name>_<param>_edit`   | 0                        |
+| Mask   | Bit | Meaning                                                   |
+|--------|-----|-----------------------------------------------------------|
+| `0x04` | 2   | **End-of-table sentinel** — last parameter entry          |
+| `0x10` | 4   | Stereo parameter (affects width/balance)                  |
+| `0x28` | 3+5 | Tempo-synced (both bits required)                         |
+| any ≠0 | —   | Pedal-assignable (any non-zero value enables expression)  |
 
-The Exciter values, observed on disk:
+Common observed values: `0x00` (regular knob), `0x04` (last-param,
+not pedal), `0x10` (pedal-assignable, stereo), `0x14` (last + pedal +
+stereo), `0x38` (tempo-synced delay time).
 
-| Entry   | name     | max  | default | handler         | extra            |
-|---------|----------|------|---------|-----------------|------------------|
-| 0       | "OnOff"  | 1    | 0       | onf             | 0                |
-| 1       | "Exciter"| 0xFFFFFFFF | special | init        | audio loop       |
-| 2       | "Bass"   | 100  | 0       | loContour_edit  | 0                |
-| 3       | "Trebl"  | 100  | 0       | process_edit    | 0                |
-| 4       | "Level"  | 150  | 100     | outlv_edit      | 0                |
+**The Exciter values, observed on disk** (note +0x14 = 1 on the name
+entry — that's `pedal_max = 1`, common but its purpose is unclear):
 
-`max = 0xFFFFFFFF` on the DLL self-entry signals "this isn't a knob, it's
-the plugin itself" — the firmware skips it during knob iteration.
+| Entry   | name     | max        | default | pedal_max | func_ptr        | audio_ptr | flags   |
+|---------|----------|------------|---------|-----------|-----------------|-----------|---------|
+| 0       | "OnOff"  | 1          | 0       | 0         | onf             | 0         | 0x00    |
+| 1       | "Exciter"| 0xFFFFFFFF | 0       | 1         | init            | audio     | 0x00    |
+| 2       | "Bass"   | 100        | 0       | 0         | loContour_edit  | 0         | 0x00    |
+| 3       | "Trebl"  | 100        | 0       | 0         | process_edit    | 0         | 0x00    |
+| 4       | "Level"  | 150        | 100     | 0         | outlv_edit      | 0         | 0x14    |
 
-The five-entry shape implies a hard cap of **3 user knobs** for this
-SonicStomp variant. Effects with more knobs presumably use a longer
-SonicStomp; we'll figure that out when we hit it.
+**On disk, `func_ptr` and `audio_ptr` are zero** — the dynamic linker
+resolves them at load time from `.rela.dyn` ABS32 entries. Same for the
+descriptor symbol's address everywhere it's referenced (e.g. inside
+`Dll_<Name>`).
 
 ---
+
+### 3.1 Pagination — how >3 knobs work [v1-empirical, ⚠ source of bugs]
+
+`effectTypeImageInfo` declares **exactly 3 on-screen knob slots**, *not*
+the parameter count. The firmware paginates by walking the descriptor
+table from the name entry until the `pedal_flags & 0x04` sentinel,
+overlaying entries onto the 3 fixed slots three-at-a-time.
+
+> v1 tried `nknobs=9` in `effectTypeImageInfo` to "make pagination
+> explicit" — on hardware it triggered a fallback path that disabled
+> paging entirely and showed only 2 knobs. **Always use exactly 3 slots.**
+
+The `nknobs > 3` ⇒ broken-paging trap is *one* of the v1 pagination
+bugs. The other suspected bug is in **how runtime knob values reach
+the audio loop** — see §5.4.
 
 ## 4. `effectTypeImageInfo` — UI layout (212 bytes)
 
@@ -134,25 +176,29 @@ firmware where to *paint* things:
 ```
 offset  type    field
 ------  ------  -----
-   0    u32     0
-   4    u32     1
-   8    u32     0
-  12    u32     image width   (= 128)
-  16    u32     image height  (= 64)
-  20    u32*    picEffectType_<Name>  ← reloc
-  24    u32     ?  (Exciter: 32)
-  28    u32     ?  (Exciter: 17)
-  32    u32     knob_count    (= 3)
-  -- per-knob block (16 bytes), repeats knob_count times --
-  +0    u32     knob_id
+0x00    u32     0
+0x04    u32     1
+0x08    u32     0
+0x0C    u32     image width   (= 128)
+0x10    u32     image height  (= 64)
+0x14    u32*    picEffectType_<Name>  ← ABS32 reloc
+0x18    u32     unknown (0x1C or 0x20)
+0x1C    u32     unknown (0x18 or 0x19)
+0x20    u32     knob_count   = ALWAYS 3, see §3.1
+  -- per-knob block (16 bytes), 3 of these --
+  +0    u32     knob_id  (1-based parameter index;
+                          1 = OnOff, 2 = first knob, …)
   +4    u32     x  (top-left, in pixels)
   +8    u32     y
-  +12   u32*    -> _infoEffectTypeKnob_A_2  ← reloc
+  +12   u32*    -> _infoEffectTypeKnob_A_2  ← ABS32 reloc
   ...
-  remainder zero-padded (room for ~8 knobs total)
+  zero-padded to exactly 212 bytes total       [v1-empirical]
 ```
 
 Notes:
+* **The struct must be padded to exactly 212 bytes.** Smaller breaks
+  paging on hardware. With 3 knob entries the populated portion is
+  `0x20 + 4 + 3·16 = 84` bytes; the rest is zeros. [v1-empirical]
 * The picture is *not* embedded — it's a pointer to a separate `.const`
   blob. Editing artwork = editing `picEffectType_<Name>` and leaving
   this struct alone.
@@ -160,14 +206,11 @@ Notes:
   callback (see §5).
 * All three knobs in Exciter point to the *same* `_infoEffectTypeKnob_A_2`
   bitmap — knob shapes are shared.
-* CH_1.md mentions image dimensions are 128×64 in `effectTypeImageInfo`,
-  while only the *top* 128×40 is the FX picture; the lower band is for
-  knobs and labels painted by the firmware. So 128×64 is the
-  paintable area; 128×40 is what you draw.
 
-`_infoEffectTypeKnob_A_2` itself (24 bytes, in `.fardata`) is a tiny
-descriptor of the knob bitmap shape — width, height, inner-circle dims.
-Documented in CH_1.md.
+`_infoEffectTypeKnob_A_2` is a 24-byte struct in `.fardata`,
+**always exactly `{20, 15, 11, 0, 2, 0}` as six little-endian u32s**.
+[v1-empirical: field4=5 was tried once and froze the unit at FX-select
+time; field4=2 ships in all 128 stock ZDLs.]
 
 ---
 
@@ -269,6 +312,31 @@ So a clean pass-through is `Output += Effect` (when on) or `Output += 0`
   by writing a known-period sine-from-counter and measuring how it
   steps across calls.
 
+### 5.3.a Buffer-state struct field map [v1-confirmed]
+
+From `zoom-fx-modding-ref/diy/{rainsel,rtfm,div0}.asm` (three independent
+from-scratch effects, all with consistent A4-field accesses):
+
+```
+A4 = ctx (state pointer; arg 0)
+  ctx[1]   →  parameters table (an array of float values, see §5.4)
+  ctx[4]   →  Dry buffer    (float*, raw guitar-input signal)
+  ctx[5]   →  Fx  buffer    (float*, signal modified by upstream chain)
+  ctx[6]   →  Output buffer (float*, accumulator — ADD into this)
+  ctx[11]  →  "magic dest"  (must shuttle bytes from ctx[12])
+  ctx[12]  →  "magic src"
+```
+
+`ctx[11]` / `ctx[12]` are a side-channel the original effects all
+read-and-rewrite once per inner-loop iteration. Skipping the shuttle
+may break downstream effects; the safe pattern is to copy verbatim. The
+purpose is unknown.
+
+The audio loop processes **8 samples per channel × 2 channels = 16
+floats per call**, channel-interleaved as `LLLLLLLL RRRRRRRR`.
+Implementations use a 2-iteration outer loop over channels (`MVK 2,B0`)
+and 8 inline samples per inner block.
+
 ### 5.3 Init `Fx_FLT_<Name>_init`
 
 CH_2.md observed for LineSel: init calls `_onf`, `_edit_efx`, `_edit_out`
@@ -280,39 +348,139 @@ each parameter into the runtime by invoking the per-param handlers.
 For Exciter, init at `.text+0x5c0` (per `Fx_FLT_Exciter_init` symbol)
 should follow the same pattern — invoke onf, then each edit handler.
 
-### 5.4 DLL entry `Dll_<Name>`
+### 5.3.b Parameter table layout [⚠ partially unverified]
 
-The ELF entry point. Relocations show it loads pointers to both
-`SonicStomp` and `effectTypeImageInfo`, which means it returns/registers
-the pair as a "this is who I am" handshake. **[ASSUMPTION]** signature:
+`ctx[1]` points to a flat float array. Verified slots, used by
+all three diy/*.asm reference effects:
 
-```c
-struct DllInfo { SonicStomp *desc; effectTypeImageInfo *ui; };
-DllInfo* Dll_<Name>(void);
+```
+params[0]   on/off multiplier   (1.0 when on, 0.0 when off)
+params[4]   level multiplier    (= 1/max, e.g. 0.01 for max=100)
+params[5]   knob 1 raw value    (0..max as float)
+params[6]   knob 2 raw value
 ```
 
-To verify, disassemble `Dll_Exciter` at `.text+0x660`. (Eight
-instructions per the ofd; should be readable by hand.)
+Audio code typically computes a per-knob coefficient as
+`params[5] * params[4] * params[0]` once at the top of the function
+(producing a normalized `0..1` scaled by on/off), then applies it
+inside the sample loop.
+
+**Slots `params[7..]` are the central question.** v1's `totape9_zoom.c`
+indexed `params[5..13]` to read 9 knobs across 3 pages. The unit
+booted (`TOTAPE9_AUDIO.ZDL`), the effect was selectable, but knob
+behavior was buggy. Possible explanations, none yet proven:
+
+1. The firmware only fills `params[5..7]` (3 visible knobs) and the
+   audio loop must read the *currently visible* page.
+2. The firmware fills all `params[5..13]`, but only when handlers
+   write them — and v1's handlers were all `NOP_RETURN`.
+3. The slot stride is not contiguous; pages may live at different
+   offsets.
+
+**Test plan to settle this** (deferred to per-plugin experiments):
+   1. Build a 1-knob plugin (`gain/`) — if its single knob works with
+      NOP handlers, the firmware auto-populates `params[5]`.
+   2. If yes, build a 3-knob plugin — if all 3 work, slots 5..7 are
+      auto-populated for the visible page.
+   3. Then a 6-knob (2-page) plugin — instrument the audio loop to
+      output a tone whose frequency depends on `params[5..10]`. Listen
+      across page changes to map slot semantics.
+
+### 5.4 DLL entry `Dll_<Name>` [v1-empirical]
+
+The ELF `e_entry` is `Dll_<Name>`. It returns:
+
+* `B0` = address of the descriptor table **start (the OnOff entry)**,
+  not the name entry.
+* `A1` = address of `effectTypeImageInfo`.
+
+Both addresses are loaded via MVK/MVKH instruction pairs that are
+patched by `.rela.dyn` ABS_L16 + ABS_H16 relocations at load time.
+
+Body length matters. v1 tried an 8-instruction (32-byte) Dll function
+patterned after LOFIDLY — the unit booted but froze inconsistently on
+each FX-select event. Switching to a **verbatim 200-byte (50-instruction)
+copy of NoiseGate's Dll function**, with the 4 reloc points re-patched
+for the new descriptor + imageInfo addresses, produced a stable boot.
+The simplest working approach is therefore: don't write your own Dll
+function — splice in NoiseGate's. v1's `link_zdl.py` does exactly this
+and the constants are reproduced verbatim in v2's `build/linker.py`.
+
+### 5.5 Compile flags — the `--mem_model:data=far` trap [v1-empirical]
+
+Critical compiler flag for any C source file used in a ZDL:
+
+```
+cl6x --c99 --opt_level=2 --opt_for_space=3 -mv6740 --abi=eabi \
+     --mem_model:data=far -c your.c -o your.obj
+```
+
+Without `--mem_model:data=far`, the C compiler places small statics
+in `.bss` and addresses them via **B14-relative** loads (a.k.a. SBR /
+DP-relative). The Zoom firmware does *not* set B14 to a valid base
+before invoking your code, so any such load reads garbage and freezes
+the unit.
+
+With `--mem_model:data=far`, every static lives in its own `.far:<name>`
+section and is addressed via absolute MVKL / MVKH pairs (`R_C6000_ABS_L16`
++ `R_C6000_ABS_H16` relocations). Those *are* resolvable by the runtime
+linker.
+
+Putting the audio function into the `.audio` section is one
+`#pragma CODE_SECTION` away:
+
+```c
+#pragma CODE_SECTION(Fx_FLT_<Name>, ".audio")
+void Fx_FLT_<Name>(unsigned int *ctx) { ... }
+```
 
 ---
 
 ## 6. Memory map and constraints
 
-| Region        | Address                | Notes                                       |
-|---------------|------------------------|---------------------------------------------|
-| `.text`       | `0x00000000` upward    | Code. Read-only at runtime.                 |
-| `.const`      | `0x80000000` upward    | Read-only data (SonicStomp, picture, coefficients). |
-| `.fardata`    | `0x80000458` upward    | Writable; small (LineSel: 24 bytes total).  |
-| Stack         | `B15` provided by host | Don't overflow — no MMU, no guard page.     |
+| Region     | VA                            | Flags | Notes                                        |
+|------------|-------------------------------|-------|----------------------------------------------|
+| `.text`    | `0x00000000` upward           | r-x   | Firmware remaps to IRAM at load time.        |
+| `.const`   | `0x80000000` upward           | r--   | RO data: descriptor, image, coefficients.    |
+| `.fardata` | immediately after `.const`    | rw-   | Writable state. **memsz must equal filesz**. |
+| Stack      | `B15` provided by host        | rw-   | Don't overflow — no MMU, no guard page.      |
 
-* **No malloc.** All state is statically allocated (globals in
-  `.fardata`, locals on stack).
+* **`.fardata` must have `memsz == filesz`** [v1-empirical]. Setting
+  `memsz > filesz` (i.e. requesting BSS zero-fill) overflows into
+  firmware-managed memory and corrupts the parameter array, breaking
+  paging. Stock effects all set `memsz = filesz` and put their
+  initialised state in `.const` lookup tables, accumulating runtime
+  state in a firmware-provided per-effect scratch buffer.
+* The `.fardata` section's leading 24 bytes are *always*
+  `_infoEffectTypeKnob_A_2 = {20, 15, 11, 0, 2, 0}`. Any user state
+  follows from offset 24.
+* **No malloc.** All state is statically allocated.
 * **No FPU exceptions** worth catching — the C6740 has hardware float;
   treat NaN/Inf the same as Airwindows desktop builds do.
-* **No threading.** Audio loop is called from a single audio task; init
-  and edit handlers from a (presumably) higher-priority UI task. Don't
-  assume atomicity; **[ASSUMPTION]** simple word writes are the de
-  facto sync primitive.
+* **No `sinf`/`cosf`/`tanf`/`logf` in the runtime** — none of the
+  stock effects use them, so they aren't in firmware's RTS. Either
+  inline approximations (v1's `totape9_zoom.c` has `zoom_sinf`,
+  `zoom_logf`, `zoom_tanf` examples) or table-lookups.
+* **`__c6xabi_divf` (float divide) IS available** — extracted from a
+  stock ZDL, ships as `build/divf_rts.bin`, gets spliced into `.text`.
+
+## 6.1 SONAME — the `gid` trap [v1-empirical]
+
+The `.dynamic` `DT_SONAME` string **must follow the pattern**
+`ZDL_<GID_PREFIX>_<Name>.out`, where `<GID_PREFIX>` matches the
+3-letter category code for the `gid` byte in the ZDL header:
+
+| gid  | Category    | SONAME prefix |
+|------|-------------|---------------|
+| 0x01 | Dynamics    | `ZDL_DYN_`    |
+| 0x02 | Filter      | `ZDL_FLT_`    |
+| 0x06 | Modulation  | `ZDL_MOD_`    |
+| 0x07 | SFX         | `ZDL_SFX_`    |
+| 0x08 | Delay       | `ZDL_DLY_`    |
+| 0x09 | Reverb      | `ZDL_REV_`    |
+
+Mismatching prefix and gid causes the firmware to fall back to a
+2-knob no-page render mode regardless of what the descriptor says.
 
 ---
 
@@ -363,17 +531,33 @@ unchanged — the SIZE field is recomputed from `len(elf)` on save.
 
 ## 9. Open questions to settle empirically
 
-* Exact `BufferState` field offsets (only the *count* of pointers is
-  known from CH_2.md).
-* Block size in samples.
-* Whether `init` runs once at firmware boot or every time the user
-  selects the effect in a patch.
-* Meaning of the four "unknown" SonicStomp-entry words at +20..+27 and
-  +36..+43.
-* How the `pedal_flag` at +44 changes runtime behavior (edit handler
-  invocation rate? a separate pedal-callback?).
-* The `A6[31]` host callback: signature, what it returns for OnOff
-  (which has only values 0/1) vs continuous knobs.
+After incorporating v1's findings the list shrinks to:
 
-These are the things to pin down on the first GAIN flash. Each gets one
-small experiment on the unit.
+1. **`params[5..]` indexing semantics** (§5.3.b) — single most important
+   open question; **the v1 pagination bug lives here**. Test with the
+   1-knob → 3-knob → 6-knob plugin progression.
+2. **Whether handlers must write to `params[]`, or if the firmware
+   auto-populates** (also §5.3.b). NOP_RETURN handlers were enough for
+   `TOTAPE9_AUDIO.ZDL` to boot and be selectable; whether the knobs
+   *actually do anything* with NOP handlers is the GAIN test.
+3. The two unknown words at `effectTypeImageInfo` offsets 0x18 / 0x1C
+   (Exciter has 32 / 17; LineSel has different values). Stock ZDLs all
+   work with these as observed; we copy them. Their semantic role is
+   irrelevant for now.
+4. The `+0x18` reserved word in each SonicStomp entry — non-zero in
+   delay/pitch effects only. May encode a sub-range or sub-tick value.
+5. The `ctx[11]` / `ctx[12]` "magic shuttle" in the audio loop — what
+   bytes are these, and what breaks if we skip the read-and-rewrite?
+
+Lower priority — already resolved well enough for v2:
+
+* Sample format: float32 ✓
+* Sample rate: 44.1 kHz ✓
+* Per-call block size: 8 samples per channel × 2 channels ✓
+* C6000 calling convention: standard EABI ✓
+* SONAME pattern: `ZDL_<GID>_<Name>.out` ✓
+* `--mem_model:data=far` requirement ✓
+* `.fardata` `memsz == filesz` ✓
+* `effectTypeImageInfo` exactly 212 bytes, exactly 3 knob slots ✓
+* `Dll_<Name>` body: NoiseGate verbatim, 200 bytes ✓
+* `KNOB_INFO = {20, 15, 11, 0, 2, 0}` ✓
