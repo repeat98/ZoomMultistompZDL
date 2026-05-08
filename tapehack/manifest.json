@@ -1,0 +1,32 @@
+{
+  "effect_name": "TapeHack",
+  "comment": "Airwindows TapeHack port. Drive into 11th-order Taylor sin, then output trim. Stateless, audibly aggressive.",
+
+  "audio_func_name": "Fx_FLT_TapeHack",
+
+  "gid":  2,
+  "gid_comment": "0x02 = Filter category. Same as GAIN/PurestDr.",
+
+  "fxid": 402,
+  "fxid_comment": "0x0192 — adjacent to GAIN (0x0190) and PurestDr (0x0191).",
+
+  "fxid_version": "1.00",
+  "flags_byte":   1,
+
+  "params": [
+    {
+      "name":    "Drive",
+      "max":     100,
+      "default": 50,
+      "comment": "params[5]. Input gain 0..10x; clipped at +/-2.305929 before the sin polynomial."
+    },
+    {
+      "name":    "Output",
+      "max":     100,
+      "default": 75,
+      "comment": "params[6]. Output trim 0..0.9239x. Default 75 lands at ~0.69x to leave headroom."
+    }
+  ],
+
+  "audio_nop": false
+}

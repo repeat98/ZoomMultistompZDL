@@ -34,12 +34,13 @@
 
 #define ZDL_PTR(type, word)  ((type)(uintptr_t)(word))
 
-/* Persistent per-channel state.  --mem_model:data=far places these in
- * .far:previousSampleL / .far:previousSampleR sections; our linker
- * collects all .far* SHT_NOBITS sections into the .fardata segment and
- * addresses them via absolute MVKL/MVKH pairs. */
-static float previousSampleL;
-static float previousSampleR;
+/* DIAGNOSTIC build: previousSampleL/R were originally `static` (in .far
+ * BSS), but the .fardata segment the firmware maps is exactly 24 bytes
+ * (KNOB_INFO only) — every stock ZDL has the same. Writing to
+ * FARDATA_VA + 24 traps the DSP and freezes the pedal on load. Until we
+ * figure out the proper per-effect state mechanism (probably a ctx
+ * pointer slot), keep them as stack locals: state is lost across blocks
+ * but at 48kHz/8-sample blocks the algorithm should still drive. */
 
 
 /* sin(x) approximation, ~3-decimal accuracy, ample for audio.
@@ -84,8 +85,10 @@ void Fx_FLT_PurestDr(unsigned int *ctx)
     if (intensity < 0.0f) intensity = 0.0f;
     if (intensity > 1.0f) intensity = 1.0f;
 
-    /* Block layout: 8 L samples then 8 R samples.  Process per-channel
-     * so each channel's previousSample stays causal. */
+    /* Block layout: 8 L samples then 8 R samples.  Per-block state
+     * (previousSample reset to 0 each block, see top-of-file note). */
+    float previousSampleL = 0.0f;
+    float previousSampleR = 0.0f;
     int i;
     for (i = 0; i < 8; i++) {
         float dry   = fxBuf[i];

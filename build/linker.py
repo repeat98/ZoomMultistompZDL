@@ -96,6 +96,7 @@ SHT_RELA      = 4
 SHT_HASH      = 5
 SHT_DYNAMIC   = 6
 SHT_NOBITS    = 8
+SHT_REL       = 9
 SHT_DYNSYM    = 11
 SHF_WRITE     = 1
 SHF_ALLOC     = 2
@@ -203,7 +204,10 @@ class LinkerConfig:
         "knob1_edit": 0x060,   # writes params[5] (knob_id=2)
         "knob2_edit": 0x0AC,   # writes params[6] (knob_id=3)
         "init":       0x0F8,   # has unresolved Coe-table refs; do NOT use
-        # 0x140  __call_stub  — referenced PC-relatively from the handlers
+        "call_stub":  0x140,   # __c6xabi_call_stub — cl6x emits indirect
+                               # calls through this when a function-pointer
+                               # call needs register-bank switching, e.g.
+                               # the Taylor-expansion thunks in TapeHack
         # 0x180  Dll_LineSel  — DEAD code, has stale relocs; never called
         "pop_rts":    0x1A0,   # __c6xabi_pop_rts (32 bytes)
         "push_rts":   0x1C0,   # __c6xabi_push_rts (32 bytes)
@@ -316,11 +320,16 @@ class ObjFile:
         raise ValueError("no .symtab")
 
     def _load_relocs(self) -> None:
+        # TI cl6x emits SHT_RELA when any reloc has a non-zero addend (e.g.
+        # `previousSampleR @ +4`), and falls back to SHT_REL when all addends
+        # are zero. We have to handle both — if we silently skip SHT_REL,
+        # external calls (__c6xabi_divf, push_rts, pop_rts) link as
+        # jumps-to-zero and crash the DSP at first audio callback.
         self.relocs: dict[int, list[dict]] = {}
         for s in self.sections:
             target_idx = s['info']
+            entries = []
             if s['type'] == SHT_RELA:
-                entries = []
                 for i in range(s['size'] // 12):
                     off = i * 12
                     info = struct.unpack_from('<I', s['data'], off + 4)[0]
@@ -330,6 +339,17 @@ class ObjFile:
                         'sym_idx': info >> 8,
                         'addend': struct.unpack_from('<i', s['data'], off + 8)[0],
                     })
+            elif s['type'] == SHT_REL:
+                for i in range(s['size'] // 8):
+                    off = i * 8
+                    info = struct.unpack_from('<I', s['data'], off + 4)[0]
+                    entries.append({
+                        'offset': struct.unpack_from('<I', s['data'], off)[0],
+                        'type':   info & 0xFF,
+                        'sym_idx': info >> 8,
+                        'addend': 0,
+                    })
+            if entries:
                 self.relocs.setdefault(target_idx, []).extend(entries)
 
     def get_section(self, name: str) -> Optional[dict]:
@@ -741,16 +761,33 @@ def link(cfg: LinkerConfig) -> None:
         knob_positions=cfg.knob_positions,
     )
     const_data.extend(info_bytes)
+
+    # Append the .obj's own .const data (compiler-emitted constants — float
+    # divisor tables, jump tables, etc.). Without this, any cross-section
+    # MVKL/MVKH reference into .const links unresolved and the audio code
+    # reads zero. TapeHack's Taylor coefficients hit this path.
+    obj_const_sec = obj.get_section('.const')
+    obj_const_off_in_const = None
+    if obj_const_sec and obj_const_sec['size'] > 0:
+        obj_const_off_in_const = _align_up(len(const_data), max(obj_const_sec['align'], 4))
+        _pad_to(const_data, obj_const_off_in_const)
+        const_data.extend(obj_const_sec['data'])
+
     CONST_SIZE = _align_up(len(const_data), 8)
     _pad_to(const_data, CONST_SIZE)
     FARDATA_VA   = CONST_VA + CONST_SIZE
     KNOB_INFO_VA = FARDATA_VA
     OUR_FARDATA_VA = FARDATA_VA + len(_KNOB_INFO)
 
+    if obj_const_sec and obj_const_off_in_const is not None:
+        section_va[obj_const_sec['idx']] = CONST_VA + obj_const_off_in_const
+
     print(f"\n  .const layout:")
     print(f"    picture    @ 0x{0:04X}  ({pic_end})")
     print(f"    descriptor @ 0x{DESC_OFF_IN_CONST:04X}  ({len(desc_bytes)})")
     print(f"    imageInfo  @ 0x{INFO_OFF_IN_CONST:04X}  ({len(info_bytes)})")
+    if obj_const_sec and obj_const_off_in_const is not None:
+        print(f"    obj.const  @ 0x{obj_const_off_in_const:04X}  ({obj_const_sec['size']})")
     print(f"    total        0x{CONST_SIZE:X}")
     print(f"    .const VA    0x{CONST_VA:08X}")
     print(f"    .fardata VA  0x{FARDATA_VA:08X}")
@@ -989,9 +1026,10 @@ def link(cfg: LinkerConfig) -> None:
     cur = ELF_HDR_SIZE + PHDR_TABLE
     text_file_off = _align_up(cur, 32);                cur = text_file_off + TEXT_TOTAL
     const_file_off = _align_up(cur, 8);                cur = const_file_off + CONST_SIZE
-    # .fardata: only KNOB_INFO ships in the file. memsz==filesz; no BSS.
-    # [v1-empirical: memsz>filesz overflows into firmware param memory,
-    # corrupts paging.]
+    # .fardata: only KNOB_INFO ships in the file. memsz==filesz==24.
+    # All 128 stock ZDLs match this; deviating (even to grow into BSS) freezes
+    # the pedal on load. Static far variables are not supported — any plugin
+    # state must come through ctx pointers.
     fardata_file_off = _align_up(cur, 4);              cur = fardata_file_off + len(_KNOB_INFO)
     rela_dyn_file_off = _align_up(cur, 4);             cur = rela_dyn_file_off + len(rela_dyn_data)
     rela_plt_file_off = cur                            # empty
@@ -1088,7 +1126,7 @@ def link(cfg: LinkerConfig) -> None:
     _p32(elf, p+0x10, CONST_SIZE); _p32(elf, p+0x14, CONST_SIZE)
     _p32(elf, p+0x18, 4); _p32(elf, p+0x1C, 8)
     p += PHDR_SIZE
-    # PT_LOAD .fardata rw-, memsz == filesz, no BSS  [v1-empirical]
+    # PT_LOAD .fardata rw-, memsz == filesz, no BSS extension. [v1-empirical]
     _p32(elf, p+0x00, PT_LOAD); _p32(elf, p+0x04, fardata_file_off)
     _p32(elf, p+0x08, FARDATA_VA); _p32(elf, p+0x0C, FARDATA_VA)
     _p32(elf, p+0x10, len(_KNOB_INFO)); _p32(elf, p+0x14, len(_KNOB_INFO))
