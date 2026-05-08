@@ -23,6 +23,7 @@ PLUGINS = [
     ("gain",        ROOT / "gain"        / "build.py"),
     ("purestdrive", ROOT / "purestdrive" / "build.py"),
     ("tapehack",    ROOT / "tapehack"    / "build.py"),
+    ("bitcrush",    ROOT / "bitcrush"    / "build.py"),
 ]
 
 

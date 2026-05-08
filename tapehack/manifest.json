@@ -17,14 +17,14 @@
     {
       "name":    "Drive",
       "max":     100,
-      "default": 50,
-      "comment": "params[5]. Input gain 0..10x; clipped at +/-2.305929 before the sin polynomial."
+      "default": 0,
+      "comment": "params[5]. Wet/dry blend AND preamp boost combined. 0 = bit-perfect dry, 100 = pure saturated polynomial at 3x preamp. Default 0 so the user starts clean and dials drive in."
     },
     {
       "name":    "Output",
       "max":     100,
-      "default": 75,
-      "comment": "params[6]. Output trim 0..0.9239x. Default 75 lands at ~0.69x to leave headroom."
+      "default": 100,
+      "comment": "params[6]. Output trim 0..0.9x. Default 100 = unity (~0.9x) so drive=0 with output=100 is true passthrough loudness."
     }
   ],
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build TapeHack.ZDL from tapehack.c + manifest.json."""
+"""Build BitCrush.ZDL from bitcrush.c + manifest.json."""
 
 from __future__ import annotations
 import json
@@ -19,11 +19,7 @@ CL6X    = TI_ROOT / "bin" / "cl6x"
 CFLAGS = [
     "--c99",
     "--opt_level=2",
-    # Skip --opt_for_space: at level 3 cl6x emits __local_call_stub thunks
-    # in .text that dispatch through an empty $C$Tn table (TI's runtime
-    # linker normally fills these with __c6xabi_divf etc.; ours doesn't).
-    # The thunk branches to address 0 and freezes the pedal on load.
-    # Plugin code is small enough that size opt isn't worth the indirection.
+    # No --opt_for_space — see feedback_linker_obj_const.md.
     "-mv6740",
     "--abi=eabi",
     "--mem_model:data=far",
@@ -34,12 +30,12 @@ CFLAGS = [
 def main() -> None:
     manifest = json.loads((HERE / "manifest.json").read_text())
 
-    src_c   = HERE / "tapehack.c"
-    obj     = HERE / "tapehack.obj"
+    src_c   = HERE / "bitcrush.c"
+    obj     = HERE / "bitcrush.obj"
     out_zdl = ROOT / "dist" / f"{manifest['effect_name']}.ZDL"
     out_zdl.parent.mkdir(exist_ok=True)
 
-    print(f"[tapehack] compiling {src_c.name} → {obj.name}")
+    print(f"[bitcrush] compiling {src_c.name} → {obj.name}")
     subprocess.run(
         [str(CL6X), *CFLAGS, "-c", str(src_c), f"--output_file={obj}"],
         check=True,
@@ -60,7 +56,7 @@ def main() -> None:
     )
     link(cfg)
 
-    print(f"\n[tapehack] done → {out_zdl}")
+    print(f"\n[bitcrush] done → {out_zdl}")
 
 
 if __name__ == "__main__":
