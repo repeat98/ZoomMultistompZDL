@@ -1,0 +1,33 @@
+{
+  "effect_name": "PurestDr",
+  "comment": "Airwindows PurestDrive port. Adaptive sin-based saturation. First real Airwindows port — exercises .fardata state and inline sinf approximation.",
+
+  "audio_func_name": "Fx_FLT_PurestDr",
+  "_audio_func_comment": "matches the symbol name in purestdrive.c",
+
+  "gid":  2,
+  "gid_comment": "0x02 = Filter. MS-70CDR has no Drive (0x03) category. Filter places it next to A-Filter and friends, fine for now.",
+
+  "fxid": 401,
+  "fxid_comment": "0x0191 — one above GAIN to keep them adjacent in the menu.",
+
+  "fxid_version": "1.00",
+  "flags_byte":   1,
+
+  "params": [
+    {
+      "name":    "Drive",
+      "max":     100,
+      "default": 50,
+      "comment": "params[5]. Audible saturation amount, 0..100. Scaled 8x in the audio function (matches the empirical scaling we tuned for GAIN)."
+    },
+    {
+      "name":    "Mix",
+      "max":     100,
+      "default": 100,
+      "comment": "params[6]. UI placeholder for now — second knob is required because firmware does not support nknobs=1. Real wet/dry blend can come later."
+    }
+  ],
+
+  "audio_nop": false
+}

@@ -38,7 +38,8 @@ def main() -> None:
 
     src_c   = HERE / "gain.c"
     obj     = HERE / "gain.obj"
-    out_zdl = HERE / f"{manifest['effect_name']}.ZDL"
+    out_zdl = ROOT / "dist" / f"{manifest['effect_name']}.ZDL"
+    out_zdl.parent.mkdir(exist_ok=True)
 
     print(f"[gain] compiling {src_c.name} → {obj.name}")
     subprocess.run(

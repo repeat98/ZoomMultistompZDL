@@ -22,7 +22,8 @@ from zdl import Zdl, ZdlInfo, patch_label  # noqa: E402
 def main() -> None:
     manifest = json.loads((HERE / "manifest.json").read_text())
     template = (HERE / manifest["template"]).resolve()
-    output   = (HERE / manifest["output"]).resolve()
+    output   = HERE.parent / "dist" / manifest["output"]
+    output.parent.mkdir(exist_ok=True)
 
     print(f"[hello] template: {template}")
     z = Zdl.load(template)

@@ -199,10 +199,14 @@ class LinkerConfig:
     # the blob: defaults match LineSel's layout.
     handler_blob_path: Optional[str | os.PathLike] = None
     handler_funcs: dict[str, int] = field(default_factory=lambda: {
-        "onf":        0x00,    # OnOff toggle: writes params[0]
-        "knob1_edit": 0x60,    # writes params[5] (knob_id=2)
-        "knob2_edit": 0xAC,    # writes params[6] (knob_id=3)
-        "init":       0xF8,    # has unresolved Coe-table refs; do NOT use
+        "onf":        0x000,   # OnOff toggle: writes params[0]
+        "knob1_edit": 0x060,   # writes params[5] (knob_id=2)
+        "knob2_edit": 0x0AC,   # writes params[6] (knob_id=3)
+        "init":       0x0F8,   # has unresolved Coe-table refs; do NOT use
+        # 0x140  __call_stub  — referenced PC-relatively from the handlers
+        # 0x180  Dll_LineSel  — DEAD code, has stale relocs; never called
+        "pop_rts":    0x1A0,   # __c6xabi_pop_rts (32 bytes)
+        "push_rts":   0x1C0,   # __c6xabi_push_rts (32 bytes)
     })
 
     # Audio-NOP override. When True, the audio function's first 32 bytes
@@ -779,6 +783,18 @@ def link(cfg: LinkerConfig) -> None:
 
     if '__c6xabi_divf' in undefined:
         sym_addr[undefined['__c6xabi_divf']] = TEXT_VA + DIVF_OFF
+
+    # Compiler-emitted register save/restore helpers — resolve to the
+    # spliced LineSel copies if present.  Without these, any moderately
+    # complex audio function (anything that spills to stack) would link
+    # as unresolved and crash at first call.
+    for ext_name, blob_key in [
+        ('__c6xabi_push_rts', 'push_rts'),
+        ('__c6xabi_pop_rts',  'pop_rts'),
+        ('__c6xabi_call_stub','call_stub'),
+    ]:
+        if ext_name in undefined and blob_key in handler_va:
+            sym_addr[undefined[ext_name]] = handler_va[blob_key]
 
     for name, idx in undefined.items():
         if idx not in sym_addr:
