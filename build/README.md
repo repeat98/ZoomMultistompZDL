@@ -20,7 +20,7 @@ ports replace the ELF; everything else stays.
 ## Repository layout
 
 ```
-airwindowsZoom_v2/
+ZoomMultistompZDL/
 ├── README.md                  # top-level overview for new contributors
 ├── build/
 │   ├── ABI.md                 # authoritative runtime ABI write-up

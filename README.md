@@ -31,6 +31,22 @@ The repo holds:
 
 ---
 
+## Quick start
+
+```bash
+git clone https://github.com/repeat98/ZoomMultistompZDL.git
+cd ZoomMultistompZDL
+python3 build_all.py             # all plugins → ./dist/*.ZDL
+```
+
+You'll need the TI C6000 toolchain installed (see "Toolchain prerequisites"
+below) for any build that compiles C — the HELLO plugin doesn't, so it's
+the fastest way to confirm the Python side works on your machine:
+
+```bash
+python3 build_all.py hello       # → dist/HELLO.ZDL
+```
+
 ## Hardware target
 
 * **Pedal:** Zoom MS-70CDR (firmware 2.10).
@@ -79,7 +95,7 @@ MS-70CDR has been hardware-tested.
 ## Repository layout
 
 ```
-airwindowsZoom_v2/
+ZoomMultistompZDL/
 ├── README.md                ← this file
 ├── build/
 │   ├── ABI.md               authoritative runtime ABI write-up — start here
