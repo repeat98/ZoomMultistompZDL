@@ -15,16 +15,22 @@
 
   "params": [
     {
+      "name":    "Input",
+      "max":     100,
+      "default": 50,
+      "comment": "params[5]. Pre-saturation level trim 0..2x. Default 50 = unity (1x). Knob 1, knob_id=2, LineSel knob1_edit handler."
+    },
+    {
       "name":    "Drive",
       "max":     100,
       "default": 0,
-      "comment": "params[5]. Wet/dry blend AND preamp boost combined. 0 = bit-perfect dry, 100 = pure saturated polynomial at 3x preamp. Default 0 so the user starts clean and dials drive in."
+      "comment": "params[6]. Wet/dry blend AND preamp boost combined. 0 = bit-perfect dry, 100 = saturated polynomial at 3x preamp. Knob 2, knob_id=3, LineSel knob2_edit handler."
     },
     {
       "name":    "Output",
       "max":     100,
       "default": 100,
-      "comment": "params[6]. Output trim 0..0.9x. Default 100 = unity (~0.9x) so drive=0 with output=100 is true passthrough loudness."
+      "comment": "params[7]. Post trim 0..0.9x. Knob 3, knob_id=4, AIR knob3 (mix_edit) handler. First v2 plugin to exercise the 3rd-knob slot — UNVERIFIED on hardware (see ABI.md §5.3.b)."
     }
   ],
 

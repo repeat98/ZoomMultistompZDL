@@ -18,12 +18,13 @@ DIST = ROOT / "dist"
 
 # Each entry: (display name, path to its build.py).  Keep ordered so the
 # linker module gets the same exercise across runs.
+PLUGIN_DIR = ROOT / "src" / "airwindows"
 PLUGINS = [
-    ("hello",       ROOT / "hello"       / "build.py"),
-    ("gain",        ROOT / "gain"        / "build.py"),
-    ("purestdrive", ROOT / "purestdrive" / "build.py"),
-    ("tapehack",    ROOT / "tapehack"    / "build.py"),
-    ("bitcrush",    ROOT / "bitcrush"    / "build.py"),
+    ("hello",       PLUGIN_DIR / "hello"       / "build.py"),
+    ("gain",        PLUGIN_DIR / "gain"        / "build.py"),
+    ("purestdrive", PLUGIN_DIR / "purestdrive" / "build.py"),
+    ("tapehack",    PLUGIN_DIR / "tapehack"    / "build.py"),
+    ("bitcrush",    PLUGIN_DIR / "bitcrush"    / "build.py"),
 ]
 
 

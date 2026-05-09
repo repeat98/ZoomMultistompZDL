@@ -14,15 +14,17 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "build"))
+ROOT = HERE.parent.parent.parent      # src/airwindows/hello/build.py → repo root
+sys.path.insert(0, str(ROOT / "build"))
 
 from zdl import Zdl, ZdlInfo, patch_label  # noqa: E402
 
 
 def main() -> None:
     manifest = json.loads((HERE / "manifest.json").read_text())
-    template = (HERE / manifest["template"]).resolve()
-    output   = HERE.parent / "dist" / manifest["output"]
+    # Template paths in manifest.json are repo-root-relative.
+    template = (ROOT / manifest["template"]).resolve()
+    output   = ROOT / "dist" / manifest["output"]
     output.parent.mkdir(exist_ok=True)
 
     print(f"[hello] template: {template}")

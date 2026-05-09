@@ -21,16 +21,24 @@ ports replace the ELF; everything else stays.
 
 ```
 airwindowsZoom_v2/
+├── README.md                  # top-level overview for new contributors
 ├── build/
+│   ├── ABI.md                 # authoritative runtime ABI write-up
+│   ├── linker.py              # static linker (.obj → .ZDL)
 │   ├── zdl.py                 # ZDL container parser/writer + label patcher
+│   ├── linesel_handlers.bin   # onf + knob1 + knob2 + RTS helpers (LineSel)
+│   ├── air_knob3_edit.bin     # knob3 edit handler (AIR mix_edit)
+│   ├── divf_rts.bin           # __c6xabi_divf RTS code
 │   └── README.md              # this file
-├── hello/                     # the minimal "Hello World" plugin
-│   ├── manifest.json
-│   ├── build.py
-│   └── HELLO.ZDL
-├── working_zdls/              # ~830 ZDLs across all Zoom Multistomp models,
-│   │                          # used as templates / references
-│   └── MS-70CDR_*.ZDL
+├── src/
+│   └── airwindows/
+│       ├── hello/             # minimal pass-through, validates flash/boot
+│       ├── gain/              # 1-knob volume trim
+│       ├── purestdrive/       # Airwindows PurestDrive (1 knob)
+│       ├── tapehack/          # Airwindows TapeHack (3 knobs)
+│       └── bitcrush/          # bit/SR crusher (1 knob)
+├── docs/CONTRIBUTING.md       # open questions + workflow rules
+├── working_zdls/              # ~830 stock ZDLs (templates / references)
 ├── firmware/                  # MS-70CDR firmware blobs (boot/Main/FS/Preset)
 ├── airwindows-ref/            # Airwindows source (reference; future ports)
 ├── zoom-fx-modding-ref/       # third-party RE notes, picture en/decoder
@@ -160,7 +168,7 @@ See `zoom-fx-modding-ref/library/CH_3.md` for click-by-click setup.
 
 The pedal accepts a single firmware image, not loose ZDLs. Workflow:
 
-1. `python3 hello/build.py` → `hello/HELLO.ZDL`.
+1. `python3 build_all.py hello` → `dist/HELLO.ZDL`.
 2. Open `Zoom-Firmware-Editor-master/ZoomFirmwareEditor.jar`.
 3. Load the official MS-70CDR firmware (the `.bin` Zoom distributes).
    Backup blobs are in [firmware/](../firmware/) (`boot.bin`, `Main.bin`,
@@ -185,19 +193,17 @@ The pedal accepts a single firmware image, not loose ZDLs. Workflow:
 
 ## Workflow for a new Airwindows port
 
-The intended pattern, once we go past HELLO:
+See the recipe in the [top-level README](../README.md#adding-a-new-effect--a-5-step-recipe).
+In short:
 
-1. Pick an Airwindows plugin from `airwindows-ref/`.
-2. Pick a stock ZDL whose **shape** matches (mono in/out vs stereo,
-   knob count) — e.g. AIR.ZDL for a one-knob filter, EXCITER.ZDL for a
-   two-knob filter. Copy it into a new directory analogous to `hello/`.
-3. Re-implement the DSP as a TI C6000 ELF that exports the
-   `Fx_FLT_<Name>_*` symbol set (see "How a ZDL is structured internally"
-   above).
-4. Write `manifest.json` declaring label, picture, knob positions, and
-   INFO sort index.
-5. `build.py` swaps in the new ELF, repaints the picture, relabels.
-6. Flash via Zoom Firmware Editor and audition.
+1. Pick an Airwindows plugin from [airwindows-ref/](../airwindows-ref/).
+2. Copy [src/airwindows/gain/](../src/airwindows/gain/) as a
+   skeleton; rename and edit `<name>.c`, `manifest.json`, and `build.py`.
+3. Add an entry to [build_all.py](../build_all.py).
+4. `python3 build_all.py <name>` → ZDL drops into `dist/`.
+5. Flash via Zoom Effect Manager (or the bundled Firmware Editor) and
+   audition. Start with `audio_nop: true` to confirm the build is
+   structurally OK before exercising the DSP.
 
 `build/zdl.py` is the only piece of the container layer; it is small on
 purpose. As we hit edge cases (BCAB/CABI sections in cab effects, larger

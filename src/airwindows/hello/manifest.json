@@ -2,7 +2,7 @@
   "name": "HELLO",
   "comment": "Smallest functional ZDL: pass-through DSP from the LineSel template, relabeled. Used to validate the build / flash / boot loop end-to-end before porting any real DSP.",
 
-  "template": "../working_zdls/MS-70CDR_LINESEL.ZDL",
+  "template": "working_zdls/MS-70CDR_LINESEL.ZDL",
   "output":   "HELLO.ZDL",
 
   "label": {

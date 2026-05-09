@@ -10,14 +10,14 @@
  * memory needed, so this sidesteps the unsolved-on-MS-70CDR static far
  * BSS problem.
  *
- * Knobs:
- *   Drive  (params[5])  inputGain 0..10x
- *   Output (params[6])  outputGain 0..0.9239 (matches stock airwindows)
+ * Knobs (descriptor order, mapped to params[5..7]):
+ *   Input  (params[5])  pre-saturation level trim, 0..2x
+ *   Drive  (params[6])  preamp boost AND wet/dry blend
+ *   Output (params[7])  post trim, 0..0.9x  — uses AIR knob3 blob
  *
- * Original TapeHack has a third "Wet" knob; we hardcode wet=1 because
- * the LineSel handler blob we splice in only provides edit handlers for
- * knobs 1+2. Adding wet means extracting a knob3 edit handler from a
- * stock 3-knob effect (AIR is the obvious candidate).
+ * Adding the 3rd knob is the next experiment in ABI.md §5.3.b: AIR's
+ * mix_edit handler (76 bytes, 0 relocs) is spliced for knob 3, and the
+ * test is whether params[7] arrives populated when the user turns it.
  *
  * Skipped from the desktop original:
  *   - 32-bit FP dither (would need frexpf/pow)
@@ -31,16 +31,15 @@
 #define ZDL_PTR(type, word)  ((type)(uintptr_t)(word))
 
 
-/* params[5] / params[6] arrive scaled by ~0.14 at full knob (LineSel
- * handler convention). MS-70CDR's effect-loop signal is much hotter
- * than -15dBFS guitar, so even unity through the Taylor polynomial
- * saturates audibly. We use Drive as a wet/dry blend AND preamp control
- * simultaneously: at drive=0, output is bit-perfect dry; as drive
- * ramps, preamp grows 1x..3x and wet mix grows 0..100%. Output is a
- * straight 0..0.9x trim with a hair of headroom for the polynomial's
- * ~1.08 peak. */
-#define DRIVE_NORM    (1.0f / 0.14f)         /* raw 0..0.14 -> intensity 0..1 */
-#define OUTPUT_SCALE  (0.9f / 0.14f)         /* raw 0..0.14 -> 0..0.9x */
+/* params[5] / params[6] / params[7] arrive scaled by ~0.14 at full knob
+ * (LineSel/AIR handler convention). MS-70CDR's effect-loop signal is
+ * hotter than -15dBFS guitar, so even unity through the Taylor polynomial
+ * saturates audibly. Drive is a wet/dry blend AND preamp control
+ * combined; Input lets the user push or attenuate before saturation;
+ * Output trims after. */
+#define KNOB_NORM     (1.0f / 0.14f)         /* raw 0..0.14 → 0..1 */
+#define INPUT_SCALE   (2.0f / 0.14f)         /* raw 0..0.14 → 0..2x preamp */
+#define OUTPUT_SCALE  (0.9f / 0.14f)         /* raw 0..0.14 → 0..0.9x */
 #define MAX_BOOST     2.0f                   /* preamp at full drive = 1 + MAX_BOOST */
 #define CLIP_LIMIT    2.305929f
 
@@ -101,8 +100,9 @@ void Fx_FLT_TapeHack(unsigned int *ctx)
      * audio at onoff=0 and bypass becomes a hard mute. */
     if (params[0] < 0.5f) return;
 
-    float intensity  = params[5] * DRIVE_NORM;            /* 0..1 */
-    float outputGain = params[6] * OUTPUT_SCALE;          /* 0..0.9 */
+    float inputGain  = params[5] * INPUT_SCALE;           /* 0..2x */
+    float intensity  = params[6] * KNOB_NORM;             /* 0..1 */
+    float outputGain = params[7] * OUTPUT_SCALE;          /* 0..0.9 */
     float boost      = 1.0f + intensity * MAX_BOOST;      /* 1..3x */
     float dry_mix    = 1.0f - intensity;
     float wet_mix    = intensity;
@@ -110,7 +110,7 @@ void Fx_FLT_TapeHack(unsigned int *ctx)
     /* Block layout: 8 L samples then 8 R samples. */
     int i;
     for (i = 0; i < 16; i++) {
-        float dry = fxBuf[i];
+        float dry = fxBuf[i] * inputGain;
         float s   = clipf_(dry * boost, CLIP_LIMIT);
         float wet = taylor_sin(s);
         fxBuf[i]  = (dry * dry_mix + wet * wet_mix) * outputGain;

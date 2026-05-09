@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
+ROOT = HERE.parent.parent.parent      # src/airwindows/<name>/build.py → repo root
 sys.path.insert(0, str(ROOT / "build"))
 
 from linker import LinkerConfig, Param, link  # noqa: E402

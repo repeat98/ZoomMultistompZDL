@@ -191,13 +191,13 @@ class LinkerConfig:
     # Path to extracted __c6xabi_divf RTS code (640 bytes).
     divf_rts_path: Optional[str | os.PathLike] = None
 
-    # Path to LineSel handler blob (384 bytes: onf + edit_a + edit_b + init
-    # + __call_stub, copied verbatim from LineSel's .text). The blob
-    # provides real edit/onf handlers that read knob values from the host
-    # runtime and write into params[5], params[6], params[0]. Without
-    # this, NOP_RETURN handlers are used and params[] stays uninitialised.
-    # When set, handler_funcs maps logical names to byte offsets within
-    # the blob: defaults match LineSel's layout.
+    # Path to LineSel handler blob (480 bytes: onf + edit_a + edit_b + init
+    # + __call_stub + RTS helpers, copied verbatim from LineSel's .text).
+    # The blob provides real edit/onf handlers that read knob values from
+    # the host runtime and write into params[5], params[6], params[0].
+    # Without this, NOP_RETURN handlers are used and params[] stays
+    # uninitialised. When set, handler_funcs maps logical names to byte
+    # offsets within the blob: defaults match LineSel's layout.
     handler_blob_path: Optional[str | os.PathLike] = None
     handler_funcs: dict[str, int] = field(default_factory=lambda: {
         "onf":        0x000,   # OnOff toggle: writes params[0]
@@ -213,6 +213,16 @@ class LinkerConfig:
         "push_rts":   0x1C0,   # __c6xabi_push_rts (32 bytes)
     })
 
+    # Path to AIR knob3-edit blob (76 bytes, self-contained, 0 relocs).
+    # Extracted from MS-70CDR_AIR.ZDL's `Fx_REV_Air_mix_edit` — the third
+    # of three knobs in AIR. Hardcodes knob_id=4 and writes params[7].
+    # Used when a plugin has a 3rd parameter. Knobs 4..9 fall back to
+    # NOP_RETURN: no stock effect with >3 knobs has self-contained edit
+    # handlers (LO-FI Dly's all reference effect-specific lookup tables),
+    # so whether they update params[] is the open hardware question
+    # tracked in ABI.md §5.3.b.
+    knob3_blob_path: Optional[str | os.PathLike] = None
+
     # Audio-NOP override. When True, the audio function's first 32 bytes
     # are replaced with a canonical B B3 + delay-slot NOP sequence after
     # linking. Useful as a smoke test: lets the firmware exercise the UI
@@ -225,10 +235,18 @@ class LinkerConfig:
         if self.gid not in GID_PREFIX:
             raise ValueError(f"unknown gid {self.gid:#x}; add to GID_PREFIX table")
 
-        # Auto-pick knob positions if not given. nknobs must match
-        # min(3, len(params)). Defaults follow LineSel (2 knobs) /
-        # AIR (3 knobs) layouts.
-        n = min(3, len(self.params))
+        # nknobs in effectTypeImageInfo is capped at 3 — the firmware
+        # paginates by walking the descriptor and overlaying entries onto
+        # the 3 fixed visible slots three-at-a-time. ABI.md §3.1: setting
+        # nknobs > 3 triggers a fallback that disables paging. So we
+        # always advertise *page 1* knob_ids (2, 3, 4) here; pages 2/3
+        # come into view at runtime via descriptor walking.
+        if len(self.params) > 9:
+            raise ValueError(
+                f"{len(self.params)} params > 9 (3 pages × 3 visible knobs "
+                f"is the apparent firmware ceiling — see ABI.md §3.1)"
+            )
+        n_visible = min(3, len(self.params))
         defaults_by_count = {
             0: [],
             1: [(2, 54, 36)],                          # centered single knob
@@ -236,16 +254,18 @@ class LinkerConfig:
             3: [(2, 14, 34), (3, 38, 34), (4, 62, 34)],
         }
         if self.knob_positions is None:
-            self.knob_positions = defaults_by_count[n]
-        elif len(self.knob_positions) != n:
+            self.knob_positions = defaults_by_count[n_visible]
+        elif len(self.knob_positions) != n_visible:
             raise ValueError(
                 f"knob_positions has {len(self.knob_positions)} entries; "
-                f"need {n} (= min(3, n_params))"
+                f"need {n_visible} (= min(3, n_params))"
             )
         if self.divf_rts_path is None:
             self.divf_rts_path = Path(__file__).resolve().parent / "divf_rts.bin"
         if self.handler_blob_path is None:
             self.handler_blob_path = Path(__file__).resolve().parent / "linesel_handlers.bin"
+        if self.knob3_blob_path is None:
+            self.knob3_blob_path = Path(__file__).resolve().parent / "air_knob3_edit.bin"
 
 
 # ---------------------------------------------------------------------------
@@ -618,6 +638,15 @@ def link(cfg: LinkerConfig) -> None:
         handler_blob = handler_path.read_bytes()
         print(f"  handlers: {handler_path.name} ({len(handler_blob)} bytes)")
 
+    # ----- Load AIR knob3 blob (used when len(params) >= 3) -----
+    knob3_blob = b""
+    knob3_path = Path(cfg.knob3_blob_path) if cfg.knob3_blob_path else None
+    use_knob3 = (knob3_path is not None and knob3_path.exists()
+                 and len(cfg.params) >= 3)
+    if use_knob3:
+        knob3_blob = knob3_path.read_bytes()
+        print(f"  knob3:    {knob3_path.name} ({len(knob3_blob)} bytes)")
+
     # ----- Screen image -----
     pic_data = bytearray(cfg.screen_image or make_text_screen(cfg.effect_name))
     while len(pic_data) % 4:
@@ -651,7 +680,9 @@ def link(cfg: LinkerConfig) -> None:
     TEXT_ORIG_SIZE  = text_sec['size'] if text_sec else 0
     HANDLER_OFF     = _align_up(TEXT_ORIG_OFF + TEXT_ORIG_SIZE, 32)
     HANDLER_SIZE    = len(handler_blob)
-    DIVF_OFF        = _align_up(HANDLER_OFF + HANDLER_SIZE, 32)
+    KNOB3_OFF       = _align_up(HANDLER_OFF + HANDLER_SIZE, 32)
+    KNOB3_SIZE      = len(knob3_blob)
+    DIVF_OFF        = _align_up(KNOB3_OFF + KNOB3_SIZE, 32)
     DIVF_SIZE       = len(divf_code)
     NOP_RET_OFF     = _align_up(DIVF_OFF + DIVF_SIZE, 32)
     NOP_RET_SIZE    = 32
@@ -664,6 +695,8 @@ def link(cfg: LinkerConfig) -> None:
     print(f"    text     @ 0x{TEXT_ORIG_OFF:04X}  ({TEXT_ORIG_SIZE})")
     if HANDLER_SIZE:
         print(f"    handlers @ 0x{HANDLER_OFF:04X}  ({HANDLER_SIZE})")
+    if KNOB3_SIZE:
+        print(f"    knob3    @ 0x{KNOB3_OFF:04X}  ({KNOB3_SIZE})")
     print(f"    divf     @ 0x{DIVF_OFF:04X}  ({DIVF_SIZE})")
     print(f"    nop_ret  @ 0x{NOP_RET_OFF:04X}")
     print(f"    Dll      @ 0x{DLL_OFF:04X}")
@@ -676,6 +709,8 @@ def link(cfg: LinkerConfig) -> None:
         out_text[TEXT_ORIG_OFF:TEXT_ORIG_OFF + TEXT_ORIG_SIZE] = text_sec['data']
     if HANDLER_SIZE:
         out_text[HANDLER_OFF:HANDLER_OFF + HANDLER_SIZE] = handler_blob
+    if KNOB3_SIZE:
+        out_text[KNOB3_OFF:KNOB3_OFF + KNOB3_SIZE] = knob3_blob
     out_text[DIVF_OFF:DIVF_OFF + DIVF_SIZE] = divf_code
     out_text[NOP_RET_OFF:NOP_RET_OFF + NOP_RET_SIZE] = _NOP_RETURN
     out_text[DLL_OFF:DLL_OFF + DLL_SIZE] = _build_dll()
@@ -684,6 +719,8 @@ def link(cfg: LinkerConfig) -> None:
     if use_real_handlers:
         for name, off in cfg.handler_funcs.items():
             handler_va[name] = TEXT_VA + HANDLER_OFF + off
+    if use_knob3:
+        handler_va["knob3_edit"] = TEXT_VA + KNOB3_OFF
 
     # ----- Map .obj sections to VAs -----
     section_va: dict[int, int] = {
@@ -706,15 +743,33 @@ def link(cfg: LinkerConfig) -> None:
     # If/when we extract a self-contained init, swap this to handler_va["init"].
     init_va = NOP_VA
 
-    # Per-knob edit handlers. With LineSel's blob:
-    #   knob 1 → params[5] via knob1_edit
-    #   knob 2 → params[6] via knob2_edit
-    # >2 knobs need additional edit handlers (not yet extracted).
-    edit_keys = ["knob1_edit", "knob2_edit"]
+    # Per-knob edit handlers.
+    #
+    #  knob 1 → LineSel knob1_edit  (verified, writes params[5], knob_id=2)
+    #  knob 2 → LineSel knob2_edit  (verified, writes params[6], knob_id=3)
+    #  knob 3 → AIR knob3 blob       (writes params[7], knob_id=4 — untested
+    #                                 in v2; AIR ships as a 3-knob effect)
+    #  knob 4..9 → NOP_RETURN
+    #
+    # Knobs 4..9 use NOP_RETURN because no stock effect exposes self-contained
+    # (reloc-free, ~76-byte) edit handlers for slot indices beyond 3 — the
+    # 9-knob LO-FI Dly handlers are tightly coupled to its lookup tables.
+    # Whether the firmware auto-populates params[8..13] for paginated knobs
+    # without a real edit handler is the open hardware question tracked in
+    # ABI.md §5.3.b. The TapeHack 3-knob build is the next experiment in
+    # that ladder.
+    edit_keys = ["knob1_edit", "knob2_edit", "knob3_edit"]
     knob_edit_vas: list[int] = []
+    n_nop_handlers = 0
     for i, _ in enumerate(cfg.params):
         key = edit_keys[i] if i < len(edit_keys) else None
-        knob_edit_vas.append(handler_va.get(key, NOP_VA) if key else NOP_VA)
+        va = handler_va.get(key, NOP_VA) if key else NOP_VA
+        if va == NOP_VA:
+            n_nop_handlers += 1
+        knob_edit_vas.append(va)
+    if n_nop_handlers:
+        print(f"  WARNING: {n_nop_handlers} knob(s) using NOP_RETURN edit "
+              f"handler (knobs 4–9; firmware-auto-populate is unverified)")
 
     desc_bytes, desc_relocs = _build_descriptor(
         effect_name=cfg.effect_name,
