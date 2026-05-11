@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "build"))
 sys.path.insert(0, str(HERE.parent / "common"))
 
 from airwindows_image import make_airwindows_tape_screen  # noqa: E402
-from linker import LinkerConfig, Param, link  # noqa: E402
+from linker import LinkerConfig, link, params_from_manifest  # noqa: E402
 
 TI_ROOT = Path("/Applications/ti/ccs2050/ccs/tools/compiler/ti-cgt-c6000_8.5.0.LTS")
 CL6X = TI_ROOT / "bin" / "cl6x"
@@ -37,9 +37,13 @@ def build_one(
     fxid: int,
     audio_nop: bool,
     use_object_edit_handlers: bool,
+    object_edit_start_index: int = 0,
+    use_air_knob3: bool = False,
+    synthesize_linesel_edit_handlers: bool = False,
+    synth_edit_start_index: int = 2,
 ) -> None:
     out_zdl = ROOT / "dist" / f"{effect_name}.ZDL"
-    params = [Param(p["name"], p["max"], p["default"]) for p in manifest["params"]]
+    params = params_from_manifest(manifest["params"])
     cfg = LinkerConfig(
         effect_name=effect_name,
         audio_func_name=manifest["audio_func_name"],
@@ -53,7 +57,10 @@ def build_one(
         screen_image=make_airwindows_tape_screen(effect_name, ""),
         audio_nop=audio_nop,
         use_object_edit_handlers=use_object_edit_handlers,
-        knob3_blob_path="/tmp/__nonexistent__",
+        object_edit_start_index=object_edit_start_index,
+        synthesize_linesel_edit_handlers=synthesize_linesel_edit_handlers,
+        synth_edit_start_index=synth_edit_start_index,
+        knob3_blob_path=None if use_air_knob3 else "/tmp/__nonexistent__",
     )
     print(
         f"\n[totape9 variants] {effect_name}: "
@@ -103,6 +110,35 @@ def main() -> None:
         audio_nop=False,
         use_object_edit_handlers=False,
     )
+    build_one(
+        manifest,
+        obj,
+        effect_name="T9Stock3",
+        fxid=0x01A5,
+        audio_nop=False,
+        use_object_edit_handlers=False,
+        use_air_knob3=True,
+    )
+    build_one(
+        manifest,
+        obj,
+        effect_name="T9Page2",
+        fxid=0x01A6,
+        audio_nop=False,
+        use_object_edit_handlers=True,
+        object_edit_start_index=3,
+        use_air_knob3=True,
+    )
+    build_one(
+        manifest,
+        obj,
+        effect_name="T9Synth",
+        fxid=0x01A7,
+        audio_nop=False,
+        use_object_edit_handlers=False,
+        synthesize_linesel_edit_handlers=True,
+        synth_edit_start_index=2,
+    )
     tiny_manifest = dict(manifest)
     tiny_manifest["audio_func_name"] = "Fx_FLT_ToTape9_Tiny"
     build_one(
@@ -112,6 +148,16 @@ def main() -> None:
         fxid=0x01A3,
         audio_nop=False,
         use_object_edit_handlers=False,
+    )
+    probe_manifest = dict(manifest)
+    probe_manifest["audio_func_name"] = "Fx_FLT_ToTape9_ParamProbe"
+    build_one(
+        probe_manifest,
+        tiny_obj,
+        effect_name="T9Param",
+        fxid=0x01A4,
+        audio_nop=False,
+        use_object_edit_handlers=True,
     )
     build_one(
         manifest,

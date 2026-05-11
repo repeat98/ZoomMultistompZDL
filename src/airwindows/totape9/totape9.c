@@ -157,6 +157,7 @@ static float zoom_tanf(float x)
  * per-effect state ABI is solved; the 9-param UI and core tape stages still
  * make a useful beta. */
 #define TOTAPE9_PERSISTENT_STATE 0
+#define TOTAPE9_FULL_DSP 0
 
 /* -------------------------------------------------------------------------
  * gslew layout: 9 stages × 3 words = [prevL, prevR, threshold]  (27 words)
@@ -251,6 +252,13 @@ static inline float clamp01(float x)
     return x;
 }
 
+static inline float knob_or_default(float raw, float fallback)
+{
+    float v = raw * KNOB_NORM;
+    if (v <= 0.0001f) return fallback;
+    return clamp01(v);
+}
+
 /* =========================================================================
  * Main entry point
  *
@@ -264,6 +272,64 @@ static inline float clamp01(float x)
 
 void Fx_FLT_ToTape9(unsigned int *ctx)
 {
+#if !TOTAPE9_FULL_DSP
+    float *params = ZDL_PTR(float *, ctx[1]);
+    float *fxBuf  = ZDL_PTR(float *, ctx[5]);
+
+    unsigned int *magicSrc = ZDL_PTR(unsigned int *, ctx[12]);
+    unsigned int *magicDst = ZDL_PTR(unsigned int *, *(unsigned int *)ZDL_PTR(unsigned int *, ctx[11]));
+    *magicDst = *magicSrc;
+
+    if (params[0] < 0.5f) return;
+
+    /* Small-stack/no-divide release core. The full Airwindows body below is
+     * kept for future state-ABI work, but this path avoids the large stack
+     * frame and runtime divf calls that freeze hardware on first audio tick. */
+    float pInput   = knob_or_default(params[5],  0.50f);
+    float pTilt    = knob_or_default(params[6],  0.50f);
+    float pShape   = knob_or_default(params[7],  0.50f);
+    float pFlutter = knob_or_default(params[8],  0.00f);
+    float pFlutSpd = knob_or_default(params[9],  0.50f);
+    float pBias    = knob_or_default(params[10], 0.50f);
+    float pHeadBmp = knob_or_default(params[11], 0.20f);
+    float pHeadFrq = knob_or_default(params[12], 0.50f);
+    float pOutput  = knob_or_default(params[13], 0.50f);
+
+    float inputGain = pInput * pInput * 4.0f;
+    float drive = 1.0f + pShape * 3.0f + pHeadBmp * 2.0f;
+    float wet = 0.35f + pTilt * 0.45f;
+    float dry = 1.0f - wet;
+    float bias = (pBias - 0.5f) * 0.35f;
+    float flutterTrim = 1.0f - pFlutter * pFlutSpd * 0.08f;
+    float headLift = 1.0f + pHeadBmp * (0.25f + pHeadFrq * 0.25f);
+    float outputGain = pOutput * 2.0f;
+
+    int i;
+    for (i = 0; i < 16; i++) {
+        float x = fxBuf[i] * inputGain;
+        float biased = x + bias * x * x;
+        float driven = biased * drive * flutterTrim * headLift;
+        if (driven >  2.305929f) driven =  2.305929f;
+        if (driven < -2.305929f) driven = -2.305929f;
+
+        {
+            float x2 = driven * driven;
+            float p = driven * x2;
+            float sat = driven;
+            sat -= p * 0.16666667f;
+            p *= x2;
+            sat += p * 0.014492754f;
+            p *= x2;
+            sat -= p * 0.0003952447f;
+            p *= x2;
+            sat += p * 0.00000444473f;
+            p *= x2;
+            sat -= p * 0.000000100208f;
+            fxBuf[i] = (x * dry + sat * wet) * outputGain;
+        }
+    }
+    return;
+#else
 #if !TOTAPE9_PERSISTENT_STATE
     float iirEncL = 0.0f, iirEncR = 0.0f;
     float compEncL = 1.0f, compEncR = 1.0f;
@@ -709,4 +775,5 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
         fxR[i] = sR;
     }
     /* (no return value; jump to B3 handled by compiler epilogue) */
+#endif
 }

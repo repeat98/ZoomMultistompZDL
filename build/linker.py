@@ -152,6 +152,54 @@ class Param:
     name: str            # ≤ 8 ASCII chars (descriptor slot is 12 but other entries fit in 8)
     max_val: int         # max integer (e.g. 100, 150)
     default_val: int     # initial integer value
+    kind: str = "knob"   # knob | switch | enum | tempo (documented + future UI policy)
+    min_val: int = 0     # documented lower bound; descriptor format stores max/default only
+    pedal_max: Optional[int] = None
+    reserved_a: int = 0
+    reserved_b: int = 0
+    flags: Optional[int] = None
+    scale: str = "linear"
+    unit: str = ""
+    audio_min: float = 0.0
+    audio_max: float = 1.0
+    audio_default: Optional[float] = None
+    labels: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_manifest(cls, raw: dict) -> "Param":
+        kind = raw.get("type", raw.get("kind", "knob"))
+        max_val = int(raw.get("max", raw.get("max_val", 1 if kind == "switch" else 100)))
+        default_val = int(raw.get("default", raw.get("default_val", 0)))
+        audio_default = raw.get("audio_default")
+        return cls(
+            name=raw["name"],
+            max_val=max_val,
+            default_val=default_val,
+            kind=kind,
+            min_val=int(raw.get("min", raw.get("min_val", 0))),
+            pedal_max=raw.get("pedal_max"),
+            reserved_a=int(raw.get("reserved_a", 0)),
+            reserved_b=int(raw.get("reserved_b", 0)),
+            flags=raw.get("flags"),
+            scale=raw.get("scale", "linear"),
+            unit=raw.get("unit", ""),
+            audio_min=float(raw.get("audio_min", 0.0)),
+            audio_max=float(raw.get("audio_max", 1.0)),
+            audio_default=None if audio_default is None else float(audio_default),
+            labels=list(raw.get("labels", [])),
+        )
+
+    @property
+    def normalized_default(self) -> float:
+        if self.audio_default is not None:
+            return self.audio_default
+        if self.max_val <= self.min_val:
+            return 0.0
+        return (self.default_val - self.min_val) / float(self.max_val - self.min_val)
+
+
+def params_from_manifest(raw_params: list[dict]) -> list[Param]:
+    return [Param.from_manifest(p) for p in raw_params]
 
 
 @dataclass
@@ -250,6 +298,20 @@ class LinkerConfig:
     # can write real params. Set False to force blob/NOP handlers and
     # isolate whether a custom handler freezes during firmware init.
     use_object_edit_handlers: bool = True
+
+    # Zero-based first parameter index allowed to use object-defined edit
+    # handlers. This lets a plugin use the stock-proven LineSel/AIR
+    # handlers for knobs 1-3 and custom generated handlers only for later
+    # pages while we harden handler synthesis.
+    object_edit_start_index: int = 0
+
+    # Hardware-safe handler synthesis. Instead of compiling inline asm,
+    # clone the complete LineSel handler blob for each requested knob so
+    # the handler's relative calls to its local __c6xabi_call_stub remain
+    # exactly stock-shaped. Only two compact MVK immediates are patched:
+    # the host knob id and params[] byte offset.
+    synthesize_linesel_edit_handlers: bool = False
+    synth_edit_start_index: int = 2
 
     def __post_init__(self) -> None:
         if self.audio_func_name is None:
@@ -516,7 +578,11 @@ def _build_descriptor(
         entry[:len(nb)] = nb
         _p32(entry, 0x0C, p.max_val)
         _p32(entry, 0x10, p.default_val)
+        if p.pedal_max is not None:
+            _p32(entry, 0x14, int(p.pedal_max))
+        _p32(entry, 0x18, p.reserved_a)
         _p32(entry, 0x1C, knob_edit_vas[i])
+        _p32(entry, 0x28, p.reserved_b)
         if i == last_idx:
             # Last-entry sentinel pattern is param-count-dependent
             # (verified across MS-70CDR stock 2026-05-10):
@@ -532,11 +598,16 @@ def _build_descriptor(
             # (sentinel | pedal) and pedal_max=max on the final parameter.
             # Earlier tests (2026-05-10) marked this as "no fix" in isolation,
             # but it is the correct on-disk ABI for 3-param effects.
-            if n_user == 3:
-                _p32(entry, 0x14, p.max_val)   # pedal_max = max
-                _p32(entry, 0x2C, 0x14)        # flags = sentinel | stereo | pedal
+            if p.flags is not None:
+                _p32(entry, 0x2C, int(p.flags) | 0x04)
+            elif n_user == 3:
+                if p.pedal_max is None:
+                    _p32(entry, 0x14, p.max_val)   # pedal_max = max
+                _p32(entry, 0x2C, 0x14)            # flags = sentinel | stereo | pedal
             else:
-                _p32(entry, 0x2C, 0x04)        # flags = sentinel only
+                _p32(entry, 0x2C, 0x04)            # flags = sentinel only
+        elif p.flags is not None:
+            _p32(entry, 0x2C, int(p.flags) & ~0x04)
         relocs.append((len(desc) + 0x1C, knob_edit_vas[i]))
         desc.extend(entry)
 
@@ -621,6 +692,52 @@ def _build_image_info(
 # all 128 stock MS-70CDR ZDLs; v1 tried field4=5 once and the unit froze
 # at FX-select time. Don't change.
 _KNOB_INFO = struct.pack('<6I', 20, 15, 11, 0, 2, 0)
+
+
+_COMPACT_MVK_S1_A4 = {
+    20: 0x9212,
+    24: 0x1A12,
+    28: 0x9A12,
+    32: 0x0232,
+    36: 0x8232,
+    40: 0x0A32,
+    44: 0x8A32,
+    48: 0x1232,
+    52: 0x9232,
+}
+
+_COMPACT_MVK_L2_B4 = {
+    2: 0x4627,
+    3: 0x6627,
+    4: 0x8627,
+    5: 0xA627,
+    6: 0xC627,
+    7: 0xE627,
+    8: 0x0E27,
+    9: 0x2E27,
+    10: 0x4E27,
+}
+
+
+def _patch_linesel_knob_clone(blob: bytes, knob_id: int, param_byte_off: int) -> bytes:
+    """Clone LineSel's known-good knob1 handler block and retarget it.
+
+    The returned blob is a full linesel_handlers.bin-sized block. Its
+    handler lives at +0x60 and calls the cloned call_stub at +0x140, so no
+    branch relocation/encoding changes are needed.
+    """
+    if param_byte_off not in _COMPACT_MVK_S1_A4:
+        raise ValueError(f"no compact MVK.S1 A4 encoding for byte offset {param_byte_off}")
+    if knob_id not in _COMPACT_MVK_L2_B4:
+        raise ValueError(f"no compact MVK.L2 B4 encoding for knob id {knob_id}")
+    out = bytearray(blob)
+    # LineSel knob1 handler starts at +0x60. At +0x10 it has:
+    #   MVK.L2 <knob_id>,B4
+    _p16(out, 0x60 + 0x10, _COMPACT_MVK_L2_B4[knob_id])
+    # At +0x44 it has:
+    #   MVK.S1 <param_byte_off>,A4
+    _p16(out, 0x60 + 0x44, _COMPACT_MVK_S1_A4[param_byte_off])
+    return bytes(out)
 
 # Stock 3-knob effects all export a local coefficient-table object before
 # the UI/descriptor symbols. Simple test effects do not need coefficients,
@@ -749,6 +866,27 @@ def link(cfg: LinkerConfig) -> None:
         handler_blob = handler_path.read_bytes()
         print(f"  handlers: {handler_path.name} ({len(handler_blob)} bytes)")
 
+    # ----- Build LineSel-cloned synthetic edit handlers -----
+    synth_handler_blob = b""
+    synth_handler_vas_by_param: dict[int, int] = {}
+    synth_specs: list[tuple[int, int, int]] = []
+    if cfg.synthesize_linesel_edit_handlers:
+        if not use_real_handlers:
+            raise RuntimeError("LineSel handler synthesis requires handler_blob_path")
+        for i in range(len(cfg.params)):
+            if i >= cfg.synth_edit_start_index:
+                synth_specs.append((i, i + 2, 20 + i * 4))
+        if synth_specs:
+            synth_parts = [
+                _patch_linesel_knob_clone(handler_blob, knob_id, param_off)
+                for _, knob_id, param_off in synth_specs
+            ]
+            synth_handler_blob = b"".join(synth_parts)
+            print(
+                f"  synth:   {len(synth_specs)} LineSel-cloned edit handler(s) "
+                f"({len(synth_handler_blob)} bytes)"
+            )
+
     # ----- Load AIR knob3 blob (used when len(params) >= 3) -----
     knob3_blob = b""
     knob3_path = Path(cfg.knob3_blob_path) if cfg.knob3_blob_path else None
@@ -791,7 +929,9 @@ def link(cfg: LinkerConfig) -> None:
     TEXT_ORIG_SIZE  = text_sec['size'] if text_sec else 0
     HANDLER_OFF     = _align_up(TEXT_ORIG_OFF + TEXT_ORIG_SIZE, 32)
     HANDLER_SIZE    = len(handler_blob)
-    KNOB3_OFF       = _align_up(HANDLER_OFF + HANDLER_SIZE, 32)
+    SYNTH_OFF       = _align_up(HANDLER_OFF + HANDLER_SIZE, 32)
+    SYNTH_SIZE      = len(synth_handler_blob)
+    KNOB3_OFF       = _align_up(SYNTH_OFF + SYNTH_SIZE, 32)
     KNOB3_SIZE      = len(knob3_blob)
     DIVF_OFF        = _align_up(KNOB3_OFF + KNOB3_SIZE, 32)
     DIVF_SIZE       = len(divf_code)
@@ -813,7 +953,12 @@ def link(cfg: LinkerConfig) -> None:
     nop_knob_count    = sum(1 for i in range(len(cfg.params))
                             if not (
                                 (
+                                    cfg.synthesize_linesel_edit_handlers
+                                    and i >= cfg.synth_edit_start_index
+                                ) or
+                                (
                                     cfg.use_object_edit_handlers
+                                    and i >= cfg.object_edit_start_index
                                     and f"{cfg.audio_func_name}_{cfg.params[i].name.replace(' ', '')}_edit"
                                     in object_symbol_names
                                 ) or
@@ -836,6 +981,8 @@ def link(cfg: LinkerConfig) -> None:
     print(f"    text     @ 0x{TEXT_ORIG_OFF:04X}  ({TEXT_ORIG_SIZE})")
     if HANDLER_SIZE:
         print(f"    handlers @ 0x{HANDLER_OFF:04X}  ({HANDLER_SIZE})")
+    if SYNTH_SIZE:
+        print(f"    synth    @ 0x{SYNTH_OFF:04X}  ({SYNTH_SIZE})")
     if KNOB3_SIZE:
         print(f"    knob3    @ 0x{KNOB3_OFF:04X}  ({KNOB3_SIZE})")
     print(f"    divf     @ 0x{DIVF_OFF:04X}  ({DIVF_SIZE})")
@@ -850,6 +997,8 @@ def link(cfg: LinkerConfig) -> None:
         out_text[TEXT_ORIG_OFF:TEXT_ORIG_OFF + TEXT_ORIG_SIZE] = text_sec['data']
     if HANDLER_SIZE:
         out_text[HANDLER_OFF:HANDLER_OFF + HANDLER_SIZE] = handler_blob
+    if SYNTH_SIZE:
+        out_text[SYNTH_OFF:SYNTH_OFF + SYNTH_SIZE] = synth_handler_blob
     if KNOB3_SIZE:
         out_text[KNOB3_OFF:KNOB3_OFF + KNOB3_SIZE] = knob3_blob
     out_text[DIVF_OFF:DIVF_OFF + DIVF_SIZE] = divf_code
@@ -865,6 +1014,11 @@ def link(cfg: LinkerConfig) -> None:
     if use_real_handlers:
         for name, off in cfg.handler_funcs.items():
             handler_va[name] = TEXT_VA + HANDLER_OFF + off
+    if synth_specs:
+        for clone_idx, (param_idx, _knob_id, _param_off) in enumerate(synth_specs):
+            synth_handler_vas_by_param[param_idx] = (
+                TEXT_VA + SYNTH_OFF + clone_idx * len(handler_blob) + 0x60
+            )
     if use_knob3:
         handler_va["knob3_edit"] = TEXT_VA + KNOB3_OFF
 
@@ -913,8 +1067,10 @@ def link(cfg: LinkerConfig) -> None:
     # Per-knob edit handlers.
     #   knob 1 → LineSel knob1_edit (if blob present)
     #   knob 2 → LineSel knob2_edit (if blob present)
-    #   knob 3 → AIR knob3 blob (if present)
-    #   knob 4..9 → unique NOP_RETURN stub each
+    #   knob 3 → AIR knob3 blob (legacy fallback only; it is not
+    #            portable to every plugin context)
+    #   synthesized LineSel clones / object-defined handlers can override
+    #   this before falling back to blob/NOP handlers.
     edit_keys = ["knob1_edit", "knob2_edit", "knob3_edit"]
     knob_edit_vas: list[int] = []
     n_nop_handlers = 0
@@ -922,7 +1078,13 @@ def link(cfg: LinkerConfig) -> None:
         p_name = param.name.replace(' ', '')
         obj_edit_name = f"{cfg.audio_func_name}_{p_name}_edit"
         key = edit_keys[i] if i < len(edit_keys) else None
-        real_va = obj_symbol_va.get(obj_edit_name) if cfg.use_object_edit_handlers else None
+        real_va = synth_handler_vas_by_param.get(i)
+        if real_va is None:
+            real_va = (
+                obj_symbol_va.get(obj_edit_name)
+                if cfg.use_object_edit_handlers and i >= cfg.object_edit_start_index
+                else None
+            )
         if real_va is None:
             real_va = handler_va.get(key) if key else None
 

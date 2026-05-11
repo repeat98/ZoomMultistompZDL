@@ -11,7 +11,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent.parent      # src/airwindows/<name>/build.py → repo root
 sys.path.insert(0, str(ROOT / "build"))
 
-from linker import LinkerConfig, Param, link  # noqa: E402
+from linker import LinkerConfig, link, params_from_manifest  # noqa: E402
 
 TI_ROOT = Path("/Applications/ti/ccs2050/ccs/tools/compiler/ti-cgt-c6000_8.5.0.LTS")
 CL6X    = TI_ROOT / "bin" / "cl6x"
@@ -51,7 +51,7 @@ def main() -> None:
         audio_func_name  = manifest.get("audio_func_name"),
         gid              = manifest["gid"],
         fxid             = manifest["fxid"],
-        params           = [Param(p["name"], p["max"], p["default"]) for p in manifest["params"]],
+        params           = params_from_manifest(manifest["params"]),
         obj_path         = obj,
         output_path      = out_zdl,
         fxid_version     = manifest.get("fxid_version", "1.00").encode("ascii"),

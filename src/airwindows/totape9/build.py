@@ -13,7 +13,7 @@ ROOT = HERE.parent.parent.parent
 sys.path.insert(0, str(ROOT / "build"))
 sys.path.insert(0, str(HERE.parent / "common"))
 
-from linker import LinkerConfig, Param, link  # noqa: E402
+from linker import LinkerConfig, link, params_from_manifest  # noqa: E402
 from airwindows_image import make_airwindows_tape_screen  # noqa: E402
 
 TI_ROOT = Path("/Applications/ti/ccs2050/ccs/tools/compiler/ti-cgt-c6000_8.5.0.LTS")
@@ -49,14 +49,18 @@ def main() -> None:
         audio_func_name=manifest.get("audio_func_name"),
         gid=manifest["gid"],
         fxid=manifest["fxid"],
-        params=[Param(p["name"], p["max"], p["default"]) for p in manifest["params"]],
+        params=params_from_manifest(manifest["params"]),
         obj_path=obj,
         output_path=out_zdl,
         fxid_version=manifest.get("fxid_version", "1.00").encode("ascii"),
         flags_byte=manifest.get("flags_byte", 0x01),
         screen_image=make_airwindows_tape_screen("ToTape", "9"),
         audio_nop=manifest.get("audio_nop", False),
-        # The C file defines real edit handlers for all nine knobs.
+        # Input/Tilt use LineSel's stock handlers. Shape and pages 2/3 use
+        # LineSel-cloned handlers with patched knob ids/param offsets.
+        use_object_edit_handlers=False,
+        synthesize_linesel_edit_handlers=True,
+        synth_edit_start_index=2,
         knob3_blob_path="/tmp/__nonexistent__",
     )
     link(cfg)
