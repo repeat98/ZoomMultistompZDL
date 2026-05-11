@@ -6,3 +6,7 @@ airwindows-ref/
 zdownload-master/
 zoom-fx-modding-main
 *.pdf
+.DS_Store
+__pycache__/
+*.pyc
+src/airwindows/*/*.obj

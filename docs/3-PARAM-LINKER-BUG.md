@@ -3,7 +3,7 @@
 **Status:** likely fixed in linker; pending final hardware confirmation.
 Workaround available via [src/airwindows/tapehack/build_via_template.py](../src/airwindows/tapehack/build_via_template.py).
 
-## Likely root cause found (2026-05-11)
+## Likely root cause found (2026-05-11) <--- YES THIS WAS
 
 The linker copied the `Dll_NoiseGate` entry stub verbatim. That stub
 stores `4` into the host-return struct, which is the descriptor entry

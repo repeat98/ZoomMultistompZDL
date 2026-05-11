@@ -153,20 +153,18 @@ descriptor symbol's address everywhere it's referenced (e.g. inside
 
 ---
 
-### 3.1 Pagination — how >3 knobs work [v1-empirical, ⚠ source of bugs]
+### 3.1 Pagination — how >3 knobs work [hardware-confirmed]
 
-`effectTypeImageInfo` declares **exactly 3 on-screen knob slots**, *not*
-the parameter count. The firmware paginates by walking the descriptor
-table from the name entry until the `pedal_flags & 0x04` sentinel,
-overlaying entries onto the 3 fixed slots three-at-a-time.
+`effectTypeImageInfo` carries the total user-parameter count, but only
+the first three coordinate blocks are meaningful. The firmware paginates
+edit mode by walking the descriptor table from the name entry until the
+`pedal_flags & 0x04` sentinel, overlaying entries onto 3 fixed visible
+slots three-at-a-time.
 
-> v1 tried `nknobs=9` in `effectTypeImageInfo` to "make pagination
-> explicit" — on hardware it triggered a fallback path that disabled
-> paging entirely and showed only 2 knobs. **Always use exactly 3 slots.**
-
-The `nknobs > 3` ⇒ broken-paging trap is *one* of the v1 pagination
-bugs. The other suspected bug is in **how runtime knob values reach
-the audio loop** — see §5.4.
+The earlier "nknobs=9 breaks paging" reading was incomplete: the real
+bug was the DLL entry stub still declaring NoiseGate's descriptor count
+of `4`. Once `Dll_<Name>` declares `2 + len(params)`, hardware renders
+and edits 3, 5, 7, and 9 parameter builds.
 
 ## 4. `effectTypeImageInfo` — UI layout (212 bytes)
 
@@ -184,8 +182,8 @@ offset  type    field
 0x14    u32*    picEffectType_<Name>  ← ABS32 reloc
 0x18    u32     unknown (0x1C or 0x20)
 0x1C    u32     unknown (0x18 or 0x19)
-0x20    u32     knob_count   = ALWAYS 3, see §3.1
-  -- per-knob block (16 bytes), 3 of these --
+0x20    u32     user parameter count (3 for single-page, 4-9 for paginated)
+  -- per-knob block (16 bytes), first 3 visible slots populated --
   +0    u32     knob_id  (1-based parameter index;
                           1 = OnOff, 2 = first knob, …)
   +4    u32     x  (top-left, in pixels)
@@ -348,7 +346,7 @@ each parameter into the runtime by invoking the per-param handlers.
 For Exciter, init at `.text+0x5c0` (per `Fx_FLT_Exciter_init` symbol)
 should follow the same pattern — invoke onf, then each edit handler.
 
-### 5.3.b Parameter table layout [⚠ partially unverified]
+### 5.3.b Parameter table layout [hardware-confirmed through 9 params]
 
 `ctx[1]` points to a flat float array. Verified slots, used by
 all three diy/*.asm reference effects:
@@ -358,6 +356,9 @@ params[0]   on/off multiplier   (1.0 when on, 0.0 when off)
 params[4]   level multiplier    (= 1/max, e.g. 0.01 for max=100)
 params[5]   knob 1 raw value    (0..max as float)
 params[6]   knob 2 raw value
+params[7]   knob 3 raw value
+...
+params[13]  knob 9 raw value
 ```
 
 Audio code typically computes a per-knob coefficient as
@@ -365,26 +366,10 @@ Audio code typically computes a per-knob coefficient as
 (producing a normalized `0..1` scaled by on/off), then applies it
 inside the sample loop.
 
-**Slots `params[7..]` are the central question.** v1's `totape9_zoom.c`
-indexed `params[5..13]` to read 9 knobs across 3 pages. The unit
-booted (`TOTAPE9_AUDIO.ZDL`), the effect was selectable, but knob
-behavior was buggy. Possible explanations, none yet proven:
-
-1. The firmware only fills `params[5..7]` (3 visible knobs) and the
-   audio loop must read the *currently visible* page.
-2. The firmware fills all `params[5..13]`, but only when handlers
-   write them — and v1's handlers were all `NOP_RETURN`.
-3. The slot stride is not contiguous; pages may live at different
-   offsets.
-
-**Test plan to settle this** (deferred to per-plugin experiments):
-   1. Build a 1-knob plugin (`gain/`) — if its single knob works with
-      NOP handlers, the firmware auto-populates `params[5]`.
-   2. If yes, build a 3-knob plugin — if all 3 work, slots 5..7 are
-      auto-populated for the visible page.
-   3. Then a 6-knob (2-page) plugin — instrument the audio loop to
-      output a tone whose frequency depends on `params[5..10]`. Listen
-      across page changes to map slot semantics.
+Slots `params[5..13]` are contiguous for the 1-9 user-param range.
+Generated edit handlers must write these slots; NOP handlers render UI
+but do not update the audio parameters. The reusable macro lives in
+`src/airwindows/common/zoom_edit_handlers.h`.
 
 ### 5.4 DLL entry `Dll_<Name>` [v1-empirical]
 
@@ -402,9 +387,9 @@ patterned after LOFIDLY — the unit booted but froze inconsistently on
 each FX-select event. Switching to a **verbatim 200-byte (50-instruction)
 copy of NoiseGate's Dll function**, with the 4 reloc points re-patched
 for the new descriptor + imageInfo addresses, produced a stable boot.
-The simplest working approach is therefore: don't write your own Dll
-function — splice in NoiseGate's. v1's `link_zdl.py` does exactly this
-and the constants are reproduced verbatim in v2's `build/linker.py`.
+The simplest working approach is therefore: splice in NoiseGate's body,
+patch the relocation targets, and patch its compact `MVK A0` immediate
+from NoiseGate's hardcoded descriptor count `4` to `2 + len(params)`.
 
 ### 5.5 Compile flags — the `--mem_model:data=far` trap [v1-empirical]
 
@@ -442,7 +427,7 @@ void Fx_FLT_<Name>(unsigned int *ctx) { ... }
 |------------|-------------------------------|-------|----------------------------------------------|
 | `.text`    | `0x00000000` upward           | r-x   | Firmware remaps to IRAM at load time.        |
 | `.const`   | `0x80000000` upward           | r--   | RO data: descriptor, image, coefficients.    |
-| `.fardata` | immediately after `.const`    | rw-   | Writable state. **memsz must equal filesz**. |
+| `.fardata` | immediately after `.const`    | rw-   | Tiny writable data. **memsz must equal filesz**. |
 | Stack      | `B15` provided by host        | rw-   | Don't overflow — no MMU, no guard page.      |
 
 * **`.fardata` must have `memsz == filesz`** [v1-empirical]. Setting
@@ -454,6 +439,11 @@ void Fx_FLT_<Name>(unsigned int *ctx) { ... }
 * The `.fardata` section's leading 24 bytes are *always*
   `_infoEffectTypeKnob_A_2 = {20, 15, 11, 0, 2, 0}`. Any user state
   follows from offset 24.
+* Keep writable `.fardata` small. Stock MS-70CDR effects observed so far
+  stay within a few hundred bytes; large custom static state has frozen
+  hardware on effect load. The linker rejects `.fardata` images above
+  512 bytes unless `allow_large_fardata=True` is set for an explicit
+  hardware probe.
 * **No malloc.** All state is statically allocated.
 * **No FPU exceptions** worth catching — the C6740 has hardware float;
   treat NaN/Inf the same as Airwindows desktop builds do.
@@ -533,14 +523,10 @@ unchanged — the SIZE field is recomputed from `len(elf)` on save.
 
 After incorporating v1's findings the list shrinks to:
 
-1. **`params[5..]` indexing semantics** (§5.3.b) — single most important
-   open question; **the v1 pagination bug lives here**. Test with the
-   1-knob → 3-knob → 6-knob plugin progression.
-2. **Whether handlers must write to `params[]`, or if the firmware
-   auto-populates** (also §5.3.b). NOP_RETURN handlers were enough for
-   `TOTAPE9_AUDIO.ZDL` to boot and be selectable; whether the knobs
-   *actually do anything* with NOP handlers is the GAIN test.
-3. The two unknown words at `effectTypeImageInfo` offsets 0x18 / 0x1C
+1. **The per-effect state ABI.** Large writable `.fardata` freezes
+   current custom builds, so stateful Airwindows ports need either a
+   proven scratch-buffer mapping or a different persistence strategy.
+2. The two unknown words at `effectTypeImageInfo` offsets 0x18 / 0x1C
    (Exciter has 32 / 17; LineSel has different values). Stock ZDLs all
    work with these as observed; we copy them. Their semantic role is
    irrelevant for now.

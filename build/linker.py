@@ -172,13 +172,11 @@ class LinkerConfig:
     # a text-only screen showing the effect name.
     screen_image: Optional[bytes] = None
 
-    # Knob xy positions on screen. The firmware paginates by walking the
-    # descriptor table and overlaying entries onto these visible slots
-    # three-at-a-time, BUT `nknobs` itself must match the parameter count
-    # (capped at 3). [v1-empirical was wrong — link_zdl.py hardcoded 3
-    # because ToTape9 has 9 params; for fewer params the firmware
-    # dereferences nonexistent descriptor entries when interaction
-    # starts, which is what froze v2 GAIN at edit time.]
+    # Knob xy positions for the visible slots on the preview image. The
+    # firmware paginates edit-mode parameters by walking the descriptor
+    # table three-at-a-time. For >3 params, effectTypeImageInfo advertises
+    # the total parameter count but still only provides the first 3 visible
+    # coordinate slots, matching stock AIR-style paginated effects.
     #
     # Verified against 128 stock MS-70CDR ZDLs:
     #   2 params  → nknobs=2
@@ -198,6 +196,13 @@ class LinkerConfig:
     # equivalent relocs in dead .text padding to test old firmware parsers that
     # may expect this relocation prelude.
     emit_dummy_coe_relocs: bool = False
+
+    # Stock MS-70CDR writable .fardata segments are tiny (largest observed:
+    # 220 bytes). Large plugin static state has frozen hardware on load, so
+    # keep custom builds inside the known-safe envelope unless a hardware
+    # experiment explicitly opts out.
+    max_fardata_bytes: int = 512
+    allow_large_fardata: bool = False
 
     # Path to extracted __c6xabi_divf RTS code (640 bytes).
     divf_rts_path: Optional[str | os.PathLike] = None
@@ -240,18 +245,22 @@ class LinkerConfig:
     # without running the plugin's DSP.
     audio_nop: bool = False
 
+    # Diagnostic override. Normal builds prefer object-defined edit
+    # handlers when present, because those are the only way knobs 3..9
+    # can write real params. Set False to force blob/NOP handlers and
+    # isolate whether a custom handler freezes during firmware init.
+    use_object_edit_handlers: bool = True
+
     def __post_init__(self) -> None:
         if self.audio_func_name is None:
             self.audio_func_name = f"Fx_FLT_{self.effect_name}"
         if self.gid not in GID_PREFIX:
             raise ValueError(f"unknown gid {self.gid:#x}; add to GID_PREFIX table")
 
-        # nknobs in effectTypeImageInfo is capped at 3 — the firmware
-        # paginates by walking the descriptor and overlaying entries onto
-        # the 3 fixed visible slots three-at-a-time. ABI.md §3.1: setting
-        # nknobs > 3 triggers a fallback that disables paging. So we
-        # always advertise *page 1* knob_ids (2, 3, 4) here; pages 2/3
-        # come into view at runtime via descriptor walking.
+        # Hardware-confirmed ceiling for the MS-series UI path: 9 user
+        # params, displayed as three pages of three edit-mode controls.
+        # The preview image still only has coordinates for the first three
+        # visible slots.
         if len(self.params) > 9:
             raise ValueError(
                 f"{len(self.params)} params > 9 (3 pages × 3 visible knobs "
@@ -535,7 +544,9 @@ def _build_descriptor(
 
 
 # ---------------------------------------------------------------------------
-# effectTypeImageInfo — exactly 212 bytes, exactly 3 knob slots [v1-empirical]
+# effectTypeImageInfo — exactly 212 bytes. For paginated effects, the count
+# field is the total user-param count, while only the first three coordinate
+# blocks are populated; the rest of the fixed 212-byte struct is zero padding.
 # ---------------------------------------------------------------------------
 
 def _build_image_info(
@@ -549,9 +560,9 @@ def _build_image_info(
     info = bytearray()
     relocs: list[tuple[int, int]] = []
 
-    # Single-page plugins (<=3 knobs) like Exciter/OptComp always use 3 slots 
-    # and total_knobs=3 in the header. Multi-page plugins (AIR) use 3 slots 
-    # but advertise the total param count in the count field.
+    # Single-page plugins (<=3 knobs) like Exciter/OptComp advertise 3 in
+    # the header. Multi-page plugins (AIR-style) advertise the total param
+    # count in the count field, but still only carry three coordinate slots.
     effective_knobs = (
         knob_count_override
         if knob_count_override is not None
@@ -583,8 +594,8 @@ def _build_image_info(
     # Knob count and coordinate slots
     info.extend(struct.pack('<I', effective_knobs))
     
-    # Coordinate blocks. We must provide exactly 3 if effective_knobs is 3.
-    # We take coordinates from knob_positions and pad with (0,0,0) if needed.
+    # Coordinate blocks. Only the first three visible slots are meaningful;
+    # the 212-byte struct has enough zero padding for the advertised count.
     blocks = list(knob_positions)
     while len(blocks) < 3 and effective_knobs == 3:
         blocks.append((0, 0, 0))
@@ -724,6 +735,8 @@ def link(cfg: LinkerConfig) -> None:
     if externals:
         print(f"  external symbols: {externals}")
 
+    object_symbol_names = {sym['name'] for sym in obj.symbols if sym['name']}
+
     # ----- Load divf RTS -----
     divf_code = Path(cfg.divf_rts_path).read_bytes()
 
@@ -799,14 +812,15 @@ def link(cfg: LinkerConfig) -> None:
     use_real_knob3    = use_knob3       and len(cfg.params) >= 3
     nop_knob_count    = sum(1 for i in range(len(cfg.params))
                             if not (
+                                (
+                                    cfg.use_object_edit_handlers
+                                    and f"{cfg.audio_func_name}_{cfg.params[i].name.replace(' ', '')}_edit"
+                                    in object_symbol_names
+                                ) or
                                 (i == 0 and use_real_knob1) or
                                 (i == 1 and use_real_knob2) or
                                 (i == 2 and use_real_knob3)
                             ))
-
-    # Account for all knobs beyond the first 3 (which are always NOP unless real)
-    if len(cfg.params) > 3:
-        nop_knob_count += (len(cfg.params) - 3)
 
     nop_onf_needed    = 1 if (not use_real_handlers or "onf" not in cfg.handler_funcs) else 0
     NOP_RETURN_COUNT  = 1 + nop_knob_count + nop_onf_needed   # init + NOP'd knobs + (maybe) onf
@@ -908,7 +922,7 @@ def link(cfg: LinkerConfig) -> None:
         p_name = param.name.replace(' ', '')
         obj_edit_name = f"{cfg.audio_func_name}_{p_name}_edit"
         key = edit_keys[i] if i < len(edit_keys) else None
-        real_va = obj_symbol_va.get(obj_edit_name)
+        real_va = obj_symbol_va.get(obj_edit_name) if cfg.use_object_edit_handlers else None
         if real_va is None:
             real_va = handler_va.get(key) if key else None
 
@@ -1011,6 +1025,13 @@ def link(cfg: LinkerConfig) -> None:
     if fardata_sec and fardata_sec['size'] > 0:
         off = len(_KNOB_INFO)
         fardata_data[off:off + fardata_sec['size']] = fardata_sec['data']
+    if len(fardata_data) > cfg.max_fardata_bytes and not cfg.allow_large_fardata:
+        raise RuntimeError(
+            f".fardata image is {len(fardata_data)} bytes, above the "
+            f"{cfg.max_fardata_bytes}-byte hardware-safe limit. Large writable "
+            "segments have frozen MS-series pedals on load; remove static state "
+            "or set allow_large_fardata=True for an explicit hardware probe."
+        )
 
     # =====================================================================
     # Resolve .obj symbols → VAs

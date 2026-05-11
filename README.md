@@ -15,19 +15,16 @@ The repo holds:
   parameter table, calling convention, memory layout, gotchas.
 * **A growing collection of ports** under
   [src/airwindows/](src/airwindows/) (so far: HELLO, GAIN,
-  PurestDrive, TapeHack, BitCrush). Most are Airwindows kernels.
-* **Extracted handler blobs** ([build/linesel_handlers.bin](build/linesel_handlers.bin),
-  [build/air_knob3_edit.bin](build/air_knob3_edit.bin),
-  [build/divf_rts.bin](build/divf_rts.bin)) carved out of stock effects
-  and spliced into our outputs to provide knob handlers and float-divide
-  RTS routines.
+  PurestDrive, TapeHack, ToTape9, BitCrush). Most are Airwindows kernels.
+* **Stock-derived handlers and helpers** ([build/linesel_handlers.bin](build/linesel_handlers.bin),
+  [src/airwindows/common/zoom_edit_handlers.h](src/airwindows/common/zoom_edit_handlers.h),
+  [build/divf_rts.bin](build/divf_rts.bin)) used to provide OnOff,
+  1-9 knob edit handlers, and float-divide RTS routines.
 
-> **Status:** 1- and 2-knob plugins boot, are selectable in the FX menu,
-> and process audio on real hardware. 3-knob plugins build but the third
-> knob's params slot is **unverified** on hardware (see
-> [build/ABI.md](build/ABI.md) §5.3.b). 4–9 knob plugins build with
-> NOP_RETURN handlers for the extra slots and a loud warning. Every
-> path beyond 2 knobs needs hardware bisection before it can be trusted.
+> **Status:** the descriptor-count linker bug is fixed and hardware-tested
+> up to 9 edit parameters. The release-safe path now rejects oversized
+> writable `.fardata` by default, because large static plugin state has
+> frozen real MS-series pedals during load.
 
 ---
 
@@ -103,14 +100,15 @@ ZoomMultistompZDL/
 │   ├── zdl.py               container reader/writer + label patcher
 │   ├── screen_image.py      auto-renders a 128×64 splash image from text
 │   ├── linesel_handlers.bin onf + knob1 + knob2 + RTS helpers (verbatim from LineSel)
-│   ├── air_knob3_edit.bin   knob3 edit handler (verbatim from AIR's mix_edit)
+│   ├── air_knob3_edit.bin   legacy knob3 edit handler (verbatim from AIR's mix_edit)
 │   └── divf_rts.bin         float-divide runtime support (verbatim from a stock effect)
 ├── src/
 │   └── airwindows/
 │       ├── hello/           proves the build/flash/boot loop works end-to-end
 │       ├── gain/            single-knob volume trim — minimal C plugin
 │       ├── purestdrive/     Airwindows PurestDrive port (1 knob)
-│       ├── tapehack/        Airwindows TapeHack port (3 knobs — NEW SLOT)
+│       ├── tapehack/        Airwindows TapeHack port
+│       ├── totape9/         Airwindows ToTape9 stateless beta (9 params)
 │       └── bitcrush/        bit-depth/sample-rate crusher (1 knob)
 ├── build_all.py             rebuild every plugin into ./dist/
 ├── dist/                    output ZDLs land here (point Effect Manager at this)
@@ -233,28 +231,23 @@ The pedal paginates parameters onto **3 fixed visible slots** by walking
 the descriptor table 3 entries at a time. So a 9-knob plugin shows up as
 3 pages of 3 knobs each. We accept up to 9 `params`.
 
-| # of knobs | Status            | Edit handlers used                              |
-|-----------:|-------------------|-------------------------------------------------|
-| 1          | ✅ verified        | LineSel `knob1_edit` (writes `params[5]`)       |
-| 2          | ✅ verified        | LineSel `knob1_edit` + `knob2_edit`             |
-| 3          | ❌ broken in linker | See [docs/3-PARAM-LINKER-BUG.md](docs/3-PARAM-LINKER-BUG.md). Workaround: template-clone via [src/airwindows/tapehack/build_via_template.py](src/airwindows/tapehack/build_via_template.py). |
-| 4–9        | ❌ untested         | Blocked on resolving the 3-param bug first.    |
+| # of knobs | Status             | Edit handlers used                              |
+|-----------:|--------------------|-------------------------------------------------|
+| 1          | verified           | LineSel-compatible write to `params[5]`         |
+| 2          | verified           | LineSel-compatible writes to `params[5..6]`     |
+| 3          | verified           | Generated writes to `params[5..7]`              |
+| 4-9        | verified in UI path | Generated writes to `params[5..13]`             |
 
-The 3-param bug was investigated 2026-05-10 — five hardware tests
-ruled out the obvious causes (handler choice, sentinel flags, knob
-positions, dynsym ordering). The actual cause is in firmware code we
-haven't disassembled yet. See
-[docs/3-PARAM-LINKER-BUG.md](docs/3-PARAM-LINKER-BUG.md) for the full
-investigation notes and suggested follow-up. If you
-flash a 4-knob plugin, please report whether the 4th knob actually
-modulates audio. That single data point would unblock the whole
-pages-2-and-3 path.
+The 2026-05-11 fix was in the DLL entry stub: it must declare
+`OnOff + effect-name + params` descriptor entries. Copying NoiseGate's
+hardcoded count of `4` made edit mode stop after two user params. See
+[docs/3-PARAM-LINKER-BUG.md](docs/3-PARAM-LINKER-BUG.md) for the
+investigation log.
 
-If you need a real edit handler for a knob slot ≥ 4 today, you'll have to
-extract one from a stock 9-knob effect (LO-FI Dly is the obvious source)
-and patch out its references to effect-specific lookup tables. The
-extraction harness is straightforward but the patching isn't — none of
-LO-FI Dly's handlers are reloc-free.
+For knobs beyond the first two, include
+[src/airwindows/common/zoom_edit_handlers.h](src/airwindows/common/zoom_edit_handlers.h)
+and instantiate `ZOOM_EDIT_HANDLER(symbol, knob_id, param_byte_offset)`.
+ToTape9 is the reference 9-param build.
 
 ---
 

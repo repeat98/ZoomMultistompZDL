@@ -4,12 +4,18 @@
  * ToTape9 by Chris Johnson (airwindows) – MIT licence
  * Ported to TI TMS320C674x for Zoom Multistomp (MS-50G / MS-60B / MS-70CDR)
  *
+ * Release status
+ * --------------
+ * This is a flash-safe stateless beta. The original Airwindows algorithm has
+ * several kilobytes of persistent state, but large writable .fardata segments
+ * currently freeze MS-series pedals while loading a custom ZDL. Until that ABI
+ * is solved, TOTAPE9_PERSISTENT_STATE stays 0 and flutter is disabled.
+ *
  * Assumptions
  * -----------
  *  - Sample rate is 44100 Hz  →  overallscale = 1.0, spacing = 1, slewsing = 2
  *    Only the avg2 stage of TapeHack2 is active; avg4/8/16/32 stages are dead code
  *    at this sample rate and are omitted entirely.
- *  - Single instance.  All state is static.
  *  - The Zoom firmware calls this function with a pointer to a context structure
  *    in register A4 (first argument by C674x calling convention).
  *  - Knobs are on three pages, three knobs each (IDs 2-10):
@@ -44,6 +50,18 @@
 
 /* #include <math.h>  -- replaced with inline implementations below */
 #include <stdint.h>
+
+#include "../common/zoom_edit_handlers.h"
+
+ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Input_edit,   2, 20);
+ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Tilt_edit,    3, 24);
+ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Shape_edit,   4, 28);
+ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Flutter_edit, 5, 32);
+ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_FlutSpd_edit, 6, 36);
+ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Bias_edit,    7, 40);
+ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_HeadBmp_edit, 8, 44);
+ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_HeadFrq_edit, 9, 48);
+ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Output_edit, 10, 52);
 
 /* =========================================================================
  * Inline math functions
@@ -132,6 +150,13 @@ static float zoom_tanf(float x)
 
 #define FLUTTER_BUF  502   /* must be > max flutter depth (498) + 2 */
 #define PHI          1.6180339887498948f
+#define KNOB_NORM    (1.0f / 0.14f)
+
+/* Persistent .fardata larger than a few hundred bytes currently freezes
+ * MS-series pedals during load. Keep the release build stateless until the
+ * per-effect state ABI is solved; the 9-param UI and core tape stages still
+ * make a useful beta. */
+#define TOTAPE9_PERSISTENT_STATE 0
 
 /* -------------------------------------------------------------------------
  * gslew layout: 9 stages × 3 words = [prevL, prevR, threshold]  (27 words)
@@ -158,6 +183,7 @@ static float zoom_tanf(float x)
  * Persistent state (single-instance)
  * ====================================================================== */
 
+#if TOTAPE9_PERSISTENT_STATE
 /* Dubly encode */
 static float iirEncL, iirEncR;
 static float compEncL, compEncR;
@@ -199,6 +225,7 @@ static float intermedL, intermedR;
 static float slewArrL[2], slewArrR[2];
 static int   wasPosClipL, wasNegClipL;
 static int   wasPosClipR, wasNegClipR;
+#endif
 
 /* =========================================================================
  * Head-bump biquad coefficient calculation
@@ -217,6 +244,13 @@ static void computeHDB(float *hdb, float normalizedFreq, float reso)
     hdb[HDB_B2] =  (1.0f - K / reso + K * K) * norm;
 }
 
+static inline float clamp01(float x)
+{
+    if (x < 0.0f) return 0.0f;
+    if (x > 1.0f) return 1.0f;
+    return x;
+}
+
 /* =========================================================================
  * Main entry point
  *
@@ -230,6 +264,34 @@ static void computeHDB(float *hdb, float normalizedFreq, float reso)
 
 void Fx_FLT_ToTape9(unsigned int *ctx)
 {
+#if !TOTAPE9_PERSISTENT_STATE
+    float iirEncL = 0.0f, iirEncR = 0.0f;
+    float compEncL = 1.0f, compEncR = 1.0f;
+    float avgEncL = 0.0f, avgEncR = 0.0f;
+    float iirDecL = 0.0f, iirDecR = 0.0f;
+    float compDecL = 1.0f, compDecR = 1.0f;
+    float avgDecL = 0.0f, avgDecR = 0.0f;
+    float gslew[GSLEW_TOTAL];
+    float hysteresisL = 0.0f, hysteresisR = 0.0f;
+    float avg2L[2], avg2R[2];
+    float post2L[2], post2R[2];
+    int avgPos = 0;
+    float lastDarkL = 0.0f, lastDarkR = 0.0f;
+    float headBumpL = 0.0f, headBumpR = 0.0f;
+    float hdbA[HDB_TOTAL], hdbB[HDB_TOTAL];
+    float lastSampL = 0.0f, lastSampR = 0.0f;
+    float intermedL = 0.0f, intermedR = 0.0f;
+    float slewArrL[2], slewArrR[2];
+    int wasPosClipL = 0, wasNegClipL = 0;
+    int wasPosClipR = 0, wasNegClipR = 0;
+    int z;
+    for (z = 0; z < GSLEW_TOTAL; z++) gslew[z] = 0.0f;
+    for (z = 0; z < HDB_TOTAL; z++) { hdbA[z] = 0.0f; hdbB[z] = 0.0f; }
+    avg2L[0] = avg2L[1] = avg2R[0] = avg2R[1] = 0.0f;
+    post2L[0] = post2L[1] = post2R[0] = post2R[1] = 0.0f;
+    slewArrL[0] = slewArrL[1] = slewArrR[0] = slewArrR[1] = 0.0f;
+#endif
+
     /* --- Decode context structure --- */
     unsigned int *params   = ZDL_PTR(unsigned int *, ctx[1]);
     float        *fxBuf    = ZDL_PTR(float *,        ctx[5]);  /* L:[0..7] R:[8..15] */
@@ -238,19 +300,22 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
     unsigned int *magicDst = ZDL_PTR(unsigned int *, *(unsigned int *)ZDL_PTR(unsigned int *, ctx[11]));
     unsigned int *magicSrc = ZDL_PTR(unsigned int *, ctx[12]);
 
-    /* --- Load knob values (all 0-1 after multiplying by levelMul) --- */
-    float levelMul = *(float *)&params[4];
+    if (*(float *)&params[0] < 0.5f) return;
 
-    float pInput   = *(float *)&params[5]  * levelMul;  /* Page 1 */
-    float pTilt    = *(float *)&params[6]  * levelMul;
-    float pShape   = *(float *)&params[7]  * levelMul;
-    float pFlutter = *(float *)&params[8]  * levelMul;  /* Page 2 */
-    float pFlutSpd = *(float *)&params[9]  * levelMul;
-    float pBias    = *(float *)&params[10] * levelMul;
-    float pHeadBmp = *(float *)&params[11] * levelMul;  /* Page 3 */
-    float pHeadFrq = *(float *)&params[12] * levelMul;
-    float pOutput  = *(float *)&params[13] * levelMul;
-    float onoff    = *(float *)&params[0];               /* 1.0 on / 0.0 off */
+    /* Generic Zoom edit handlers write a raw ~0..0.14 float, so normalize
+     * here instead of relying on params[4] from stock init code. */
+    float pInput   = clamp01(*(float *)&params[5]  * KNOB_NORM);  /* Page 1 */
+    float pTilt    = clamp01(*(float *)&params[6]  * KNOB_NORM);
+    float pShape   = clamp01(*(float *)&params[7]  * KNOB_NORM);
+    float pFlutter = clamp01(*(float *)&params[8]  * KNOB_NORM);  /* Page 2 */
+#if !TOTAPE9_PERSISTENT_STATE
+    pFlutter = 0.0f;
+#endif
+    float pFlutSpd = clamp01(*(float *)&params[9]  * KNOB_NORM);
+    float pBias    = clamp01(*(float *)&params[10] * KNOB_NORM);
+    float pHeadBmp = clamp01(*(float *)&params[11] * KNOB_NORM);  /* Page 3 */
+    float pHeadFrq = clamp01(*(float *)&params[12] * KNOB_NORM);
+    float pOutput  = clamp01(*(float *)&params[13] * KNOB_NORM);
 
     /* --- Derive algorithm parameters (matching ToTape9 formulas exactly)
      *     overallscale = 1.0 throughout                                  --- */
@@ -355,6 +420,7 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
         /* ================================================================
          * Flutter  (shared gcount write pointer, per original)
          * ============================================================= */
+#if TOTAPE9_PERSISTENT_STATE
         if (flutDepth > 0.0f) {
             if (gcount < 0 || gcount >= FLUTTER_BUF) gcount = FLUTTER_BUF - 1;
 
@@ -394,6 +460,7 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
 
             gcount--;
         }
+#endif
 
         /* ================================================================
          * Bias  (9-stage slew limiter, gslew[x]=prevL, [x+1]=prevR, [x+2]=thresh)
@@ -638,8 +705,8 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
         /* ================================================================
          * Write back, scaled by on/off
          * ============================================================= */
-        fxL[i] = sL * onoff;
-        fxR[i] = sR * onoff;
+        fxL[i] = sL;
+        fxR[i] = sR;
     }
     /* (no return value; jump to B3 handled by compiler epilogue) */
 }

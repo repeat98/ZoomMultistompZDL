@@ -24,6 +24,7 @@ PLUGINS = [
     ("gain",        PLUGIN_DIR / "gain"        / "build.py"),
     ("purestdrive", PLUGIN_DIR / "purestdrive" / "build.py"),
     ("tapehack",    PLUGIN_DIR / "tapehack"    / "build.py"),
+    ("totape9",     PLUGIN_DIR / "totape9"     / "build.py"),
     ("bitcrush",    PLUGIN_DIR / "bitcrush"    / "build.py"),
 ]
 

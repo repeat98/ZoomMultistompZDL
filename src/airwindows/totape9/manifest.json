@@ -1,0 +1,29 @@
+{
+  "effect_name": "ToTape9",
+  "comment": "Airwindows ToTape9 port. Nine-parameter tape-machine model with dubly, flutter, bias, head bump, saturation, and output trim.",
+
+  "audio_func_name": "Fx_FLT_ToTape9",
+
+  "gid": 2,
+  "gid_comment": "0x02 = Filter category. Same bucket as the other Airwindows test ports.",
+
+  "fxid": 403,
+  "fxid_comment": "0x0193, adjacent to GAIN/PurestDr/TapeHack.",
+
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+
+  "params": [
+    {"name": "Input",   "max": 100, "default": 50, "comment": "Input gain. 50 = unity, 100 = 4x."},
+    {"name": "Tilt",    "max": 100, "default": 50, "comment": "Dubly encode/decode tilt."},
+    {"name": "Shape",   "max": 100, "default": 50, "comment": "Dubly IIR shape/frequency."},
+    {"name": "Flutter", "max": 100, "default": 50, "comment": "Wow/flutter depth."},
+    {"name": "FlutSpd", "max": 100, "default": 50, "comment": "Flutter LFO speed."},
+    {"name": "Bias",    "max": 100, "default": 50, "comment": "Tape bias. 50 = neutral."},
+    {"name": "HeadBmp", "max": 100, "default": 50, "comment": "Head-bump resonance amount."},
+    {"name": "HeadFrq", "max": 100, "default": 50, "comment": "Head-bump frequency, 25..200 Hz."},
+    {"name": "Output",  "max": 100, "default": 50, "comment": "Output gain. 50 = unity, 100 = 2x."}
+  ],
+
+  "audio_nop": false
+}
