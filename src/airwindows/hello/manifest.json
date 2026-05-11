@@ -1,29 +1,12 @@
 {
-  "name": "HELLO",
-  "comment": "Smallest functional ZDL: pass-through DSP from the LineSel template, relabeled. Used to validate the build / flash / boot loop end-to-end before porting any real DSP.",
-
-  "template": "working_zdls/MS-70CDR_LINESEL.ZDL",
-  "output":   "HELLO.ZDL",
-
-  "label": {
-    "old": "LineSel",
-    "new": "HELLO",
-    "slot_size": 8,
-    "anchor_hex": "4f6e4f666600",
-    "anchor_offset": 42,
-    "comment": "On-screen FX name in .const. Anchor 'OnOff\\0' appears once; the visible label slot starts 43 bytes later."
-  },
-
-  "info": {
-    "real_type":    2,
-    "unknown1":     1,
-    "knob_type":    2,
-    "unknown2":     0,
-    "sort_index":   250,
-    "sort_sub":     0,
-    "bass_flags":   0,
-    "sort_fx_type": 2,
-    "fx_version":   "1.01",
-    "comment": "sort_index 250 keeps HELLO out of the way of factory FX (originals top out at 240)."
-  }
+  "effect_name": "HELLO",
+  "gid": 2,
+  "fxid": 400,
+  "params": [
+    {"name": "Knob 1", "max": 100, "default": 50},
+    {"name": "Knob 2", "max": 100, "default": 50},
+    {"name": "Knob 3", "max": 100, "default": 50}
+  ],
+  "fxid_version": "1.01",
+  "flags_byte": 1
 }

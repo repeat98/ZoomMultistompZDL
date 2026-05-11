@@ -28,9 +28,9 @@
     },
     {
       "name":    "Output",
-      "max":     100,
+      "max":     150,
       "default": 100,
-      "comment": "params[7]. Post trim 0..0.9x. Knob 3, knob_id=4, AIR knob3 (mix_edit) handler. First v2 plugin to exercise the 3rd-knob slot — UNVERIFIED on hardware (see ABI.md §5.3.b)."
+      "comment": "params[7]. Post trim. Last entry: max=150, default=100 — matches Exciter's Level entry exactly. ALL 5 stock 3-param effects (Exciter/OptComp/ZNR/BottomB/SlowATTCK) use max=150 on the last entry, never 100. Testing whether this is the trigger for the edit-mode 3rd-param bug (2026-05-11). DSP scaling will be slightly off (params[7] maxes at 0.93 not 0.14) but irrelevant for the visibility test."
     }
   ],
 

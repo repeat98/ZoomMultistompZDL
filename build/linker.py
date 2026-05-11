@@ -188,6 +188,17 @@ class LinkerConfig:
     # the next experiment.
     knob_positions: Optional[list[tuple[int, int, int]]] = None
 
+    # Diagnostic override for hardware ABI experiments. Normal builds leave
+    # this unset and use the stock-derived count rules in _build_image_info.
+    image_info_knob_count: Optional[int] = None
+    image_info_header_words: Optional[tuple[int, int]] = None
+
+    # Diagnostic only: stock 3-knob effects have two .text relocations to a
+    # coefficient table before the Dll descriptor/imageInfo relocations. Emit
+    # equivalent relocs in dead .text padding to test old firmware parsers that
+    # may expect this relocation prelude.
+    emit_dummy_coe_relocs: bool = False
+
     # Path to extracted __c6xabi_divf RTS code (640 bytes).
     divf_rts_path: Optional[str | os.PathLike] = None
 
@@ -246,17 +257,13 @@ class LinkerConfig:
                 f"{len(self.params)} params > 9 (3 pages × 3 visible knobs "
                 f"is the apparent firmware ceiling — see ABI.md §3.1)"
             )
-        n_visible = min(3, len(self.params))
+        image_count = self.image_info_knob_count
+        n_visible = min(3, image_count if image_count is not None else len(self.params))
         defaults_by_count = {
             0: [],
-            1: [(2, 54, 36)],                          # centered single knob
-            2: [(2, 38, 36), (3, 70, 36)],             # LineSel-style spacing
-            # 3-knob layout copied verbatim from stock AIR (gid=9, 3-knob).
-            # Earlier defaults (14, 38, 62) at y=34 fell OUTSIDE the
-            # x-range every stock 3-knob effect uses — Exciter's leftmost
-            # is x=31, AIR's is x=21. The firmware silently dropped our
-            # 3rd knob and fell back to a 2-knob render. (2026-05-10 hw test)
-            3: [(2, 21, 36), (3, 45, 36), (4, 69, 36)],
+            1: [(2, 54, 36)],
+            2: [(2, 38, 36), (3, 70, 36)],
+            3: [(2, 31, 36), (3, 55, 36), (4, 79, 36)],
         }
         if self.knob_positions is None:
             self.knob_positions = defaults_by_count[n_visible]
@@ -368,11 +375,17 @@ class ObjFile:
                 for i in range(s['size'] // 8):
                     off = i * 8
                     info = struct.unpack_from('<I', s['data'], off + 4)[0]
+                    rtype = info & 0xFF
+                    offset = struct.unpack_from('<I', s['data'], off)[0]
                     entries.append({
-                        'offset': struct.unpack_from('<I', s['data'], off)[0],
-                        'type':   info & 0xFF,
+                        'offset': offset,
+                        'type':   rtype,
                         'sym_idx': info >> 8,
-                        'addend': 0,
+                        # TI emits CALLP PCR relocations as SHT_REL with the
+                        # instruction offset as the implicit addend. Without
+                        # this, calls land early by their original section
+                        # offset after we move .text/.audio in the final ZDL.
+                        'addend': offset if rtype == RT_PCR_S21 else 0,
                     })
             if entries:
                 self.relocs.setdefault(target_idx, []).extend(entries)
@@ -474,6 +487,14 @@ def _build_descriptor(
     _p32(entry, 0x14, 1)
     _p32(entry, 0x1C, init_func_va)
     _p32(entry, 0x20, audio_func_va)
+    # +0x28: non-zero IEEE-754 float — present in 821/821 stock MS-70CDR
+    # effects (range 11.58..127.67, mean 37.23). Almost certainly a
+    # CPU/memory cost estimate. Writing 0 here makes the firmware silently
+    # drop params from the edit-mode UI even though the descriptor and
+    # imageInfo declare them. See docs/3-PARAM-LINKER-BUG.md.
+    # 20.0f (0x41a00000) is in the typical range for simple effects
+    # (Exciter=19.51, OptComp=30.76, BitCrush=14.88, AutoPan=13.89).
+    entry[0x28:0x2C] = struct.pack('<f', 20.0)
     relocs.append((len(desc) + 0x1C, init_func_va))
     relocs.append((len(desc) + 0x20, audio_func_va))
     desc.extend(entry)
@@ -498,13 +519,12 @@ def _build_descriptor(
             #     (AIR with 6, LOFIDLY with 9, NoiseGate with 2 all
             #      use the simple 0x04 sentinel)
             #
-            # Setting flags=0x14 (which includes the 0x10
-            # pedal-assignable bit) WITHOUT also setting pedal_max=
-            # max_val produces an internally inconsistent entry. v2
-            # tested that combination and it fell back to 2-knob
-            # render — flags and pmax must move together.
+            # Matches Exciter/OptComp/ZNR: 3-param plugins use flags=0x14
+            # (sentinel | pedal) and pedal_max=max on the final parameter.
+            # Earlier tests (2026-05-10) marked this as "no fix" in isolation,
+            # but it is the correct on-disk ABI for 3-param effects.
             if n_user == 3:
-                _p32(entry, 0x14, p.max_val)   # pedal_max
+                _p32(entry, 0x14, p.max_val)   # pedal_max = max
                 _p32(entry, 0x2C, 0x14)        # flags = sentinel | stereo | pedal
             else:
                 _p32(entry, 0x2C, 0x04)        # flags = sentinel only
@@ -522,33 +542,62 @@ def _build_image_info(
     pic_va: int,
     knob_info_va: int,
     knob_positions: list[tuple[int, int, int]],
+    total_knobs: int,
+    knob_count_override: Optional[int] = None,
+    header_words_override: Optional[tuple[int, int]] = None,
 ) -> tuple[bytes, list[tuple[int, int]]]:
     info = bytearray()
     relocs: list[tuple[int, int]] = []
 
+    # Single-page plugins (<=3 knobs) like Exciter/OptComp always use 3 slots 
+    # and total_knobs=3 in the header. Multi-page plugins (AIR) use 3 slots 
+    # but advertise the total param count in the count field.
+    effective_knobs = (
+        knob_count_override
+        if knob_count_override is not None
+        else total_knobs if total_knobs > 3 else 3
+    )
+
+    # Header (32 bytes)
     info.extend(struct.pack('<I', 0))
     info.extend(struct.pack('<I', 1))
     info.extend(struct.pack('<I', 0))
-    info.extend(struct.pack('<I', 128))     # screen width
-    info.extend(struct.pack('<I', 64))      # screen height
+    info.extend(struct.pack('<I', 128))
+    info.extend(struct.pack('<I', 64))
     relocs.append((len(info), pic_va))
     info.extend(struct.pack('<I', pic_va))
-    # +0x18 / +0x1C are picture-related per-effect values (vary across
-    # 128 stock ZDLs without obvious meaning — possibly clip extents).
-    # We match LineSel exactly (the stock 2-knob gid=0x02 effect that
-    # is closest to our common test case). The values aren't load-bearing
-    # for boot — GAIN's picture rendered fine with (28, 25) — but
-    # matching stock keeps the diff surface small.
-    info.extend(struct.pack('<I', 28))
-    info.extend(struct.pack('<I', 17))
+    
+    if header_words_override is not None:
+        info.extend(struct.pack('<I', header_words_override[0]))
+        info.extend(struct.pack('<I', header_words_override[1]))
+    elif effective_knobs == 3:
+        info.extend(struct.pack('<I', 32))  # Exciter/OptComp pattern
+        info.extend(struct.pack('<I', 17))
+    elif effective_knobs > 3:
+        info.extend(struct.pack('<I', 21))  # AIR (paginated) pattern
+        info.extend(struct.pack('<I', 23))
+    else:
+        info.extend(struct.pack('<I', 28))  # LineSel (1 or 2 knobs) pattern
+        info.extend(struct.pack('<I', 17))
 
-    info.extend(struct.pack('<I', len(knob_positions)))
-    for kid, kx, ky in knob_positions:
+    # Knob count and coordinate slots
+    info.extend(struct.pack('<I', effective_knobs))
+    
+    # Coordinate blocks. We must provide exactly 3 if effective_knobs is 3.
+    # We take coordinates from knob_positions and pad with (0,0,0) if needed.
+    blocks = list(knob_positions)
+    while len(blocks) < 3 and effective_knobs == 3:
+        blocks.append((0, 0, 0))
+
+    for kid, kx, ky in blocks:
         info.extend(struct.pack('<I', kid))
         info.extend(struct.pack('<I', kx))
         info.extend(struct.pack('<I', ky))
-        relocs.append((len(info), knob_info_va))
-        info.extend(struct.pack('<I', knob_info_va))
+        if kid > 0:
+            relocs.append((len(info), knob_info_va))
+            info.extend(struct.pack('<I', knob_info_va))
+        else:
+            info.extend(struct.pack('<I', 0))
 
     if len(info) > 212:
         raise ValueError(f"effectTypeImageInfo is {len(info)} > 212 bytes")
@@ -561,6 +610,12 @@ def _build_image_info(
 # all 128 stock MS-70CDR ZDLs; v1 tried field4=5 once and the unit froze
 # at FX-select time. Don't change.
 _KNOB_INFO = struct.pack('<6I', 20, 15, 11, 0, 2, 0)
+
+# Stock 3-knob effects all export a local coefficient-table object before
+# the UI/descriptor symbols. Simple test effects do not need coefficients,
+# but keeping a zero-filled table preserves the stock local-symbol shape
+# that the firmware's edit-mode path appears to care about.
+_DUMMY_COE = bytes(0x44)
 
 
 # ---------------------------------------------------------------------------
@@ -579,11 +634,15 @@ _NOP_RETURN = bytes([
 ])
 
 
+
+
 # ---------------------------------------------------------------------------
 # Dll_<Name> entry function  [v1-empirical]
 #
-# Verbatim 200-byte copy of NoiseGate's Dll function with 4 reloc points
-# repatched to point at our descriptor table + effectTypeImageInfo.
+# 200-byte copy of NoiseGate's Dll function with 4 reloc points repatched
+# to point at our descriptor table + effectTypeImageInfo. The first compact
+# MVK writes the descriptor entry count into the host output struct:
+#   OnOff + effect-name self-entry + user params.
 #
 # An earlier 32-byte attempt patterned after LOFIDLY's Dll caused
 # inconsistent FX-select freezes. NoiseGate boots cleanly. Why this body
@@ -615,9 +674,23 @@ _DLL_RELA_OFFSETS = [
 ]
 
 
-def _build_dll() -> bytes:
+def _encode_compact_mvk_l1_a0(value: int) -> int:
+    """Return compact `MVK.L1 value,A0` encoding for small non-negative ints."""
+    if value < 0 or value > 31:
+        raise ValueError(f"DLL descriptor count {value} out of compact MVK range")
+    # Observed stock encodings:
+    #   4 -> 0x8426 (NoiseGate, 2 user params)
+    #   5 -> 0xA426 (Exciter/OptComp, 3 user params)
+    #   9 -> 0x2C26 (GraphicEQ, 7 user params)
+    hi = ((value & 0x7) << 5) | ((value >> 3) << 3) | 0x04
+    return (hi << 8) | 0x26
+
+
+def _build_dll(desc_entry_count: int) -> bytes:
     code = bytearray()
-    for w in _DLL_WORDS:
+    words = list(_DLL_WORDS)
+    words[0] = (words[0] & 0x0000FFFF) | (_encode_compact_mvk_l1_a0(desc_entry_count) << 16)
+    for w in words:
         code.extend(struct.pack('<I', w))
     assert len(code) == 200
     return bytes(code)
@@ -709,11 +782,40 @@ def link(cfg: LinkerConfig) -> None:
     KNOB3_SIZE      = len(knob3_blob)
     DIVF_OFF        = _align_up(KNOB3_OFF + KNOB3_SIZE, 32)
     DIVF_SIZE       = len(divf_code)
-    NOP_RET_OFF     = _align_up(DIVF_OFF + DIVF_SIZE, 32)
-    NOP_RET_SIZE    = 32
-    DLL_OFF         = NOP_RET_OFF + NOP_RET_SIZE
-    DLL_SIZE        = 200
-    TEXT_TOTAL      = _align_up(DLL_OFF + DLL_SIZE, 32)
+
+    # NOP_RETURN stubs — we need one PER NOP'd-handler-role so each
+    # named dynsym entry (Fx_FLT_<Name>_init, Fx_FLT_<Name>_KnobN_edit
+    # etc.) gets a unique VA. Shared VAs cause va_to_idx collisions
+    # where one named handler overwrites another's reloc resolution —
+    # the firmware then sees `Fx_FLT_<Name>_init` actually pointing at
+    # the symbol named for a different role and silently drops the
+    # affected entry from the edit-mode list (verified hardware test
+    # 2026-05-11 with HELLO).
+    #
+    # Pre-count NOP roles: init (always NOP), plus one per knob that
+    # falls back to NOP_RETURN.
+    use_real_knob1    = use_real_handlers and "knob1_edit" in cfg.handler_funcs and len(cfg.params) >= 1
+    use_real_knob2    = use_real_handlers and "knob2_edit" in cfg.handler_funcs and len(cfg.params) >= 2
+    use_real_knob3    = use_knob3       and len(cfg.params) >= 3
+    nop_knob_count    = sum(1 for i in range(len(cfg.params))
+                            if not (
+                                (i == 0 and use_real_knob1) or
+                                (i == 1 and use_real_knob2) or
+                                (i == 2 and use_real_knob3)
+                            ))
+
+    # Account for all knobs beyond the first 3 (which are always NOP unless real)
+    if len(cfg.params) > 3:
+        nop_knob_count += (len(cfg.params) - 3)
+
+    nop_onf_needed    = 1 if (not use_real_handlers or "onf" not in cfg.handler_funcs) else 0
+    NOP_RETURN_COUNT  = 1 + nop_knob_count + nop_onf_needed   # init + NOP'd knobs + (maybe) onf
+    NOP_RET_OFF       = _align_up(DIVF_OFF + DIVF_SIZE, 32)
+    NOP_RET_STUB_SIZE = 32
+    NOP_RET_SIZE      = NOP_RET_STUB_SIZE * NOP_RETURN_COUNT
+    DLL_OFF           = NOP_RET_OFF + NOP_RET_SIZE
+    DLL_SIZE          = 200
+    TEXT_TOTAL        = _align_up(DLL_OFF + DLL_SIZE, 32)
 
     print(f"\n  .text layout:")
     print(f"    audio    @ 0x{AUDIO_OFF:04X}  ({audio_sec['size']} → padded {AUDIO_PAD})")
@@ -723,7 +825,7 @@ def link(cfg: LinkerConfig) -> None:
     if KNOB3_SIZE:
         print(f"    knob3    @ 0x{KNOB3_OFF:04X}  ({KNOB3_SIZE})")
     print(f"    divf     @ 0x{DIVF_OFF:04X}  ({DIVF_SIZE})")
-    print(f"    nop_ret  @ 0x{NOP_RET_OFF:04X}")
+    print(f"    nop_ret  @ 0x{NOP_RET_OFF:04X}  ({NOP_RETURN_COUNT} × 32-byte stubs)")
     print(f"    Dll      @ 0x{DLL_OFF:04X}")
     print(f"    total      0x{TEXT_TOTAL:X}")
 
@@ -737,8 +839,13 @@ def link(cfg: LinkerConfig) -> None:
     if KNOB3_SIZE:
         out_text[KNOB3_OFF:KNOB3_OFF + KNOB3_SIZE] = knob3_blob
     out_text[DIVF_OFF:DIVF_OFF + DIVF_SIZE] = divf_code
-    out_text[NOP_RET_OFF:NOP_RET_OFF + NOP_RET_SIZE] = _NOP_RETURN
-    out_text[DLL_OFF:DLL_OFF + DLL_SIZE] = _build_dll()
+    # Emit NOP_RETURN_COUNT distinct 32-byte stubs (each is the same byte
+    # sequence — `B B3` + delay-slot NOPs — but they live at distinct
+    # VAs so different roles using NOP_RETURN don't collide in va_to_idx).
+    for k in range(NOP_RETURN_COUNT):
+        stub_off = NOP_RET_OFF + k * NOP_RET_STUB_SIZE
+        out_text[stub_off:stub_off + NOP_RET_STUB_SIZE] = _NOP_RETURN
+    out_text[DLL_OFF:DLL_OFF + DLL_SIZE] = _build_dll(2 + len(cfg.params))
 
     # Resolve handler VAs (one per logical name)
     if use_real_handlers:
@@ -754,6 +861,11 @@ def link(cfg: LinkerConfig) -> None:
     if text_sec:
         section_va[text_sec['idx']] = TEXT_VA + TEXT_ORIG_OFF
 
+    obj_symbol_va: dict[str, int] = {}
+    for sym in obj.symbols:
+        if sym['name'] and sym['shndx'] in section_va:
+            obj_symbol_va[sym['name']] = section_va[sym['shndx']] + sym['value']
+
     # =====================================================================
     # Build .const layout
     # =====================================================================
@@ -762,39 +874,52 @@ def link(cfg: LinkerConfig) -> None:
     DESC_OFF_IN_CONST = _align_up(len(const_data), 4)
     _pad_to(const_data, DESC_OFF_IN_CONST)
 
-    NOP_VA = TEXT_VA + NOP_RET_OFF
-    onf_va  = handler_va.get("onf",  NOP_VA)
-    # init has unresolved Coe-table refs in LineSel's blob; always NOP it.
-    # If/when we extract a self-contained init, swap this to handler_va["init"].
-    init_va = NOP_VA
+    # Sequential allocator over the NOP_RETURN stub region. Each role
+    # that needs a NOP_RETURN handler gets a UNIQUE stub VA so the
+    # named dynsym entries (Fx_FLT_<Name>_init, Fx_FLT_<Name>_KnobN_edit)
+    # never collide in va_to_idx (which uses latest-VA-wins). Without
+    # unique VAs, a NOP'd knob entry's func_ptr reloc resolves to a
+    # symbol with someone else's name, and the firmware silently drops
+    # the affected param from the edit-mode list (verified hardware
+    # test 2026-05-11 with HELLO).
+    next_nop_stub = [0]
+    def _alloc_nop_va() -> int:
+        if next_nop_stub[0] >= NOP_RETURN_COUNT:
+            raise RuntimeError(
+                f"out of NOP_RETURN stubs (NOP_RETURN_COUNT={NOP_RETURN_COUNT}); "
+                f"increase pre-count above"
+            )
+        va = TEXT_VA + NOP_RET_OFF + next_nop_stub[0] * NOP_RET_STUB_SIZE
+        next_nop_stub[0] += 1
+        return va
+
+    onf_va  = handler_va["onf"] if "onf" in handler_va else _alloc_nop_va()
+    init_va = _alloc_nop_va()    # init always NOPs (no real init synthesized yet)
 
     # Per-knob edit handlers.
-    #
-    #  knob 1 → LineSel knob1_edit  (verified, writes params[5], knob_id=2)
-    #  knob 2 → LineSel knob2_edit  (verified, writes params[6], knob_id=3)
-    #  knob 3 → AIR knob3 blob       (writes params[7], knob_id=4 — untested
-    #                                 in v2; AIR ships as a 3-knob effect)
-    #  knob 4..9 → NOP_RETURN
-    #
-    # Knobs 4..9 use NOP_RETURN because no stock effect exposes self-contained
-    # (reloc-free, ~76-byte) edit handlers for slot indices beyond 3 — the
-    # 9-knob LO-FI Dly handlers are tightly coupled to its lookup tables.
-    # Whether the firmware auto-populates params[8..13] for paginated knobs
-    # without a real edit handler is the open hardware question tracked in
-    # ABI.md §5.3.b. The TapeHack 3-knob build is the next experiment in
-    # that ladder.
+    #   knob 1 → LineSel knob1_edit (if blob present)
+    #   knob 2 → LineSel knob2_edit (if blob present)
+    #   knob 3 → AIR knob3 blob (if present)
+    #   knob 4..9 → unique NOP_RETURN stub each
     edit_keys = ["knob1_edit", "knob2_edit", "knob3_edit"]
     knob_edit_vas: list[int] = []
     n_nop_handlers = 0
-    for i, _ in enumerate(cfg.params):
+    for i, param in enumerate(cfg.params):
+        p_name = param.name.replace(' ', '')
+        obj_edit_name = f"{cfg.audio_func_name}_{p_name}_edit"
         key = edit_keys[i] if i < len(edit_keys) else None
-        va = handler_va.get(key, NOP_VA) if key else NOP_VA
-        if va == NOP_VA:
+        real_va = obj_symbol_va.get(obj_edit_name)
+        if real_va is None:
+            real_va = handler_va.get(key) if key else None
+
+        if real_va is not None:
+            knob_edit_vas.append(real_va)
+        else:
+            knob_edit_vas.append(_alloc_nop_va())
             n_nop_handlers += 1
-        knob_edit_vas.append(va)
     if n_nop_handlers:
         print(f"  WARNING: {n_nop_handlers} knob(s) using NOP_RETURN edit "
-              f"handler (knobs 4–9; firmware-auto-populate is unverified)")
+              f"handler (each gets a unique stub VA)")
 
     desc_bytes, desc_relocs = _build_descriptor(
         effect_name=cfg.effect_name,
@@ -816,37 +941,38 @@ def link(cfg: LinkerConfig) -> None:
     _pad_to(const_data, INFO_OFF_IN_CONST)
     INFO_VA = CONST_VA + INFO_OFF_IN_CONST
 
-    # First pass: estimate const size to compute KNOB_INFO_VA, then rebuild
-    # imageInfo with the confirmed VA. (imageInfo is always 212 bytes so the
-    # second pass produces the same result; the indirection is just to
-    # decouple the two builds cleanly.)
-    info_pass1, _ = _build_image_info(
-        pic_va=PIC_VA,
-        knob_info_va=CONST_VA + _align_up(INFO_OFF_IN_CONST + 212, 8),
-        knob_positions=cfg.knob_positions,
-    )
-    const_data.extend(info_pass1)
-    CONST_SIZE = _align_up(len(const_data), 8)
-    _pad_to(const_data, CONST_SIZE)
-
+    # Compute the final fardata address before writing imageInfo, because
+    # imageInfo contains absolute relocations to _infoEffectTypeKnob_A_2.
+    obj_const_sec = obj.get_section('.const')
+    after_info = INFO_OFF_IN_CONST + 212
+    coe_off_est = _align_up(after_info, 4)
+    after_coe = coe_off_est + len(_DUMMY_COE)
+    if obj_const_sec and obj_const_sec['size'] > 0:
+        after_coe = _align_up(after_coe, max(obj_const_sec['align'], 4)) + obj_const_sec['size']
+    CONST_SIZE = _align_up(after_coe, 8)
     FARDATA_VA   = CONST_VA + CONST_SIZE
     KNOB_INFO_VA = FARDATA_VA
     OUR_FARDATA_VA = FARDATA_VA + len(_KNOB_INFO)
 
-    # Second pass: rebuild imageInfo with the actual KNOB_INFO_VA.
-    const_data = bytearray(const_data[:INFO_OFF_IN_CONST])
     info_bytes, info_relocs = _build_image_info(
         pic_va=PIC_VA,
         knob_info_va=KNOB_INFO_VA,
         knob_positions=cfg.knob_positions,
+        total_knobs=len(cfg.params),
+        knob_count_override=cfg.image_info_knob_count,
+        header_words_override=cfg.image_info_header_words,
     )
     const_data.extend(info_bytes)
+
+    COE_OFF_IN_CONST = _align_up(len(const_data), 4)
+    _pad_to(const_data, COE_OFF_IN_CONST)
+    COE_VA = CONST_VA + COE_OFF_IN_CONST
+    const_data.extend(_DUMMY_COE)
 
     # Append the .obj's own .const data (compiler-emitted constants — float
     # divisor tables, jump tables, etc.). Without this, any cross-section
     # MVKL/MVKH reference into .const links unresolved and the audio code
     # reads zero. TapeHack's Taylor coefficients hit this path.
-    obj_const_sec = obj.get_section('.const')
     obj_const_off_in_const = None
     if obj_const_sec and obj_const_sec['size'] > 0:
         obj_const_off_in_const = _align_up(len(const_data), max(obj_const_sec['align'], 4))
@@ -957,6 +1083,21 @@ def link(cfg: LinkerConfig) -> None:
     print(f"\n  Applied {n_relocs} .obj relocations")
 
     # ----- Patch Dll function MVK/MVKH -----
+    coe_relocs: list[tuple[int, int, int]] = []
+    if cfg.emit_dummy_coe_relocs:
+        coe_reloc_off = DLL_OFF + DLL_SIZE
+        if coe_reloc_off + 0x10 > TEXT_TOTAL:
+            raise RuntimeError("not enough .text padding for dummy Coe relocs")
+        # Dead padding after Dll_<Name>. These words are never executed, but
+        # using MVK/MVKH-shaped instructions keeps the relocation records
+        # structurally close to stock Exciter.
+        struct.pack_into('<I', out_text, coe_reloc_off + 0x00, 0x0001AC2A)
+        struct.pack_into('<I', out_text, coe_reloc_off + 0x0C, 0x0040006B)
+        _patch_abs_l16(out_text, coe_reloc_off + 0x00, COE_VA)
+        _patch_abs_h16(out_text, coe_reloc_off + 0x0C, COE_VA)
+        coe_relocs.append((TEXT_VA + coe_reloc_off + 0x00, RT_ABS_L16, COE_VA))
+        coe_relocs.append((TEXT_VA + coe_reloc_off + 0x0C, RT_ABS_H16, COE_VA))
+
     DESC_TABLE_VA = DESC_VA
     for off_in_dll, rtype, purpose in _DLL_RELA_OFFSETS:
         file_off = DLL_OFF + off_in_dll
@@ -970,7 +1111,7 @@ def link(cfg: LinkerConfig) -> None:
     # =====================================================================
     # Build .rela.dyn
     # =====================================================================
-    all_rela: list[tuple[int, int, int]] = list(dyn_relocs)
+    all_rela: list[tuple[int, int, int]] = list(coe_relocs) + list(dyn_relocs)
     for off_in_desc, func_va in desc_relocs:
         all_rela.append((DESC_VA + off_in_desc, RT_ABS32, func_va))
     for off_in_info, ptr_va in info_relocs:
@@ -982,115 +1123,79 @@ def link(cfg: LinkerConfig) -> None:
     # =====================================================================
     # Build .dynsym / .dynstr
     # =====================================================================
+    # ELF spec requires all STB_LOCAL syms to precede all STB_GLOBAL syms.
+    # The host firmware loader also appears to expect a specific order and
+    # visibility (verified against Exciter 2026-05-10).
     dynstr = _StringTable()
-    dynsym_list: list[dict] = [{
-        'name': '', 'name_idx': 0, 'value': 0, 'size': 0,
-        'info': 0, 'st_other': 0, 'shndx': 0,
-    }]
-
-    name_for_va = {
-        TEXT_VA + AUDIO_OFF: cfg.audio_func_name,
-        TEXT_VA + NOP_RET_OFF: 'nop_return',
-        PIC_VA: f'picEffectType_{cfg.effect_name}',
-        DESC_TABLE_VA: cfg.effect_name,
-        INFO_VA: 'effectTypeImageInfo',
-        KNOB_INFO_VA: '_infoEffectTypeKnob_A_2',
-    }
-    if fardata_sec:
-        for sym in obj.symbols:
-            if sym['shndx'] in section_va:
-                va = section_va[sym['shndx']] + sym['value']
-                if va >= 0x80000000 and sym['name']:
-                    name_for_va.setdefault(va, sym['name'])
-
-    size_for_va = {
-        DESC_TABLE_VA: len(desc_bytes),
-        INFO_VA:       len(info_bytes),
-        PIC_VA:        pic_end,
-        KNOB_INFO_VA:  len(_KNOB_INFO),
-    }
-
-    def _shndx(va: int) -> int:
-        # Section indices in our output ELF (must match write_shdr below):
-        # 4 = .text, 5 = .const, 6 = .fardata
-        if va < 0x80000000:
-            return 4
-        elif va >= FARDATA_VA:
-            return 6
-        else:
-            return 5
-
-    # ELF spec requires all STB_LOCAL syms to precede all STB_GLOBAL syms
-    # in a dynamic symbol table. The .dynsym sh_info field is the index of
-    # the first global. v1's linker emitted globals before the trailing
-    # __TI_* locals, violating this — 1- and 2-param plugins worked
-    # despite it, but 3-param effects fall back to a 2-knob render on
-    # MS-70CDR firmware (likely a stricter loader path). Stock effects
-    # follow this layout (verified against Exciter / OptComp / ZNR /
-    # AIR / LineSel 2026-05-10):
-    #
-    #   [0]    NULL
-    #   [1..]  STT_OBJECT data syms (.const / .fardata)   STB_LOCAL
-    #   [..]   STT_FUNC code syms (.text)                 STB_LOCAL
-    #   [..]   __TI_* profiling/static-base syms          STB_LOCAL (SHN_ABS)
-    #   [N-1]  Dll_<Name>                                 STB_GLOBAL  ← only global
-    #
-    # We sort the rela targets into (data, then code) groups, each by VA,
-    # then append the __TI_* locals, then the Dll global last.
-    # Visibility (st_other) per SPRAB89B §14.4.3 "Visibility and Binding":
-    #   "The default visibility for global symbols is STV_INTERNAL.
-    #    ... In the dynamic symbol table all symbols with STV_DEFAULT
-    #    visibility are marked STB_GLOBAL."
-    # Stock Exciter uses STV_HIDDEN (0x02) for all locals and
-    # STV_PROTECTED (0x03) for the single Dll_<Name> global.
-    # Our v1 linker left st_other = 0 (STV_DEFAULT), which the loader
-    # interprets as "potentially preemptible global" — works for ≤2-param
-    # plugins but breaks the 3-param descriptor walk.
-    STV_HIDDEN    = 2
+    dynsym_list = []
+    # Index 0: NULL symbol
+    dynsym_list.append({'name': '', 'name_idx': 0, 'value': 0, 'size': 0, 'info': 0, 'st_other': 0, 'shndx': 0})
+    
+    va_to_idx = {}
+    STV_HIDDEN = 2
     STV_PROTECTED = 3
 
-    code_targets = sorted(t for t in dynsym_targets if t < 0x80000000)
-    data_targets = sorted(t for t in dynsym_targets if t >= 0x80000000)
-    for tgt in data_targets + code_targets:
-        name = name_for_va.get(tgt, f'_sym_0x{tgt:08X}')
-        dynsym_targets[tgt] = len(dynsym_list)
-        stype = STT_FUNC if tgt < 0x80000000 else STT_OBJECT
-        dynsym_list.append({
-            'name': name, 'name_idx': dynstr.add(name),
-            'value': tgt, 'size': size_for_va.get(tgt, 0),
-            'info': (STB_LOCAL << 4) | stype,
-            'st_other': STV_HIDDEN,
-            'shndx': _shndx(tgt),
-        })
+    def _shndx(va: int) -> int:
+        if va < 0x80000000: return 4 # .text
+        return 6 if va >= FARDATA_VA else 5 # .fardata or .const
 
-    # Profiling/static-base locals (always STB_LOCAL, must come before global).
+    def _add_sym(name, value, size, stype, bind, visibility, shndx=None, map_reloc=True):
+        idx = len(dynsym_list)
+        dynsym_list.append({
+            'name': name,
+            'name_idx': dynstr.add(name),
+            'value': value,
+            'size': size,
+            'info': (bind << 4) | stype,
+            'st_other': visibility,
+            'shndx': shndx if shndx is not None else _shndx(value),
+        })
+        if map_reloc:
+            va_to_idx[value] = idx
+        return idx
+
+    # 1. Start with relocation targets (unnamed locals)
+    abi_vas = {TEXT_VA + AUDIO_OFF, DESC_TABLE_VA, INFO_VA, PIC_VA, KNOB_INFO_VA, TEXT_VA + NOP_RET_OFF, onf_va, init_va}
+    abi_vas.update(knob_edit_vas)
+
+    for tgt in sorted(dynsym_targets.keys()):
+        if tgt not in abi_vas:
+            stype = STT_FUNC if tgt < 0x80000000 else STT_OBJECT
+            _add_sym('', tgt, 0, stype, STB_LOCAL, STV_HIDDEN)
+
+    # 2. Add ABI-required local symbols in the same broad order as stock
+    # 3-knob effects: data, edit handlers in reverse descriptor order,
+    # audio/init/onf, then imageInfo + descriptor. The firmware should use
+    # relocations, but hardware tests show the edit-mode path is sensitive
+    # to details the loader's normal relocation path ignores.
+    _add_sym(f'_{cfg.audio_func_name}_Coe', COE_VA, len(_DUMMY_COE), STT_OBJECT, STB_LOCAL, STV_HIDDEN)
+    _add_sym('_infoEffectTypeKnob_A_2', KNOB_INFO_VA, len(_KNOB_INFO), STT_OBJECT, STB_LOCAL, STV_HIDDEN)
+    _add_sym(f'picEffectType_{cfg.effect_name}', PIC_VA, pic_end, STT_OBJECT, STB_LOCAL, STV_HIDDEN)
+    for i in reversed(range(len(knob_edit_vas))):
+        p_name = cfg.params[i].name.replace(' ', '')
+        _add_sym(f"{cfg.audio_func_name}_{p_name}_edit", knob_edit_vas[i], 0, STT_FUNC, STB_LOCAL, STV_HIDDEN)
+    _add_sym(cfg.audio_func_name, TEXT_VA + AUDIO_OFF, 0, STT_FUNC, STB_LOCAL, STV_HIDDEN)
+    _add_sym(f"{cfg.audio_func_name}_init", init_va, 0, STT_FUNC, STB_LOCAL, STV_HIDDEN)
+    _add_sym(f"{cfg.audio_func_name}_onf", onf_va, 0, STT_FUNC, STB_LOCAL, STV_HIDDEN)
+    _add_sym('effectTypeImageInfo', INFO_VA, len(info_bytes), STT_OBJECT, STB_LOCAL, STV_HIDDEN)
+    _add_sym('SonicStomp', DESC_TABLE_VA, len(desc_bytes), STT_OBJECT, STB_LOCAL, STV_HIDDEN)
+
+    # 3. Profiling/static-base locals (SHN_ABS)
     SHN_ABS = 0xFFF1
-    for sn in ('__TI_STATIC_BASE', '__TI_pprof_out_hndl',
-               '__TI_prof_data_size', '__TI_prof_data_start'):
-        # Order matches stock Exciter exactly.
-        ni = dynstr.add(sn)
+    for sn in ('__TI_STATIC_BASE', '__TI_pprof_out_hndl', '__TI_prof_data_size', '__TI_prof_data_start'):
         val = 0xFFFFFFFF if 'pprof' in sn or 'prof_data' in sn else 0
         shndx = SHN_ABS if val == 0xFFFFFFFF else 0
-        dynsym_list.append({
-            'name': sn, 'name_idx': ni,
-            'value': val, 'size': 0,
-            'info': (STB_LOCAL << 4) | STT_NOTYPE,
-            'st_other': STV_HIDDEN,
-            'shndx': shndx,
-        })
+        # These ABI bookkeeping symbols are not relocation targets for our
+        # descriptor. In particular, __TI_STATIC_BASE has value 0, same as
+        # the audio function, and must not steal the name entry's audio_ptr
+        # relocation from Fx_FLT_<Name>.
+        _add_sym(sn, val, 0, STT_NOTYPE, STB_LOCAL, STV_HIDDEN, shndx=shndx, map_reloc=False)
 
-    # First global symbol — Dll_<Name> goes LAST. STV_PROTECTED matches stock.
+    # 4. DLL Entry (STB_GLOBAL)
     first_global_idx = len(dynsym_list)
     dll_name = f'Dll_{cfg.effect_name}'
     dll_name_idx = dynstr.add(dll_name)
-    dll_sym_idx = len(dynsym_list)
-    dynsym_list.append({
-        'name': dll_name, 'name_idx': dll_name_idx,
-        'value': TEXT_VA + DLL_OFF, 'size': 0,
-        'info': (STB_GLOBAL << 4) | STT_FUNC,
-        'st_other': STV_PROTECTED,
-        'shndx': 4,
-    })
+    dll_sym_idx = _add_sym(dll_name, TEXT_VA + DLL_OFF, 0, STT_FUNC, STB_GLOBAL, STV_PROTECTED)
 
     # SONAME — must follow `ZDL_<GID_PREFIX>_<Name>.out` or the firmware
     # falls back to a 2-knob no-page mode.
@@ -1100,7 +1205,7 @@ def link(cfg: LinkerConfig) -> None:
     # ----- Pack dynamic structures -----
     rela_dyn_data = bytearray()
     for va, rtype, tgt in all_rela:
-        sym_idx = dynsym_targets[tgt]
+        sym_idx = va_to_idx.get(tgt, 0)
         rela_dyn_data.extend(struct.pack('<Iii', va, (sym_idx << 8) | rtype, 0))
 
     dynsym_data = bytearray()
@@ -1146,14 +1251,19 @@ def link(cfg: LinkerConfig) -> None:
     c6xabi_path = Path(__file__).resolve().parent / "c6xabi_attributes.bin"
     c6xabi_attrs = c6xabi_path.read_bytes()
 
-    cur = ELF_HDR_SIZE + PHDR_TABLE
+    # Stock ZDL ELFs place .text at file offset 0x40 and put the program
+    # header table near EOF, immediately before the section headers. Keep
+    # that shape: the normal loader follows e_phoff either way, but the
+    # firmware's edit-mode path appears to have an older parser with layout
+    # assumptions.
+    cur = ELF_HDR_SIZE
     text_file_off = _align_up(cur, 32);                cur = text_file_off + TEXT_TOTAL
     const_file_off = _align_up(cur, 8);                cur = const_file_off + CONST_SIZE
-    # .fardata: only KNOB_INFO ships in the file. memsz==filesz==24.
-    # All 128 stock ZDLs match this; deviating (even to grow into BSS) freezes
-    # the pedal on load. Static far variables are not supported — any plugin
-    # state must come through ctx pointers.
-    fardata_file_off = _align_up(cur, 4);              cur = fardata_file_off + len(_KNOB_INFO)
+    # .fardata includes the common 24-byte knob bitmap followed by any
+    # plugin .fardata/.far state. Keep filesz == memsz: stock effects store
+    # zero-initialized state as literal zero bytes in the file image rather
+    # than asking the loader for a BSS extension.
+    fardata_file_off = _align_up(cur, 4);              cur = fardata_file_off + len(fardata_data)
     rela_dyn_file_off = _align_up(cur, 4);             cur = rela_dyn_file_off + len(rela_dyn_data)
     rela_plt_file_off = cur                            # empty
     dynamic_size = 21 * 8                              # match Exciter
@@ -1173,7 +1283,8 @@ def link(cfg: LinkerConfig) -> None:
 
     NUM_SECTIONS = 13
     SHDR_SIZE    = 0x28
-    shdr_file_off = _align_up(cur, 4);                 cur = shdr_file_off + NUM_SECTIONS * SHDR_SIZE
+    phdr_file_off = cur;                               cur = phdr_file_off + PHDR_TABLE
+    shdr_file_off = cur;                               cur = shdr_file_off + NUM_SECTIONS * SHDR_SIZE
     elf_size = cur
 
     # ----- ZDL header (76 bytes) -----
@@ -1227,7 +1338,7 @@ def link(cfg: LinkerConfig) -> None:
     _p16(elf, 0x12, EM_TI_C6000)
     _p32(elf, 0x14, 1)
     _p32(elf, 0x18, TEXT_VA + DLL_OFF)                          # e_entry
-    _p32(elf, 0x1C, ELF_HDR_SIZE)                               # e_phoff
+    _p32(elf, 0x1C, phdr_file_off)                              # e_phoff
     _p32(elf, 0x20, shdr_file_off)                              # e_shoff
     _p32(elf, 0x24, 0)
     _p16(elf, 0x28, ELF_HDR_SIZE)
@@ -1237,7 +1348,7 @@ def link(cfg: LinkerConfig) -> None:
     _p16(elf, 0x30, NUM_SECTIONS)
     _p16(elf, 0x32, NUM_SECTIONS - 1)                           # e_shstrndx
 
-    p = ELF_HDR_SIZE
+    p = phdr_file_off
     # PT_LOAD .text r-x
     _p32(elf, p+0x00, PT_LOAD); _p32(elf, p+0x04, text_file_off)
     _p32(elf, p+0x08, TEXT_VA); _p32(elf, p+0x0C, TEXT_VA)
@@ -1250,10 +1361,10 @@ def link(cfg: LinkerConfig) -> None:
     _p32(elf, p+0x10, CONST_SIZE); _p32(elf, p+0x14, CONST_SIZE)
     _p32(elf, p+0x18, 4); _p32(elf, p+0x1C, 8)
     p += PHDR_SIZE
-    # PT_LOAD .fardata rw-, memsz == filesz, no BSS extension. [v1-empirical]
+    # PT_LOAD .fardata rw-, memsz == filesz, no BSS extension.
     _p32(elf, p+0x00, PT_LOAD); _p32(elf, p+0x04, fardata_file_off)
     _p32(elf, p+0x08, FARDATA_VA); _p32(elf, p+0x0C, FARDATA_VA)
-    _p32(elf, p+0x10, len(_KNOB_INFO)); _p32(elf, p+0x14, len(_KNOB_INFO))
+    _p32(elf, p+0x10, len(fardata_data)); _p32(elf, p+0x14, len(fardata_data))
     _p32(elf, p+0x18, 6); _p32(elf, p+0x1C, 4)
     p += PHDR_SIZE
     # PT_DYNAMIC
@@ -1265,7 +1376,7 @@ def link(cfg: LinkerConfig) -> None:
     # ----- Section data -----
     elf[text_file_off:text_file_off + TEXT_TOTAL]              = out_text
     elf[const_file_off:const_file_off + CONST_SIZE]            = const_data
-    elf[fardata_file_off:fardata_file_off + len(_KNOB_INFO)]   = fardata_data[:len(_KNOB_INFO)]
+    elf[fardata_file_off:fardata_file_off + len(fardata_data)] = fardata_data
     elf[rela_dyn_file_off:rela_dyn_file_off + len(rela_dyn_data)] = rela_dyn_data
     elf[dynamic_file_off:dynamic_file_off + len(dyn)]          = dyn
     elf[dynsym_file_off:dynsym_file_off + len(dynsym_data)]    = dynsym_data
@@ -1300,7 +1411,7 @@ def link(cfg: LinkerConfig) -> None:
     _sh(5, '.const', SHT_PROGBITS, SHF_ALLOC,
         CONST_VA, const_file_off, CONST_SIZE, align=8)
     _sh(6, '.fardata', SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
-        FARDATA_VA, fardata_file_off, len(_KNOB_INFO), align=4)
+        FARDATA_VA, fardata_file_off, len(fardata_data), align=4)
     _sh(7, '.dynamic', SHT_DYNAMIC, 0,
         0, dynamic_file_off, dynamic_size, link=9, entsize=8)
     # SHT_DYNSYM info field: ELF spec mandates this be the index of the

@@ -144,7 +144,7 @@ entry — that's `pedal_max = 1`, common but its purpose is unclear):
 | 1       | "Exciter"| 0xFFFFFFFF | 0       | 1         | init            | audio     | 0x00    |
 | 2       | "Bass"   | 100        | 0       | 0         | loContour_edit  | 0         | 0x00    |
 | 3       | "Trebl"  | 100        | 0       | 0         | process_edit    | 0         | 0x00    |
-| 4       | "Level"  | 150        | 100     | 0         | outlv_edit      | 0         | 0x14    |
+| 4       | "Level"  | 150        | 100     | 150       | outlv_edit      | 0         | 0x14    |
 
 **On disk, `func_ptr` and `audio_ptr` are zero** — the dynamic linker
 resolves them at load time from `.rela.dyn` ABS32 entries. Same for the
