@@ -10,3 +10,5 @@ zoom-fx-modding-main
 __pycache__/
 *.pyc
 src/airwindows/*/*.obj
+src/airwindows/*/*_params.h
+!src/airwindows/common/zoom_params.h

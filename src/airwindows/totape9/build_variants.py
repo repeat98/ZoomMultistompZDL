@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT / "build"))
 sys.path.insert(0, str(HERE.parent / "common"))
 
 from airwindows_image import make_airwindows_tape_screen  # noqa: E402
+from manifest_params import write_param_header  # noqa: E402
 from linker import LinkerConfig, link, params_from_manifest  # noqa: E402
 
 TI_ROOT = Path("/Applications/ti/ccs2050/ccs/tools/compiler/ti-cgt-c6000_8.5.0.LTS")
@@ -71,6 +72,7 @@ def build_one(
 
 def main() -> None:
     manifest = json.loads((HERE / "manifest.json").read_text())
+    write_param_header(manifest, HERE / "totape9_params.h", "TOTAPE9")
     src_c = HERE / "totape9.c"
     obj = HERE / "totape9.obj"
     tiny_src_c = HERE / "totape9_tiny.c"

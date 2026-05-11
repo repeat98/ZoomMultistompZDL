@@ -52,6 +52,8 @@
 #include <stdint.h>
 
 #include "../common/zoom_edit_handlers.h"
+#include "../common/zoom_params.h"
+#include "totape9_params.h"
 
 ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Input_edit,   2, 20);
 ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Tilt_edit,    3, 24);
@@ -245,20 +247,6 @@ static void computeHDB(float *hdb, float normalizedFreq, float reso)
     hdb[HDB_B2] =  (1.0f - K / reso + K * K) * norm;
 }
 
-static inline float clamp01(float x)
-{
-    if (x < 0.0f) return 0.0f;
-    if (x > 1.0f) return 1.0f;
-    return x;
-}
-
-static inline float knob_or_default(float raw, float fallback)
-{
-    float v = raw * KNOB_NORM;
-    if (v <= 0.0001f) return fallback;
-    return clamp01(v);
-}
-
 /* =========================================================================
  * Main entry point
  *
@@ -285,15 +273,15 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
     /* Small-stack/no-divide release core. The full Airwindows body below is
      * kept for future state-ABI work, but this path avoids the large stack
      * frame and runtime divf calls that freeze hardware on first audio tick. */
-    float pInput   = knob_or_default(params[5],  0.50f);
-    float pTilt    = knob_or_default(params[6],  0.50f);
-    float pShape   = knob_or_default(params[7],  0.50f);
-    float pFlutter = knob_or_default(params[8],  0.00f);
-    float pFlutSpd = knob_or_default(params[9],  0.50f);
-    float pBias    = knob_or_default(params[10], 0.50f);
-    float pHeadBmp = knob_or_default(params[11], 0.20f);
-    float pHeadFrq = knob_or_default(params[12], 0.50f);
-    float pOutput  = knob_or_default(params[13], 0.50f);
+    float pInput   = zoom_param_norm(params[TOTAPE9_INPUT_SLOT],   TOTAPE9_INPUT_DEFAULT_NORM);
+    float pTilt    = zoom_param_norm(params[TOTAPE9_TILT_SLOT],    TOTAPE9_TILT_DEFAULT_NORM);
+    float pShape   = zoom_param_norm(params[TOTAPE9_SHAPE_SLOT],   TOTAPE9_SHAPE_DEFAULT_NORM);
+    float pFlutter = zoom_param_norm(params[TOTAPE9_FLUTTER_SLOT], TOTAPE9_FLUTTER_DEFAULT_NORM);
+    float pFlutSpd = zoom_param_norm(params[TOTAPE9_FLUTSPD_SLOT], TOTAPE9_FLUTSPD_DEFAULT_NORM);
+    float pBias    = zoom_param_norm(params[TOTAPE9_BIAS_SLOT],    TOTAPE9_BIAS_DEFAULT_NORM);
+    float pHeadBmp = zoom_param_norm(params[TOTAPE9_HEADBMP_SLOT], TOTAPE9_HEADBMP_DEFAULT_NORM);
+    float pHeadFrq = zoom_param_norm(params[TOTAPE9_HEADFRQ_SLOT], TOTAPE9_HEADFRQ_DEFAULT_NORM);
+    float pOutput  = zoom_param_norm(params[TOTAPE9_OUTPUT_SLOT],  TOTAPE9_OUTPUT_DEFAULT_NORM);
 
     float inputGain = pInput * pInput * 4.0f;
     float drive = 1.0f + pShape * 3.0f + pHeadBmp * 2.0f;
@@ -370,18 +358,18 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
 
     /* Generic Zoom edit handlers write a raw ~0..0.14 float, so normalize
      * here instead of relying on params[4] from stock init code. */
-    float pInput   = clamp01(*(float *)&params[5]  * KNOB_NORM);  /* Page 1 */
-    float pTilt    = clamp01(*(float *)&params[6]  * KNOB_NORM);
-    float pShape   = clamp01(*(float *)&params[7]  * KNOB_NORM);
-    float pFlutter = clamp01(*(float *)&params[8]  * KNOB_NORM);  /* Page 2 */
+    float pInput   = zoom_clamp01(*(float *)&params[5]  * KNOB_NORM);  /* Page 1 */
+    float pTilt    = zoom_clamp01(*(float *)&params[6]  * KNOB_NORM);
+    float pShape   = zoom_clamp01(*(float *)&params[7]  * KNOB_NORM);
+    float pFlutter = zoom_clamp01(*(float *)&params[8]  * KNOB_NORM);  /* Page 2 */
 #if !TOTAPE9_PERSISTENT_STATE
     pFlutter = 0.0f;
 #endif
-    float pFlutSpd = clamp01(*(float *)&params[9]  * KNOB_NORM);
-    float pBias    = clamp01(*(float *)&params[10] * KNOB_NORM);
-    float pHeadBmp = clamp01(*(float *)&params[11] * KNOB_NORM);  /* Page 3 */
-    float pHeadFrq = clamp01(*(float *)&params[12] * KNOB_NORM);
-    float pOutput  = clamp01(*(float *)&params[13] * KNOB_NORM);
+    float pFlutSpd = zoom_clamp01(*(float *)&params[9]  * KNOB_NORM);
+    float pBias    = zoom_clamp01(*(float *)&params[10] * KNOB_NORM);
+    float pHeadBmp = zoom_clamp01(*(float *)&params[11] * KNOB_NORM);  /* Page 3 */
+    float pHeadFrq = zoom_clamp01(*(float *)&params[12] * KNOB_NORM);
+    float pOutput  = zoom_clamp01(*(float *)&params[13] * KNOB_NORM);
 
     /* --- Derive algorithm parameters (matching ToTape9 formulas exactly)
      *     overallscale = 1.0 throughout                                  --- */

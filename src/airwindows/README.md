@@ -10,6 +10,41 @@ Required files:
   `build/linker.py`.
 - `<effect>.c`: exports `Fx_FLT_<Name>` in `.audio`.
 
+Manifest params can describe more than plain `0..100` knobs:
+
+```json
+{
+  "name": "Mode",
+  "type": "switch",
+  "max": 1,
+  "default": 0,
+  "labels": ["Off", "On"],
+  "audio_default": 0
+}
+```
+
+For continuous controls, keep UI range and DSP range separate:
+
+```json
+{
+  "name": "Freq",
+  "type": "knob",
+  "min": 0,
+  "max": 100,
+  "default": 50,
+  "scale": "hz",
+  "unit": "Hz",
+  "audio_min": 25.0,
+  "audio_max": 200.0,
+  "audio_default": 0.5
+}
+```
+
+The linker writes descriptor fields from `min/max/default/flags`. Build
+scripts can call `write_param_header(...)` from
+`common/manifest_params.py` so DSP code gets generated slot/default/range
+defines from the same manifest.
+
 For ports with more than two controls, include
 `../common/zoom_edit_handlers.h` and define one `ZOOM_EDIT_HANDLER` per
 param:

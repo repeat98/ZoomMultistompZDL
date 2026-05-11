@@ -198,9 +198,17 @@ config travels with the plugin rather than with `build.py` (see below).
 
    Each `params` entry has:
    * `name` (≤ 8 ASCII chars — short labels render best),
-   * `max` (integer, e.g. 100, 150, 0x779),
-   * `default` (integer in `0..max`),
-   * `comment` (free-form, ignored by the linker — document the slot and handler choice here).
+   * `type` (`knob`, `switch`, `enum`, or `tempo`; currently used as metadata and for generated DSP constants),
+   * `min`, `max`, `default` (UI integer range written into the descriptor),
+   * optional descriptor fields: `pedal_max`, `flags`, `reserved_a`, `reserved_b`,
+   * optional DSP fields: `scale`, `unit`, `audio_min`, `audio_max`, `audio_default`, `labels`,
+   * `comment` (free-form, ignored by the linker).
+
+   Manifest builds generate an `<effect>_params.h` header when the build
+   script calls `write_param_header(...)`. DSP code can then use
+   `ZOOM_PARAM_*` helpers from
+   [src/airwindows/common/zoom_params.h](src/airwindows/common/zoom_params.h)
+   instead of hardcoding every slot/default/range.
 
 4. **Add an entry to `build_all.py`.** Append your plugin to the
    `PLUGINS` list so it gets rebuilt with the rest:

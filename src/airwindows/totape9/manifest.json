@@ -14,15 +14,15 @@
   "flags_byte": 1,
 
   "params": [
-    {"name": "Input",   "max": 100, "default": 50, "comment": "Input gain. 50 = unity, 100 = 4x."},
-    {"name": "Tilt",    "max": 100, "default": 50, "comment": "Dubly encode/decode tilt."},
-    {"name": "Shape",   "max": 100, "default": 50, "comment": "Dubly IIR shape/frequency."},
-    {"name": "Flutter", "max": 100, "default": 50, "comment": "Wow/flutter depth."},
-    {"name": "FlutSpd", "max": 100, "default": 50, "comment": "Flutter LFO speed."},
-    {"name": "Bias",    "max": 100, "default": 50, "comment": "Tape bias. 50 = neutral."},
-    {"name": "HeadBmp", "max": 100, "default": 50, "comment": "Head-bump resonance amount."},
-    {"name": "HeadFrq", "max": 100, "default": 50, "comment": "Head-bump frequency, 25..200 Hz."},
-    {"name": "Output",  "max": 100, "default": 50, "comment": "Output gain. 50 = unity, 100 = 2x."}
+    {"name": "Input",   "type": "knob", "max": 100, "default": 50, "scale": "linear", "audio_min": 0.0, "audio_max": 4.0, "audio_default": 0.5, "comment": "Input gain. 50 = unity, 100 = 4x."},
+    {"name": "Tilt",    "type": "knob", "max": 100, "default": 50, "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "comment": "Dubly encode/decode tilt."},
+    {"name": "Shape",   "type": "knob", "max": 100, "default": 50, "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "comment": "Dubly IIR shape/frequency."},
+    {"name": "Flutter", "type": "knob", "max": 100, "default": 0,  "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.0, "comment": "Wow/flutter depth. Default 0 in the stateless beta."},
+    {"name": "FlutSpd", "type": "knob", "max": 100, "default": 50, "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "comment": "Flutter LFO speed."},
+    {"name": "Bias",    "type": "knob", "max": 100, "default": 50, "scale": "bipolar", "audio_min": -1.0, "audio_max": 1.0, "audio_default": 0.5, "comment": "Tape bias. 50 = neutral."},
+    {"name": "HeadBmp", "type": "knob", "max": 100, "default": 20, "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.2, "comment": "Head-bump resonance amount."},
+    {"name": "HeadFrq", "type": "knob", "max": 100, "default": 50, "scale": "hz", "unit": "Hz", "audio_min": 25.0, "audio_max": 200.0, "audio_default": 0.5, "comment": "Head-bump frequency, 25..200 Hz."},
+    {"name": "Output",  "type": "knob", "max": 100, "default": 50, "scale": "linear", "audio_min": 0.0, "audio_max": 2.0, "audio_default": 0.5, "comment": "Output gain. 50 = unity, 100 = 2x."}
   ],
 
   "audio_nop": false
