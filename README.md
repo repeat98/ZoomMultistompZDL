@@ -237,12 +237,15 @@ the descriptor table 3 entries at a time. So a 9-knob plugin shows up as
 |-----------:|-------------------|-------------------------------------------------|
 | 1          | ✅ verified        | LineSel `knob1_edit` (writes `params[5]`)       |
 | 2          | ✅ verified        | LineSel `knob1_edit` + `knob2_edit`             |
-| 3          | ⚠️  untested in v2 | LineSel ×2 + AIR `mix_edit` (writes `params[7]`) |
-| 4–9        | ⚠️  best-guess     | LineSel ×2 + AIR + **NOP_RETURN** for the rest  |
+| 3          | ❌ broken in linker | See [docs/3-PARAM-LINKER-BUG.md](docs/3-PARAM-LINKER-BUG.md). Workaround: template-clone via [src/airwindows/tapehack/build_via_template.py](src/airwindows/tapehack/build_via_template.py). |
+| 4–9        | ❌ untested         | Blocked on resolving the 3-param bug first.    |
 
-The unknown for 3+ knobs is whether the firmware auto-populates the
-`params[7..13]` slots when the user turns a paginated knob — see
-[build/ABI.md §5.3.b](build/ABI.md) for the open-questions list. If you
+The 3-param bug was investigated 2026-05-10 — five hardware tests
+ruled out the obvious causes (handler choice, sentinel flags, knob
+positions, dynsym ordering). The actual cause is in firmware code we
+haven't disassembled yet. See
+[docs/3-PARAM-LINKER-BUG.md](docs/3-PARAM-LINKER-BUG.md) for the full
+investigation notes and suggested follow-up. If you
 flash a 4-knob plugin, please report whether the 4th knob actually
 modulates audio. That single data point would unblock the whole
 pages-2-and-3 path.

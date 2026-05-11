@@ -57,6 +57,15 @@ def main() -> None:
         fxid_version     = manifest.get("fxid_version", "1.00").encode("ascii"),
         flags_byte       = manifest.get("flags_byte", 0x01),
         audio_nop        = manifest.get("audio_nop", False),
+        # AIR's mix_edit (76 bytes, 0 .rela.dyn entries but apparently
+        # internal hardcoded refs) crashes the pedal when invoked in
+        # our context — when flags=0x14 / pmax=max enables actual
+        # invocation of the entry [4] handler, the AIR blob freezes
+        # the unit. Force NOP_RETURN until we have a synthesized,
+        # truly self-contained knob3 edit handler. With NOP, knob 3
+        # is a placeholder — it doesn't write params[7], so the audio
+        # function reads stale memory there. (See docs/3-PARAM-LINKER-BUG.md.)
+        knob3_blob_path  = "/tmp/__nonexistent__",
     )
     link(cfg)
 

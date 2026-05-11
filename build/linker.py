@@ -251,7 +251,12 @@ class LinkerConfig:
             0: [],
             1: [(2, 54, 36)],                          # centered single knob
             2: [(2, 38, 36), (3, 70, 36)],             # LineSel-style spacing
-            3: [(2, 14, 34), (3, 38, 34), (4, 62, 34)],
+            # 3-knob layout copied verbatim from stock AIR (gid=9, 3-knob).
+            # Earlier defaults (14, 38, 62) at y=34 fell OUTSIDE the
+            # x-range every stock 3-knob effect uses — Exciter's leftmost
+            # is x=31, AIR's is x=21. The firmware silently dropped our
+            # 3rd knob and fell back to a 2-knob render. (2026-05-10 hw test)
+            3: [(2, 21, 36), (3, 45, 36), (4, 69, 36)],
         }
         if self.knob_positions is None:
             self.knob_positions = defaults_by_count[n_visible]
@@ -474,6 +479,7 @@ def _build_descriptor(
     desc.extend(entry)
 
     last_idx = len(params) - 1
+    n_user = len(params)
     for i, p in enumerate(params):
         entry = bytearray(0x30)
         nb = p.name.encode('ascii')[:8]
@@ -482,7 +488,26 @@ def _build_descriptor(
         _p32(entry, 0x10, p.default_val)
         _p32(entry, 0x1C, knob_edit_vas[i])
         if i == last_idx:
-            _p32(entry, 0x2C, 0x04)
+            # Last-entry sentinel pattern is param-count-dependent
+            # (verified across MS-70CDR stock 2026-05-10):
+            #
+            #   3 user params → flags=0x14, pedal_max=max_val
+            #     (Exciter / OptComp / ZNR all match this exactly)
+            #
+            #   1, 2, 4..9 user params → flags=0x04, pedal_max=0
+            #     (AIR with 6, LOFIDLY with 9, NoiseGate with 2 all
+            #      use the simple 0x04 sentinel)
+            #
+            # Setting flags=0x14 (which includes the 0x10
+            # pedal-assignable bit) WITHOUT also setting pedal_max=
+            # max_val produces an internally inconsistent entry. v2
+            # tested that combination and it fell back to 2-knob
+            # render — flags and pmax must move together.
+            if n_user == 3:
+                _p32(entry, 0x14, p.max_val)   # pedal_max
+                _p32(entry, 0x2C, 0x14)        # flags = sentinel | stereo | pedal
+            else:
+                _p32(entry, 0x2C, 0x04)        # flags = sentinel only
         relocs.append((len(desc) + 0x1C, knob_edit_vas[i]))
         desc.extend(entry)
 
@@ -960,7 +985,7 @@ def link(cfg: LinkerConfig) -> None:
     dynstr = _StringTable()
     dynsym_list: list[dict] = [{
         'name': '', 'name_idx': 0, 'value': 0, 'size': 0,
-        'info': 0, 'shndx': 0,
+        'info': 0, 'st_other': 0, 'shndx': 0,
     }]
 
     name_for_va = {
@@ -995,33 +1020,54 @@ def link(cfg: LinkerConfig) -> None:
         else:
             return 5
 
-    for tgt in sorted(dynsym_targets):
+    # ELF spec requires all STB_LOCAL syms to precede all STB_GLOBAL syms
+    # in a dynamic symbol table. The .dynsym sh_info field is the index of
+    # the first global. v1's linker emitted globals before the trailing
+    # __TI_* locals, violating this — 1- and 2-param plugins worked
+    # despite it, but 3-param effects fall back to a 2-knob render on
+    # MS-70CDR firmware (likely a stricter loader path). Stock effects
+    # follow this layout (verified against Exciter / OptComp / ZNR /
+    # AIR / LineSel 2026-05-10):
+    #
+    #   [0]    NULL
+    #   [1..]  STT_OBJECT data syms (.const / .fardata)   STB_LOCAL
+    #   [..]   STT_FUNC code syms (.text)                 STB_LOCAL
+    #   [..]   __TI_* profiling/static-base syms          STB_LOCAL (SHN_ABS)
+    #   [N-1]  Dll_<Name>                                 STB_GLOBAL  ← only global
+    #
+    # We sort the rela targets into (data, then code) groups, each by VA,
+    # then append the __TI_* locals, then the Dll global last.
+    # Visibility (st_other) per SPRAB89B §14.4.3 "Visibility and Binding":
+    #   "The default visibility for global symbols is STV_INTERNAL.
+    #    ... In the dynamic symbol table all symbols with STV_DEFAULT
+    #    visibility are marked STB_GLOBAL."
+    # Stock Exciter uses STV_HIDDEN (0x02) for all locals and
+    # STV_PROTECTED (0x03) for the single Dll_<Name> global.
+    # Our v1 linker left st_other = 0 (STV_DEFAULT), which the loader
+    # interprets as "potentially preemptible global" — works for ≤2-param
+    # plugins but breaks the 3-param descriptor walk.
+    STV_HIDDEN    = 2
+    STV_PROTECTED = 3
+
+    code_targets = sorted(t for t in dynsym_targets if t < 0x80000000)
+    data_targets = sorted(t for t in dynsym_targets if t >= 0x80000000)
+    for tgt in data_targets + code_targets:
         name = name_for_va.get(tgt, f'_sym_0x{tgt:08X}')
-        idx = len(dynsym_list)
-        dynsym_targets[tgt] = idx
+        dynsym_targets[tgt] = len(dynsym_list)
         stype = STT_FUNC if tgt < 0x80000000 else STT_OBJECT
         dynsym_list.append({
             'name': name, 'name_idx': dynstr.add(name),
             'value': tgt, 'size': size_for_va.get(tgt, 0),
             'info': (STB_LOCAL << 4) | stype,
+            'st_other': STV_HIDDEN,
             'shndx': _shndx(tgt),
         })
 
-    # The Dll_<Name> global symbol is the one the loader hooks in by name.
-    dll_name = f'Dll_{cfg.effect_name}'
-    dll_name_idx = dynstr.add(dll_name)
-    dll_sym_idx = len(dynsym_list)
-    dynsym_list.append({
-        'name': dll_name, 'name_idx': dll_name_idx,
-        'value': TEXT_VA + DLL_OFF, 'size': 0,
-        'info': (STB_GLOBAL << 4) | STT_FUNC,
-        'shndx': 4,
-    })
-
-    # Profiling/static-base symbols seen in every stock ZDL.
+    # Profiling/static-base locals (always STB_LOCAL, must come before global).
     SHN_ABS = 0xFFF1
     for sn in ('__TI_STATIC_BASE', '__TI_pprof_out_hndl',
-               '__TI_prof_data_start', '__TI_prof_data_size'):
+               '__TI_prof_data_size', '__TI_prof_data_start'):
+        # Order matches stock Exciter exactly.
         ni = dynstr.add(sn)
         val = 0xFFFFFFFF if 'pprof' in sn or 'prof_data' in sn else 0
         shndx = SHN_ABS if val == 0xFFFFFFFF else 0
@@ -1029,8 +1075,22 @@ def link(cfg: LinkerConfig) -> None:
             'name': sn, 'name_idx': ni,
             'value': val, 'size': 0,
             'info': (STB_LOCAL << 4) | STT_NOTYPE,
+            'st_other': STV_HIDDEN,
             'shndx': shndx,
         })
+
+    # First global symbol — Dll_<Name> goes LAST. STV_PROTECTED matches stock.
+    first_global_idx = len(dynsym_list)
+    dll_name = f'Dll_{cfg.effect_name}'
+    dll_name_idx = dynstr.add(dll_name)
+    dll_sym_idx = len(dynsym_list)
+    dynsym_list.append({
+        'name': dll_name, 'name_idx': dll_name_idx,
+        'value': TEXT_VA + DLL_OFF, 'size': 0,
+        'info': (STB_GLOBAL << 4) | STT_FUNC,
+        'st_other': STV_PROTECTED,
+        'shndx': 4,
+    })
 
     # SONAME — must follow `ZDL_<GID_PREFIX>_<Name>.out` or the firmware
     # falls back to a 2-knob no-page mode.
@@ -1047,7 +1107,7 @@ def link(cfg: LinkerConfig) -> None:
     for s in dynsym_list:
         dynsym_data.extend(struct.pack('<III', s['name_idx'], s['value'], s['size']))
         dynsym_data.append(s['info'])
-        dynsym_data.append(0)                                    # st_other
+        dynsym_data.append(s.get('st_other', 0))                 # visibility
         dynsym_data.extend(struct.pack('<H', s['shndx']))
 
     nbuckets = max(len(dynsym_list), 17)
@@ -1078,6 +1138,14 @@ def link(cfg: LinkerConfig) -> None:
     NUM_PHDRS    = 4
     PHDR_TABLE   = NUM_PHDRS * PHDR_SIZE
 
+    # .c6xabi.attributes — required per SPRAB89B Ch.17. Stock effects
+    # all carry one. Without it, the loader can't tell what addressing
+    # model we use and falls back to a degraded path. We splice stock
+    # Exciter's 62-byte blob verbatim (Tag_ISA=C6740, ABI_DSBT/PID/PIC
+    # all matching the bare-metal-non-DSBT model we actually produce).
+    c6xabi_path = Path(__file__).resolve().parent / "c6xabi_attributes.bin"
+    c6xabi_attrs = c6xabi_path.read_bytes()
+
     cur = ELF_HDR_SIZE + PHDR_TABLE
     text_file_off = _align_up(cur, 32);                cur = text_file_off + TEXT_TOTAL
     const_file_off = _align_up(cur, 8);                cur = const_file_off + CONST_SIZE
@@ -1093,16 +1161,17 @@ def link(cfg: LinkerConfig) -> None:
     dynsym_file_off = _align_up(cur, 4);               cur = dynsym_file_off + len(dynsym_data)
     dynstr_file_off = _align_up(cur, 4);               cur = dynstr_file_off + len(dynstr_data)
     hash_file_off = _align_up(cur, 4);                 cur = hash_file_off + len(hash_data)
+    c6xabi_file_off = _align_up(cur, 4);               cur = c6xabi_file_off + len(c6xabi_attrs)
 
     shstr = _StringTable()
     shstr_names = ['', '.rela.dyn', '.rela.plt', '.audio', '.text',
                    '.const', '.fardata', '.dynamic', '.dynsym', '.dynstr',
-                   '.hash', '.shstrtab']
+                   '.hash', '.c6xabi.attributes', '.shstrtab']
     shname_idx = {n: shstr.add(n) for n in shstr_names}
     shstr_data = shstr.get_bytes()
     shstrtab_file_off = _align_up(cur, 4);             cur = shstrtab_file_off + len(shstr_data)
 
-    NUM_SECTIONS = 12
+    NUM_SECTIONS = 13
     SHDR_SIZE    = 0x28
     shdr_file_off = _align_up(cur, 4);                 cur = shdr_file_off + NUM_SECTIONS * SHDR_SIZE
     elf_size = cur
@@ -1202,6 +1271,7 @@ def link(cfg: LinkerConfig) -> None:
     elf[dynsym_file_off:dynsym_file_off + len(dynsym_data)]    = dynsym_data
     elf[dynstr_file_off:dynstr_file_off + len(dynstr_data)]    = dynstr_data
     elf[hash_file_off:hash_file_off + len(hash_data)]          = hash_data
+    elf[c6xabi_file_off:c6xabi_file_off + len(c6xabi_attrs)]   = c6xabi_attrs
     elf[shstrtab_file_off:shstrtab_file_off + len(shstr_data)] = shstr_data
 
     # ----- Section headers -----
@@ -1233,13 +1303,21 @@ def link(cfg: LinkerConfig) -> None:
         FARDATA_VA, fardata_file_off, len(_KNOB_INFO), align=4)
     _sh(7, '.dynamic', SHT_DYNAMIC, 0,
         0, dynamic_file_off, dynamic_size, link=9, entsize=8)
+    # SHT_DYNSYM info field: ELF spec mandates this be the index of the
+    # first STB_GLOBAL symbol. Stock effects all set this correctly; v1's
+    # linker left it 0 — fine for ≤2 params but breaks 3-param render.
     _sh(8, '.dynsym',  SHT_DYNSYM, 0,
-        0, dynsym_file_off, len(dynsym_data), link=9, entsize=16)
+        0, dynsym_file_off, len(dynsym_data),
+        link=9, info=first_global_idx, entsize=16)
     _sh(9, '.dynstr',  SHT_STRTAB, 0,
         0, dynstr_file_off, len(dynstr_data))
     _sh(10, '.hash', SHT_HASH, 0,
         0, hash_file_off, len(hash_data), link=8)
-    _sh(11, '.shstrtab', SHT_STRTAB, 0,
+    # SHT_C6000_ATTRIBUTES = 0x70000003 (SHT_LOPROC + 3) per SPRAB89B Ch.17.
+    # Stock effects emit this as a non-allocated, non-loaded section.
+    _sh(11, '.c6xabi.attributes', 0x70000003, 0,
+        0, c6xabi_file_off, len(c6xabi_attrs))
+    _sh(12, '.shstrtab', SHT_STRTAB, 0,
         0, shstrtab_file_off, len(shstr_data))
 
     # ----- Combine + optional audio NOP -----
