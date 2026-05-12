@@ -440,7 +440,7 @@ corresponding to bit `31`.
 | Slot | Sweep bits 0..31 | Provisional word | Notes |
 |---:|---|---:|---|
 | `ctx[2]` | `11011000011100000000000000000000` | `0x00000e1b` | stock state/scratch candidate; repeat supersedes earlier reading |
-| `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | stock state/scratch candidate; repeat-confirmed |
+| `ctx[3]` | position-dependent; see chain-position check below | `0x00003e3b` or `0x00003e39` | stock state/scratch candidate |
 | `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | stock modulation/state candidate |
 | `ctx[14]` | `11001110011111000000000000000000` | `0x00003e73` | same observed value as `ctx[13]` |
 
@@ -450,10 +450,9 @@ Earlier `ctx[2]` was recorded as
 `ctx[2]` value as likely sweep/transcription error until independently
 reproduced.
 
-Earlier `ctx[3]` was recorded as
-`11011100011111000000000000000000` / `0x00003e3b`; a repeat sweep produced
-`10011100011111000000000000000000`, matching the later duplicate-instance
-capture. Treat the earlier `ctx[3]` value as likely sweep/transcription error.
+`ctx[3]` first looked inconsistent, but a chain-position check now suggests
+that the value depends on the physical FX slot rather than being a
+transcription error.
 
 If the bit strings were instead written most-significant-bit first, the words
 would be `0xc78fffff`, `0x9c7c0000`, and `0xce7c0000`. The next capture should
@@ -466,13 +465,21 @@ Duplicate-instance check:
 | Duplicate `CtxGate` in second FX slot | `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | matches repeat single-instance sweep |
 | Same duplicate-instance condition | `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | unchanged |
 
+Chain-position check:
+
+| Condition | Slot | Sweep bits 0..31 | Provisional word | Notes |
+|---|---:|---|---:|---|
+| One `CtxGate`, physical FX slot 1 | `ctx[3]` | `11011100011111000000000000000000` | `0x00003e3b` | differs by bit 1 |
+| One `CtxGate`, physical FX slot 2, no effect in slot 1 | `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | differs by bit 1 |
+
 Interpretation so far:
 
 * `ctx[13]` and `ctx[14]` matched exactly in this capture.
 * `ctx[2]` currently appears to be `0x00000e1b`; the earlier `0xfffff1e3`
   reading is not trusted.
-* `ctx[3]` currently appears stable at `0x00003e39`; the earlier
-  `0x00003e3b` reading is not trusted.
+* `ctx[3]` appears to encode chain position or a chain-position-related flag:
+  physical FX slot 1 produced `0x00003e3b`, while physical FX slot 2 produced
+  `0x00003e39`.
 * The observed values are small if interpreted as bit-0-first words, so they
   do not yet look like direct memory pointers. They may be flags, indexes,
   compact descriptors, or the bit order may still need confirmation.
