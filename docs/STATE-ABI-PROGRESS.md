@@ -440,26 +440,31 @@ corresponding to bit `31`.
 | Slot | Sweep bits 0..31 | Provisional word | Notes |
 |---:|---|---:|---|
 | `ctx[2]` | `11000111100011111111111111111111` | `0xfffff1e3` | stock state/scratch candidate |
-| `ctx[3]` | `11011100011111000000000000000000` | `0x00003e3b` | stock state/scratch candidate |
+| `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | stock state/scratch candidate; repeat-confirmed |
 | `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | stock modulation/state candidate |
 | `ctx[14]` | `11001110011111000000000000000000` | `0x00003e73` | same observed value as `ctx[13]` |
 
+Earlier `ctx[3]` was recorded as
+`11011100011111000000000000000000` / `0x00003e3b`; a repeat sweep produced
+`10011100011111000000000000000000`, matching the later duplicate-instance
+capture. Treat the earlier `ctx[3]` value as likely sweep/transcription error.
+
 If the bit strings were instead written most-significant-bit first, the words
-would be `0xc78fffff`, `0xdc7c0000`, and `0xce7c0000`. The next capture should
+would be `0xc78fffff`, `0x9c7c0000`, and `0xce7c0000`. The next capture should
 explicitly confirm whether the first typed character is bit `0`.
 
 Duplicate-instance check:
 
 | Condition | Slot | Sweep bits 0..31 | Provisional word | Notes |
 |---|---:|---|---:|---|
-| Duplicate `CtxGate` in second FX slot | `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | unconfirmed; possible sweep/transcription error |
+| Duplicate `CtxGate` in second FX slot | `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | matches repeat single-instance sweep |
 | Same duplicate-instance condition | `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | unchanged |
 
 Interpretation so far:
 
 * `ctx[13]` and `ctx[14]` matched exactly in this capture.
-* The apparent `ctx[3]` duplicate-instance change is not trusted yet; the
-  operator reported low confidence and possible mistake.
+* `ctx[3]` currently appears stable at `0x00003e39`; the earlier
+  `0x00003e3b` reading is not trusted.
 * The observed values are small if interpreted as bit-0-first words, so they
   do not yet look like direct memory pointers. They may be flags, indexes,
   compact descriptors, or the bit order may still need confirmation.
