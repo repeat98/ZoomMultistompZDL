@@ -431,6 +431,22 @@ Next mapping target:
 * If a bit produces no clear pan difference, mark it as `?` instead of
   guessing.
 
+Observed mapping data:
+
+Assumption for provisional hex: the strings below are written in sweep order,
+with the first character corresponding to bit `0` and the last character
+corresponding to bit `31`.
+
+| Slot | Sweep bits 0..31 | Provisional word | Notes |
+|---:|---|---:|---|
+| `ctx[2]` | `11000111100011111111111111111111` | `0xfffff1e3` | stock state/scratch candidate |
+| `ctx[3]` | `11011100011111000000000000000000` | `0x00003e3b` | stock state/scratch candidate |
+| `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | stock modulation/state candidate |
+
+If the bit strings were instead written most-significant-bit first, the words
+would be `0xc78fffff`, `0xdc7c0000`, and `0xce7c0000`. The next capture should
+explicitly confirm whether the first typed character is bit `0`.
+
 ## Next Probe
 
 If `CtxGate` maps stable pointer-looking words, the next probe is a read-only
