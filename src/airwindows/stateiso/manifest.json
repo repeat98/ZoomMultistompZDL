@@ -1,0 +1,48 @@
+{
+  "effect_name": "StateIsoA",
+  "comment": "Hardware ABI probe. Tests whether the proven ctx[2]+0x18 state block is private per effect instance by stamping variant-specific magic into word 19.",
+
+  "audio_func_name": "Fx_FLT_StateIso",
+
+  "gid": 2,
+  "gid_comment": "0x02 = Filter category. Diagnostic only.",
+
+  "fxid": 413,
+  "fxid_comment": "0x019d, follows StatePing fixed-word probe IDs.",
+
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "state_base": "ctx[2]+0x18",
+  "phase_word": 18,
+  "stamp_word": 19,
+
+  "variants": [
+    {
+      "effect_name": "StateIsoA",
+      "fxid": 413,
+      "magic": "0x13579BDF",
+      "screen_label": "Iso A"
+    },
+    {
+      "effect_name": "StateIsoB",
+      "fxid": 414,
+      "magic": "0x2468ACE0",
+      "screen_label": "Iso B"
+    }
+  ],
+
+  "params": [
+    {
+      "name": "Arm",
+      "type": "switch",
+      "max": 1,
+      "default": 0,
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.0,
+      "comment": "0=safe pass-through, 1=stamp ctx[2]+0x18 word 19 and report foreign stamps as stereo wobble."
+    }
+  ],
+
+  "audio_nop": false
+}

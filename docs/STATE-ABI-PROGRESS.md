@@ -901,3 +901,67 @@ Build result for fixed-word variant set:
   * `.text`: 0 bytes.
   * `.fardata`: 0 bytes.
   * ZDL size: 4914 bytes.
+
+Hardware/operator result:
+
+All fixed-word variants loaded and produced stereo wobble from either derived
+base:
+
+| Variant | Fixed word | `Arm10` result | `Arm18` result |
+|---|---:|---|---|
+| `StatePing` / `StateP0` | 0 | wobble | wobble |
+| `StateP12` | 12 | wobble | wobble |
+| `StateP18` | 18 | wobble | wobble |
+| `StateP19` | 19 | wobble | wobble |
+
+Conclusion:
+
+Custom ZDLs can safely write at least words 0, 12, 18, and 19 through both
+`ctx[2] + 0x10` and `ctx[2] + 0x18`. This covers the highest stock-observed
+derived word plus one extra word. It does not solve large Airwindows delay-line
+storage, but it gives us a proven host-state area for per-instance scalar state
+and for building safer follow-up probes.
+
+## 2026-05-12: Probe 5 - `StateIso`
+
+Added `src/airwindows/stateiso/`, a hardware-only instance-isolation probe.
+
+Purpose:
+
+* Test whether the proven `ctx[2] + 0x18` block is private per effect instance.
+* Avoid more bit/word sweeping.
+* Use fixed variants and one safe arm switch only.
+
+Behavior:
+
+* `Arm=0`: pass-through, no `ctx[2]` dereference.
+* `Arm=1`: uses `ctx[2] + 0x18`.
+* Word 18 is a phase counter for audible reporting.
+* Word 19 stores a variant-specific magic stamp.
+* `StateIsoA` writes `0x13579BDF`.
+* `StateIsoB` writes `0x2468ACE0`.
+* If a variant sees any nonzero stamp other than its own, it reports a foreign
+  stamp as stereo wobble.
+
+Testing guidance:
+
+1. Load `StateIsoA` alone and turn `Arm` on. It may make a brief transition
+   sound, then it should settle to centered pass-through.
+2. Load `StateIsoA` in one effect slot and `StateIsoB` in another. Turn both
+   arms on.
+3. If the host block is per instance, the chain should stay centered/pass-through
+   after startup.
+4. If both slots share the same host block, the two variants should keep seeing
+   each other's stamps and produce continuous stereo wobble.
+
+Build result:
+
+* Command: `python3 -B build_all.py stateiso`
+* Outputs:
+  * `dist/StateIsoA.ZDL`
+  * `dist/StateIsoB.ZDL`
+* Each output:
+  * `.audio`: 512 bytes.
+  * `.text`: 0 bytes.
+  * `.fardata`: 0 bytes.
+  * ZDL size: 4782 bytes.

@@ -31,6 +31,7 @@ PLUGINS = [
     ("ctxgate",     PLUGIN_DIR / "ctxgate"     / "build.py"),
     ("ctxnib",      PLUGIN_DIR / "ctxnib"      / "build.py"),
     ("stateping",   PLUGIN_DIR / "stateping"   / "build.py"),
+    ("stateiso",    PLUGIN_DIR / "stateiso"    / "build.py"),
     ("bitcrush",    PLUGIN_DIR / "bitcrush"    / "build.py"),
 ]
 
