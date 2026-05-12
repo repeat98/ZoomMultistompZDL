@@ -51,7 +51,7 @@ Working hypothesis: these are host-managed state/scratch/delay descriptors or
 related runtime structures. They must be mapped on hardware before exact
 Airwindows delay, chorus, tape, or reverb ports.
 
-## 2026-05-12: Probe 1 - `CtxMap`
+## 2026-05-12: Probe 1 - `CtxMap` v1
 
 Added `src/airwindows/ctxmap/`, a hardware-only ABI mapper.
 
@@ -109,9 +109,276 @@ Build result:
 * Python syntax check: `python3 -B -m py_compile build/zdl.py
   build/disassemble_zdl.py src/airwindows/ctxmap/build.py build_all.py`
 
+Hardware result:
+
+* Interacting with the `Bit` parameter crashed the pedal.
+* Most likely suspects are the object-defined inline-asm edit handler path or
+  the 0-31 UI range for that parameter.
+* Do not use this build for further mapping.
+
+## 2026-05-12: Probe 1b - `CtxMap` Stock-Handler Low-Bit Build
+
+Changed `CtxMap` to a two-control build:
+
+| Knob | Range | Meaning |
+|---|---:|---|
+| `Slot` | 0-15 | `ctx[]` index to inspect |
+| `Bit` | 0-15 | low-half bit inside the selected 32-bit word |
+
+Changes from v1:
+
+* Removed object-defined `ZOOM_EDIT_HANDLER` inline asm from `ctxmap.c`.
+* Removed the `Level` control so both remaining controls use the stock-proven
+  LineSel edit handlers from `linesel_handlers.bin`.
+* Reduced `Bit` to 0-15 for the first hardware-safe pass.
+* Fixed the probe tone level at `0.035f`.
+
+Build result:
+
+* Command: `python3 -B build_all.py ctxmap`
+* Output: `dist/CtxMap.ZDL`
+* `.audio`: 384 bytes
+* `.text`: 96 bytes
+* `.fardata`: 4 bytes
+* ZDL size: 4882 bytes
+
+Next hardware check:
+
+1. Load the rebuilt `dist/CtxMap.ZDL`.
+2. First edit only `Slot` and confirm the pedal survives.
+3. Then edit `Bit` slowly from 0 to 15.
+4. If stable, map low 16 bits for `ctx[0]`, `ctx[1]`, `ctx[2]`, `ctx[3]`,
+   `ctx[13]`, and `ctx[14]`.
+5. Build a separate high-bit variant only after this low-bit build survives.
+
+Hardware result:
+
+* Sweeping all exposed bits across all slots did not crash.
+* No audible output was heard.
+* New suspects: `params[0]` may be zero/uninitialized for this probe, generated
+  tone written only to `ctx[6]` may not reach the audible path, or the low
+  16 bits of the selected words may all be zero/aligned.
+
+## 2026-05-12: Probe 1c - `CtxMap` Baseline-Tone Build
+
+Changed `CtxMap` again so the audio route is self-checking:
+
+* Restored `Bit` range to 0-31 now that the stock-handler edit path survived.
+* Removed dependence on `params[0]`; the probe tone is emitted regardless of
+  the on/off multiplier.
+* Emits a quiet baseline tone when the selected bit is `0`.
+* Emits a louder tone when the selected bit is `1`.
+* Writes the tone to both `ctx[5]` and `ctx[6]`.
+
+Build result:
+
+* Command: `python3 -B build_all.py ctxmap`
+* Output: `dist/CtxMap.ZDL`
+* `.audio`: 448 bytes
+* `.text`: 96 bytes
+* `.fardata`: 4 bytes
+* ZDL size: 4946 bytes
+
+Next hardware check:
+
+1. Load the rebuilt `dist/CtxMap.ZDL`.
+2. With any `Slot`/`Bit`, confirm whether the quiet baseline tone is audible.
+3. If the build is still silent, stop mapping bits and build an even simpler
+   always-tone plugin with no param reads.
+4. If the quiet tone is audible, sweep `Bit` 0-31 and record quiet vs loud.
+
+Hardware result:
+
+* The build produced a static tone for all slots and bits.
+* The tone was still audible while the pedal reported the effect bypassed.
+* This proves generated audio written to the current buffers can reach output,
+  but it does not prove selected bits or parameters are changing.
+* The bypass result means this diagnostic route is not suitable for judging
+  normal effect bypass behavior.
+
+## 2026-05-12: Probe 1d - Parameter Plumbing Check
+
+Changed `CtxMap` temporarily from a `ctx[]` bit mapper into a parameter
+audibility probe. It no longer reads `ctx[]`.
+
+Expected behavior:
+
+* `Slot` changes the amplitude of a lower square-wave tone.
+* `Bit` changes the amplitude of a higher square-wave tone.
+
+Interpretation:
+
+* If the sound changes when either knob moves, the two stock LineSel edit
+  handlers are updating `params[5]` and `params[6]`.
+* If the sound remains static, the next blocker is descriptor/handler/param
+  plumbing, and `ctx[]` mapping must wait.
+
+Build result:
+
+* Command: `python3 -B build_all.py ctxmap`
+* Output: `dist/CtxMap.ZDL`
+* `.audio`: 608 bytes
+* `.text`: 64 bytes
+* `.fardata`: 4 bytes
+* ZDL size: 5074 bytes
+
+Hardware result:
+
+* The pedal crashed on startup with this build.
+* Do not use this variant again.
+* The likely differences from the previous hardware-surviving build were:
+  generated two-tone audio, different optimized `.audio` shape, and total
+  `.text` layout reaching `0x800` bytes instead of `0x780`.
+* Rolled `src/airwindows/ctxmap/` back to the previous baseline-tone behavior
+  so `dist/CtxMap.ZDL` is again a recovery/survival build, not the crashing
+  param-audibility variant.
+
+Recovery build result:
+
+* Command: `python3 -B build_all.py ctxmap`
+* Output: `dist/CtxMap.ZDL`
+* `.audio`: 448 bytes
+* `.text`: 96 bytes
+* `.fardata`: 4 bytes
+* ZDL size: 4946 bytes
+
+## 2026-05-12: Probe 2 - `ParamTap`
+
+Added `src/airwindows/paramtap/` as a separate effect ID so `CtxMap` can stay
+on its last hardware-surviving build.
+
+Purpose:
+
+* Prove whether two stock LineSel edit handlers update `params[5]` and
+  `params[6]`.
+* Avoid generated oscillator audio.
+* Avoid `.fardata`.
+* Avoid unknown `ctx[]` reads.
+
+Behavior:
+
+* Feed guitar/input signal through the pedal.
+* `TapA` controls gain for the first 8-float half of the block.
+* `TapB` controls gain for the second 8-float half of the block.
+
+Interpretation:
+
+* If `TapA`/`TapB` change the level, parameter plumbing is working and the
+  static `CtxMap` tone is probably caused by the selected `ctx` words/bit
+  evidence or by how we audibly encoded it.
+* If they do not change level, pause `ctx` mapping and fix descriptor/edit
+  handler/param writes first.
+* If it crashes, the next probe should be `audio_nop=true` for `ParamTap` to
+  isolate descriptor/UI load from audio execution.
+
+Build result:
+
+* Command: `python3 -B build_all.py paramtap`
+* Output: `dist/ParamTap.ZDL`
+* `.audio`: 416 bytes
+* `.text`: 0 bytes
+* `.fardata`: 0 bytes
+* ZDL size: 4842 bytes
+
+Hardware result:
+
+* Startup survived.
+* Both parameters changed loudness.
+* `TapA` controlled the left channel and `TapB` controlled the right channel.
+* Conclusion: the first two stock LineSel edit handlers do update
+  `params[5]` and `params[6]` in our diagnostic effects.
+
+## 2026-05-12: Probe 3 - `CtxGate`
+
+Added `src/airwindows/ctxgate/`, a separate input-based `ctx[]` bit mapper.
+
+Purpose:
+
+* Keep `CtxMap` as the recovery/survival build.
+* Reuse the parameter path proven by `ParamTap`.
+* Avoid generated oscillator audio.
+* Avoid `.fardata`.
+* Read `ctx[Slot]` as one raw 32-bit word without dereferencing it.
+
+Behavior:
+
+* Feed guitar/input signal through the pedal.
+* `Slot` selects `ctx[0..15]`.
+* `Bit` selects bit `0..31`.
+* Selected bit `0` -> quiet pass-through gain (`0.10f`).
+* Selected bit `1` -> loud pass-through gain (`1.25f`).
+
+Hardware test procedure:
+
+1. Load `dist/CtxGate.ZDL`.
+2. Confirm startup survives.
+3. Feed a steady input signal.
+4. Sweep `Slot` and `Bit`.
+5. Record quiet as `0` and loud as `1`.
+6. Prioritize `ctx[2]`, `ctx[3]`, `ctx[13]`, and `ctx[14]`, because stock
+   stateful effects read those fields early.
+
+Recording template:
+
+| Condition | Slot | Bits 31..0 | Reconstructed word | Notes |
+|---|---:|---|---|---|
+| input-gated, effect on | 2 | | | suspected stock state field |
+| input-gated, effect on | 3 | | | suspected stock state field |
+| input-gated, effect on | 13 | | | suspected stock modulation field |
+| input-gated, effect on | 14 | | | suspected stock modulation field |
+
+Build result:
+
+* Command: `python3 -B build_all.py ctxgate`
+* Output: `dist/CtxGate.ZDL`
+* `.audio`: 288 bytes
+* `.text`: 96 bytes
+* `.fardata`: 0 bytes
+* ZDL size: 4790 bytes
+
+Hardware result:
+
+* Startup survived.
+* Sweeping all bits across all slots did not crash.
+* Audio passed through across all settings; no clear quiet/loud bit encoding
+  was heard.
+* Because `ParamTap` proved the same two parameters can control gain, the next
+  suspect is the selector implementation in `CtxGate`, especially the
+  float-to-int conversion used to turn raw knob values into `slot` and `bit`.
+
+## 2026-05-12: Probe 3b - `CtxGate` Threshold Selector
+
+Changed `CtxGate` to keep the same input-gated behavior but remove
+float-to-int casts from the slot/bit selector path.
+
+Changes:
+
+* Removed `zoom_params.h` from this probe.
+* Replaced `raw -> normalized float -> int` conversion with explicit raw-float
+  threshold ladders.
+* Kept the selected `ctx[Slot]` word read-only and non-dereferenced.
+* Kept `.fardata` at zero.
+
+Interpretation:
+
+* If this build now changes quiet/loud while sweeping, the previous
+  float-to-int selector path was the issue.
+* If it still just passes audio through, the next likely issue is that adding
+  to `ctx[6]` is being masked by an existing dry/output path; the follow-up
+  should encode bits by channel imbalance or by modifying `ctx[5]` in-place.
+
+Build result:
+
+* Command: `python3 -B build_all.py ctxgate`
+* Output: `dist/CtxGate.ZDL`
+* `.audio`: 1408 bytes
+* `.text`: 0 bytes
+* `.fardata`: 0 bytes
+* ZDL size: 5814 bytes
+
 ## Next Probe
 
-After raw words are mapped, build a read-only pointer probe for pointer-looking
-slots. It should dereference only one selected candidate field at a time, emit
-the low bits of word `0`, and include a NOP/silence fallback build for quick
-hardware recovery.
+If `CtxGate` maps stable pointer-looking words, the next probe is a read-only
+dereference mapper for one candidate slot at a time. If it crashes or maps all
+quiet/loud, keep the same input-gated structure and vary only one ABI
+assumption per build.

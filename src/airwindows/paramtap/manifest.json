@@ -1,0 +1,40 @@
+{
+  "effect_name": "ParamTap",
+  "comment": "Hardware ABI probe. Tests whether two stock LineSel edit handlers update params[5] and params[6] by turning guitar/input level into an audible gain change. No generated oscillator, no fardata, no unknown ctx reads.",
+
+  "audio_func_name": "Fx_FLT_ParamTap",
+
+  "gid": 2,
+  "gid_comment": "0x02 = Filter category. Diagnostic only.",
+
+  "fxid": 406,
+  "fxid_comment": "0x0196, separate from CtxMap so the recovery probe remains stable.",
+
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+
+  "params": [
+    {
+      "name": "TapA",
+      "type": "knob",
+      "max": 100,
+      "default": 25,
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.25,
+      "comment": "Expected to land in params[5] via the stock LineSel knob1 edit handler."
+    },
+    {
+      "name": "TapB",
+      "type": "knob",
+      "max": 100,
+      "default": 25,
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.25,
+      "comment": "Expected to land in params[6] via the stock LineSel knob2 edit handler."
+    }
+  ],
+
+  "audio_nop": false
+}

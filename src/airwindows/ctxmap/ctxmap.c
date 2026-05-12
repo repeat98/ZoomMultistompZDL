@@ -12,6 +12,20 @@
  * ctx word, so slots that happen to be null, small integers, pointers, or
  * flags are equally safe to inspect.
  *
+ * v2 note: the first build crashed when the Bit control was edited on
+ * hardware. That build used object-defined inline-asm edit handlers. This
+ * version deliberately has only two controls, so the linker can use the
+ * stock-proven LineSel edit handlers for both controls.
+ *
+ * v3 note: the stock-handler build did not crash, but also produced no
+ * audible output. This version removes dependence on params[0], restores
+ * the 0..31 bit range, emits a quiet baseline tone for every setting, and
+ * writes the diagnostic tone to both ctx[5] and ctx[6].
+ *
+ * v4 note: the parameter-audibility variant crashed the pedal on startup.
+ * This file is rolled back to the last hardware-surviving v3 behavior until
+ * we split risky probes into separate effect IDs.
+ *
  * Known-safe ABI fields reused from the existing custom probes:
  *   ctx[1]  -> params table (float*)
  *   ctx[5]  -> fx buffer (float*)
@@ -22,20 +36,14 @@
  * Use
  * ---
  * Load on hardware, send silence or guitar through it, then sweep Slot 0..15
- * and Bit 0..31. A tone means that bit is 1; silence means it is 0. Record the
- * output if possible, because each reconstructed ctx word is evidence for the
- * exact state ABI we need before porting state-heavy Airwindows algorithms.
+ * and Bit 0..31. A louder tone means that bit is 1; a quiet tone means it is
+ * 0. Record the output if possible.
  */
 
 #include <stdint.h>
 
-#include "../common/zoom_edit_handlers.h"
 #include "../common/zoom_params.h"
 #include "ctxmap_params.h"
-
-ZOOM_EDIT_HANDLER(Fx_FLT_CtxMap_Slot_edit,  2, 20);
-ZOOM_EDIT_HANDLER(Fx_FLT_CtxMap_Bit_edit,   3, 24);
-ZOOM_EDIT_HANDLER(Fx_FLT_CtxMap_Level_edit, 4, 28);
 
 #pragma CODE_SECTION(Fx_FLT_CtxMap, ".audio")
 
@@ -53,6 +61,7 @@ static int ctxmap_scaled_index(float raw, int max_value)
 void Fx_FLT_CtxMap(unsigned int *ctx)
 {
     float *params = ZDL_PTR(float *, ctx[1]);
+    float *fxBuf = ZDL_PTR(float *, ctx[5]);
     float *outBuf = ZDL_PTR(float *, ctx[6]);
 
     unsigned int *magicSrc = ZDL_PTR(unsigned int *, ctx[12]);
@@ -61,11 +70,10 @@ void Fx_FLT_CtxMap(unsigned int *ctx)
 
     int slot = ctxmap_scaled_index(params[CTXMAP_SLOT_SLOT], CTXMAP_SLOT_UI_MAX);
     int bit = ctxmap_scaled_index(params[CTXMAP_BIT_SLOT], CTXMAP_BIT_UI_MAX);
-    float level = zoom_clamp01(params[CTXMAP_LEVEL_SLOT] * ZOOM_PARAM_RAW_TO_NORM);
 
     unsigned int word = ctx[(unsigned int)slot & 15u];
     unsigned int bit_on = (word >> ((unsigned int)bit & 31u)) & 1u;
-    float amp = bit_on ? (0.01f + (level * 0.06f)) : 0.0f;
+    float amp = bit_on ? 0.055f : 0.012f;
 
     int i;
     for (i = 0; i < 16; i++) {
@@ -73,6 +81,7 @@ void Fx_FLT_CtxMap(unsigned int *ctx)
 
         gPhase += 1u;
         tone = (gPhase & 32u) ? amp : -amp;
-        outBuf[i] += tone * params[0];
+        fxBuf[i] += tone;
+        outBuf[i] += tone;
     }
 }

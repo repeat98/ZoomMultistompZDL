@@ -27,6 +27,8 @@ PLUGINS = [
     ("totape9",     PLUGIN_DIR / "totape9"     / "build.py"),
     ("stereochorus", PLUGIN_DIR / "stereochorus" / "build.py"),
     ("ctxmap",      PLUGIN_DIR / "ctxmap"      / "build.py"),
+    ("paramtap",    PLUGIN_DIR / "paramtap"    / "build.py"),
+    ("ctxgate",     PLUGIN_DIR / "ctxgate"     / "build.py"),
     ("bitcrush",    PLUGIN_DIR / "bitcrush"    / "build.py"),
 ]
 
