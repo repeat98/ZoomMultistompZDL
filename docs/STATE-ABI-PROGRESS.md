@@ -674,3 +674,105 @@ Next firmware steps:
    pointer fields `[2]` / `[3]`, cursor-like fields, and length field `[14]`.
 5. Only after that, build a tiny read/write persistence probe against the most
    plausible `ctx[]` slot; do not return to manual bit sweeping.
+
+## 2026-05-12: Derived Stock State Shapes
+
+Added `build/trace_ctx_structs.py`, a second stock-audio tracer. Unlike
+`trace_ctx_audio.py`, it follows simple derived bases such as `ctx[2] + 0x10`
+and `ctx[2] + 0x18`, then summarizes which fields are read/written through
+each base.
+
+Command used:
+
+```bash
+python3 -B build/trace_ctx_structs.py \
+  /tmp/zoom-stock-state-trace/MS-70CDR_STCHO.ZDL.asm \
+  /tmp/zoom-stock-state-trace/MS-70CDR_DELAY.ZDL.asm \
+  /tmp/zoom-stock-state-trace/MS-70CDR_TAPEECHO.ZDL.asm \
+  --limit 2
+```
+
+Important correction:
+
+`c00de200` is now downgraded as a state-storage lead. It has many callers, and
+sampled call sites pass small source-location/error constants such as
+`0x0135`, `0x02f3`, and `0x022e` along with feature flags. Treat it as a
+common assert/log/diagnostic dispatcher unless a later trace proves otherwise.
+
+Current stock-audio field shapes:
+
+| Stock effect | `ctx[2]` direct fields | derived state block | `ctx[3]` fields |
+|---|---:|---:|---:|
+| `STCHO` | `[0]`, `[1]`, `[3]`, `[5]` | `ctx[2] + 0x18`, fields `[0..7]` | `[0]`, `[1]`, `[2]` |
+| `DELAY` | `[0]`, `[1]`, `[2]`, `[3]` | `ctx[2] + 0x10`, fields `[0..12]` | `[0]`, `[1]`, `[2]` |
+| `TAPEECHO` | `[0]`, `[2]`, `[3]` | `ctx[2] + 0x18`, fields `[0..14]`, `[16]`, `[17]`, `[18]` | `[0]`, `[1]`, `[2]` |
+
+Interpretation:
+
+* `ctx[2]` is very likely a host-provided per-instance state header, not just
+  a scalar flag.
+* Several stock effects derive their larger mutable state area from `ctx[2]`
+  using a fixed offset. `DELAY` uses `+0x10`; `STCHO` and `TAPEECHO` use
+  `+0x18`.
+* `TAPEECHO` is now the strongest stock template for a larger persistent block:
+  it writes back many derived fields at the end of the audio call, including
+  `[14]` and `[16]`.
+* `ctx[3]` still looks like a separate three-field descriptor used for indexed
+  addressing or wrap/bounds handling. Stock code reads from it but does not
+  write through it in these inspected audio entries.
+* `ctx[13]` / `ctx[14]` are still special for modulation-style effects. In
+  `STCHO`, both are pointer-like one-word cells; in `MODREV`, `ctx[13]` is
+  dereferenced and written through while `ctx[14]` is read.
+
+Next concrete probe:
+
+Build a minimal persistence probe that uses the stock pattern conservatively:
+read/write only the first few words of `ctx[2] + 0x10` or `ctx[2] + 0x18`,
+encode whether the value persists across audio callbacks as stereo panning,
+and avoid touching `ctx[3]`, `ctx[13]`, or `ctx[14]` until the `ctx[2]` state
+block is proven on custom ZDLs.
+
+## 2026-05-12: Probe 5 - `StatePing`
+
+Added `src/airwindows/stateping/`, a default-safe persistence probe for the
+stock `ctx[2]` derived-block pattern.
+
+Purpose:
+
+* Test whether custom ZDLs get the same writable state block shape that stock
+  delay/chorus effects use.
+* Avoid startup crashes by defaulting to `Base=0`, which does not dereference
+  `ctx[2]`.
+* Avoid broad manual bit sweeps. This is a direct yes/no persistence probe.
+
+Behavior:
+
+* `Arm10=0`, `Arm18=0`: pass-through, no `ctx[2]` dereference.
+* `Arm10=1`: test word 0 at `ctx[2] + 0x10`, matching stock `DELAY`.
+* `Arm18=1`: test word 0 at `ctx[2] + 0x18`, matching stock `STCHO` /
+  `TAPEECHO`. `Arm18` takes priority if both switches are on.
+* When armed, the probe increments the selected word once per audio callback
+  and uses bit `0x20` of the counter to pan/weight the input:
+  * bit clear: stronger left;
+  * bit set: stronger right.
+
+Expected hardware interpretation:
+
+* Loads with both arms off: descriptor/UI/audio path is safe.
+* `Arm10=1` creates a repeated left/right wobble: custom ZDL can
+  write persistent state at `ctx[2] + 0x10`.
+* `Arm18=1` creates a repeated left/right wobble: custom ZDL can
+  write persistent state at `ctx[2] + 0x18`.
+* It stays fixed left/right or does not wobble: the word is not persisting, or
+  host code rewrites it every callback.
+* It crashes only after enabling `Arm10` or `Arm18`: that derived pointer is
+  not safe for custom ZDLs, despite stock effects using that shape.
+
+Build result:
+
+* Command: `python3 -B build_all.py stateping`
+* Output: `dist/StatePing.ZDL`
+* `.audio`: 512 bytes
+* `.text`: 0 bytes
+* `.fardata`: 0 bytes
+* ZDL size: 4938 bytes
