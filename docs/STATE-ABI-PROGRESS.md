@@ -837,3 +837,23 @@ Build result for word-selector version:
 * `.text`: 768 bytes
 * `.fardata`: 0 bytes
 * ZDL size: 5986 bytes
+
+Hardware/operator result:
+
+* Interacting with `Word=31` froze/crashed the pedal.
+
+Follow-up fix:
+
+`Word=31` is now marked unsafe. Capped `StatePing`'s `Word` parameter at 19
+and removed selector cases above 19 so the next build cannot casually hit the
+known-freezing offset. Keep future depth tests near stock-observed boundaries:
+`Word=12`, `Word=18`, then `Word=19`.
+
+Build result for capped version:
+
+* Command: `python3 -B build_all.py stateping`
+* Output: `dist/StatePing.ZDL`
+* `.audio`: 576 bytes
+* `.text`: 384 bytes
+* `.fardata`: 0 bytes
+* ZDL size: 5602 bytes

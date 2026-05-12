@@ -7,6 +7,7 @@
  * Arm10 = 1 tests ctx[2] + 0x10, matching DELAY's derived state block.
  * Arm18 = 1 tests ctx[2] + 0x18, matching STCHO/TAPEECHO's derived block.
  * Word selects which 32-bit word inside that derived block to increment.
+ * Word 31 froze hardware in testing, so this build caps the selector at 19.
  *
  * When armed, this probe increments one selected word and uses a counter bit
  * to pan the input. Persistent writable state should create an audible
@@ -43,18 +44,6 @@ static unsigned int select_word(float word_raw)
     if (word_raw >= 0.0745161f) word = 17u;
     if (word_raw >= 0.0790323f) word = 18u;
     if (word_raw >= 0.0835484f) word = 19u;
-    if (word_raw >= 0.0880645f) word = 20u;
-    if (word_raw >= 0.0925806f) word = 21u;
-    if (word_raw >= 0.0970968f) word = 22u;
-    if (word_raw >= 0.1016129f) word = 23u;
-    if (word_raw >= 0.1061290f) word = 24u;
-    if (word_raw >= 0.1106452f) word = 25u;
-    if (word_raw >= 0.1151613f) word = 26u;
-    if (word_raw >= 0.1196774f) word = 27u;
-    if (word_raw >= 0.1241935f) word = 28u;
-    if (word_raw >= 0.1287097f) word = 29u;
-    if (word_raw >= 0.1332258f) word = 30u;
-    if (word_raw >= 0.1377419f) word = 31u;
     return word;
 }
 
