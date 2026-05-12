@@ -789,3 +789,27 @@ The first `StatePing` build treated the arm controls as full normalized
 our stock-derived edit handlers: `ParamTap` showed parameter writes are small
 raw floats. Lowered the arm threshold to `>= 0.001f` so switch/knob writes above
 zero actually arm the probe.
+
+Retest result after threshold fix:
+
+* `Arm10=1` produces stereo wobble.
+* `Arm18=1` produces stereo wobble.
+* Both arms on also produces stereo wobble. In this build `Arm18` has priority,
+  so that confirms the `ctx[2] + 0x18` path still works when both switches are
+  nonzero.
+* No crash reported.
+
+Conclusion:
+
+Custom ZDL audio callbacks can write persistent per-callback state through the
+stock `ctx[2]` derived-block pattern, at least at word 0 of both `ctx[2] +
+0x10` and `ctx[2] + 0x18`. This is the first hardware proof that a 1:1
+stateful Airwindows port does not have to keep all state in `.fardata`.
+
+Immediate next questions:
+
+1. How many words are safe in the derived block?
+2. Are the blocks per effect instance, or shared across duplicate instances?
+3. Does bypass/preset switching reset this block the same way stock effects do?
+4. Can we influence the block size from ZDL metadata, or is the custom block a
+   fixed host allocation?
