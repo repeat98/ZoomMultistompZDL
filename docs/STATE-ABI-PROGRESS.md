@@ -416,6 +416,21 @@ Build result:
 * `.fardata`: 0 bytes
 * ZDL size: 5974 bytes
 
+Hardware result:
+
+* Startup survived.
+* The probe now audibly pans the signal.
+* Conclusion: stereo balance is a usable binary observation channel for
+  selected `ctx[Slot].Bit` values. Use left/right classification instead of
+  raw volume changes for the next mapping pass.
+
+Next mapping target:
+
+* Sweep bits `0..31` for `ctx[2]`, `ctx[3]`, `ctx[13]`, and `ctx[14]`.
+* Record left-leaning as `0` and right-leaning as `1`.
+* If a bit produces no clear pan difference, mark it as `?` instead of
+  guessing.
+
 ## Next Probe
 
 If `CtxGate` maps stable pointer-looking words, the next probe is a read-only
