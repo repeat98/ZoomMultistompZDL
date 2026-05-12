@@ -1,0 +1,40 @@
+{
+  "effect_name": "CtxNib",
+  "comment": "Hardware ABI probe. Reads ctx[Slot], selects one 4-bit nibble, and encodes its bits as a repeating stereo input-panning pattern. No dereference of the selected ctx word.",
+
+  "audio_func_name": "Fx_FLT_CtxNib",
+
+  "gid": 2,
+  "gid_comment": "0x02 = Filter category. Diagnostic only.",
+
+  "fxid": 408,
+  "fxid_comment": "0x0198, separate from CtxGate.",
+
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+
+  "params": [
+    {
+      "name": "Slot",
+      "type": "knob",
+      "max": 15,
+      "default": 3,
+      "audio_min": 0.0,
+      "audio_max": 15.0,
+      "audio_default": 0.2,
+      "comment": "ctx[] index to inspect. The selected word is read but not dereferenced."
+    },
+    {
+      "name": "Nib",
+      "type": "knob",
+      "max": 7,
+      "default": 0,
+      "audio_min": 0.0,
+      "audio_max": 7.0,
+      "audio_default": 0.0,
+      "comment": "Nibble index inside the selected 32-bit ctx word. Nib 0 is bits 0-3; Nib 7 is bits 28-31."
+    }
+  ],
+
+  "audio_nop": false
+}

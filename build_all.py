@@ -29,6 +29,7 @@ PLUGINS = [
     ("ctxmap",      PLUGIN_DIR / "ctxmap"      / "build.py"),
     ("paramtap",    PLUGIN_DIR / "paramtap"    / "build.py"),
     ("ctxgate",     PLUGIN_DIR / "ctxgate"     / "build.py"),
+    ("ctxnib",      PLUGIN_DIR / "ctxnib"      / "build.py"),
     ("bitcrush",    PLUGIN_DIR / "bitcrush"    / "build.py"),
 ]
 

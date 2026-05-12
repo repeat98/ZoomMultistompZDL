@@ -479,7 +479,55 @@ Interpretation so far:
 
 ## Next Probe
 
-If `CtxGate` maps stable pointer-looking words, the next probe is a read-only
-dereference mapper for one candidate slot at a time. If it crashes or maps all
-quiet/loud, keep the same input-gated structure and vary only one ABI
-assumption per build.
+## 2026-05-12: Probe 4 - `CtxNib`
+
+Added `src/airwindows/ctxnib/`, a nibble mapper to reduce manual sweep errors.
+
+Purpose:
+
+* Keep the proven stereo/input observation channel from `CtxGate`.
+* Read a whole 4-bit nibble from `ctx[Slot]` at once.
+* Avoid 32 separate bit-position edits per slot.
+* Avoid dereferencing the selected `ctx[]` word.
+
+Behavior:
+
+* `Slot` selects `ctx[0..15]`.
+* `Nib` selects one nibble:
+  * `Nib 0` = bits `0..3`
+  * `Nib 1` = bits `4..7`
+  * ...
+  * `Nib 7` = bits `28..31`
+* The audio pattern repeats:
+  * sync: loud center
+  * bit 0: left = `0`, right = `1`
+  * bit 1: left = `0`, right = `1`
+  * bit 2: left = `0`, right = `1`
+  * bit 3: left = `0`, right = `1`
+  * gap: quiet center
+
+Test procedure:
+
+1. Load `dist/CtxNib.ZDL`.
+2. Feed a steady input signal and monitor/record stereo.
+3. Set `Slot` to a target, for example `3`.
+4. Set `Nib` to `0`.
+5. After the loud center sync, write the next four pan decisions as a nibble
+   string, left=`0`, right=`1`.
+6. Repeat for `Nib 1..7`.
+
+Build result:
+
+* Command: `python3 -B build_all.py ctxnib`
+* Output: `dist/CtxNib.ZDL`
+* `.audio`: 608 bytes
+* `.text`: 448 bytes
+* `.fardata`: 4 bytes
+* ZDL size: 5466 bytes
+
+Next after `CtxNib`:
+
+If `CtxNib` confirms stable compact words, the next probe is a read-only
+dereference mapper only if a candidate field looks pointer-like. If values stay
+small, first map how these compact fields vary by FX slot, preset, bypass, and
+duplicate instance.
