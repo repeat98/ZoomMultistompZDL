@@ -452,15 +452,14 @@ Duplicate-instance check:
 
 | Condition | Slot | Sweep bits 0..31 | Provisional word | Notes |
 |---|---:|---|---:|---|
-| Duplicate `CtxGate` in second FX slot | `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | changed from `0x00003e3b` by bit 1 |
+| Duplicate `CtxGate` in second FX slot | `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | unconfirmed; possible sweep/transcription error |
 | Same duplicate-instance condition | `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | unchanged |
 
 Interpretation so far:
 
 * `ctx[13]` and `ctx[14]` matched exactly in this capture.
-* `ctx[3]` changed under duplicate-instance conditions, which makes it more
-  interesting as a possible runtime/instance field than `ctx[13]` in this
-  specific test.
+* The apparent `ctx[3]` duplicate-instance change is not trusted yet; the
+  operator reported low confidence and possible mistake.
 * The observed values are small if interpreted as bit-0-first words, so they
   do not yet look like direct memory pointers. They may be flags, indexes,
   compact descriptors, or the bit order may still need confirmation.
