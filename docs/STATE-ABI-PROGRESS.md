@@ -439,16 +439,14 @@ corresponding to bit `31`.
 
 | Slot | Sweep bits 0..31 | Provisional word | Notes |
 |---:|---|---:|---|
-| `ctx[2]` | `11011000011100000000000000000000` | `0x00000e1b` | stock state/scratch candidate; repeat supersedes earlier reading |
+| `ctx[2]` | position-dependent; see chain-position check below | `0xfffff1e3` or `0xfffff1eb` | stock state/scratch candidate |
 | `ctx[3]` | position-dependent; see chain-position check below | `0x00003e3b` or `0x00003e39` | stock state/scratch candidate |
 | `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | stock modulation/state candidate |
 | `ctx[14]` | `11001110011111000000000000000000` | `0x00003e73` | same observed value as `ctx[13]` |
 
-Earlier `ctx[2]` was recorded as
-`11000111100011111111111111111111` / `0xfffff1e3`; a repeat sweep produced
-`11011000011100000000000000000000` / `0x00000e1b`. Treat the earlier
-`ctx[2]` value as likely sweep/transcription error until independently
-reproduced.
+`ctx[2]` first looked inconsistent, but a chain-position check now suggests
+that the high-bit-heavy readings are real and depend on the physical FX slot.
+The isolated `0x00000e1b` reading is no longer trusted until reproduced.
 
 `ctx[3]` first looked inconsistent, but a chain-position check now suggests
 that the value depends on the physical FX slot rather than being a
@@ -469,14 +467,17 @@ Chain-position check:
 
 | Condition | Slot | Sweep bits 0..31 | Provisional word | Notes |
 |---|---:|---|---:|---|
+| One `CtxGate`, physical FX slot 1 | `ctx[2]` | `11000111100011111111111111111111` | `0xfffff1e3` | differs by bit 3 |
+| One `CtxGate`, physical FX slot 2, no effect in slot 1 | `ctx[2]` | `11010111100011111111111111111111` | `0xfffff1eb` | differs by bit 3 |
 | One `CtxGate`, physical FX slot 1 | `ctx[3]` | `11011100011111000000000000000000` | `0x00003e3b` | differs by bit 1 |
 | One `CtxGate`, physical FX slot 2, no effect in slot 1 | `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | differs by bit 1 |
 
 Interpretation so far:
 
 * `ctx[13]` and `ctx[14]` matched exactly in this capture.
-* `ctx[2]` currently appears to be `0x00000e1b`; the earlier `0xfffff1e3`
-  reading is not trusted.
+* `ctx[2]` appears to encode chain position or a chain-position-related flag:
+  physical FX slot 1 produced `0xfffff1e3`, while physical FX slot 2 produced
+  `0xfffff1eb`.
 * `ctx[3]` appears to encode chain position or a chain-position-related flag:
   physical FX slot 1 produced `0x00003e3b`, while physical FX slot 2 produced
   `0x00003e39`.
