@@ -49,6 +49,9 @@ def main() -> None:
 
     for variant in variants:
         effect_name = variant.get("effect_name", manifest["effect_name"])
+        audio_func_name = variant.get("audio_func_name", manifest.get("audio_func_name"))
+        if audio_func_name is None:
+            audio_func_name = f"Fx_FLT_{effect_name}"
         fxid = int(variant.get("fxid", manifest["fxid"]))
         magic = parse_u32(variant.get("magic", "0x13579BDF"))
         screen_label = variant.get("screen_label", effect_name)
@@ -62,6 +65,7 @@ def main() -> None:
                 str(CL6X),
                 *CFLAGS,
                 f"--define=STATEISO_MAGIC=0x{magic:08X}u",
+                f"--define=STATEISO_AUDIO_FUNC={audio_func_name}",
                 "-c",
                 str(src_c),
                 f"--output_file={obj}",
@@ -77,7 +81,7 @@ def main() -> None:
 
         cfg = LinkerConfig(
             effect_name=effect_name,
-            audio_func_name=manifest.get("audio_func_name"),
+            audio_func_name=audio_func_name,
             gid=manifest["gid"],
             fxid=fxid,
             params=params,

@@ -965,3 +965,43 @@ Build result:
   * `.text`: 0 bytes.
   * `.fardata`: 0 bytes.
   * ZDL size: 4782 bytes.
+
+Hardware/operator result:
+
+* Flashing both `StateIsoA` and `StateIsoB` made the pedal crash on startup.
+* Flashing either effect by itself allowed the pedal to boot.
+* A single isolated `StateIso` loads, passes audio, and changing `Arm` does not
+  audibly affect the sound.
+
+Interpretation:
+
+The single-effect behavior is consistent with the probe design: it only makes
+an audible wobble when it sees a foreign stamp, so one isolated variant should
+settle to normal pass-through. The startup crash with both variants installed
+looks like an install-time loader/package conflict rather than an instance-state
+sharing result. First suspect: both variants exported the same audio callback
+symbol, `Fx_FLT_StateIso`.
+
+Follow-up fix:
+
+Rebuilt the two variants with unique exported audio callback names:
+
+* `StateIsoA`: `Fx_FLT_StateIsoA`.
+* `StateIsoB`: `Fx_FLT_StateIsoB`.
+
+Keep the same effect IDs and DSP behavior so the next hardware test isolates
+whether the duplicate callback symbol was the startup-crash trigger.
+
+Build result for unique-symbol version:
+
+* Command: `python3 -B build_all.py stateiso`
+* Outputs:
+  * `dist/StateIsoA.ZDL`
+  * `dist/StateIsoB.ZDL`
+* Each output:
+  * `.audio`: 512 bytes.
+  * `.text`: 0 bytes.
+  * `.fardata`: 0 bytes.
+  * ZDL size: 4786 bytes.
+* String check confirms the exported callback/edit/init/onf symbols are
+  variant-specific.

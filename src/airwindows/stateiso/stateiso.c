@@ -21,18 +21,24 @@
 
 #include "stateiso_params.h"
 
-#pragma CODE_SECTION(Fx_FLT_StateIso, ".audio")
-
 #define ZDL_PTR(type, word) ((type)(uintptr_t)(word))
+#define STATEISO_DO_PRAGMA(x) _Pragma(#x)
+#define STATEISO_EXPAND_PRAGMA(x) STATEISO_DO_PRAGMA(x)
+#define STATEISO_CODE_SECTION(func) STATEISO_EXPAND_PRAGMA(CODE_SECTION(func, ".audio"))
 
 #ifndef STATEISO_MAGIC
 #define STATEISO_MAGIC 0x13579BDFu
 #endif
 
+#ifndef STATEISO_AUDIO_FUNC
+#define STATEISO_AUDIO_FUNC Fx_FLT_StateIsoA
+#endif
+
 #define STATEISO_PHASE_WORD 18u
 #define STATEISO_STAMP_WORD 19u
 
-void Fx_FLT_StateIso(unsigned int *ctx)
+STATEISO_CODE_SECTION(STATEISO_AUDIO_FUNC)
+void STATEISO_AUDIO_FUNC(unsigned int *ctx)
 {
     float *params = ZDL_PTR(float *, ctx[1]);
     float *fxBuf = ZDL_PTR(float *, ctx[5]);
