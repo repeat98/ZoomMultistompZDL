@@ -776,3 +776,16 @@ Build result:
 * `.text`: 0 bytes
 * `.fardata`: 0 bytes
 * ZDL size: 4938 bytes
+
+Hardware/operator result:
+
+* No crash with both arms off, either arm on, or both arms on.
+* No audible wobble in any state.
+
+Follow-up fix:
+
+The first `StatePing` build treated the arm controls as full normalized
+`0.0/1.0` switches and used a `>= 0.5f` threshold. That is probably wrong for
+our stock-derived edit handlers: `ParamTap` showed parameter writes are small
+raw floats. Lowered the arm threshold to `>= 0.001f` so switch/knob writes above
+zero actually arm the probe.

@@ -30,8 +30,13 @@ void Fx_FLT_StatePing(unsigned int *ctx)
     unsigned int *magicDst = ZDL_PTR(unsigned int *, *(unsigned int *)ZDL_PTR(unsigned int *, ctx[11]));
     *magicDst = *magicSrc;
 
-    unsigned int arm10 = (params[STATEPING_ARM10_SLOT] >= 0.5f) ? 1u : 0u;
-    unsigned int arm18 = (params[STATEPING_ARM18_SLOT] >= 0.5f) ? 1u : 0u;
+    /*
+     * ParamTap showed stock edit handlers write small raw floats, not full
+     * 0.0/1.0 normalized switch values. Anything clearly above zero counts as
+     * armed.
+     */
+    unsigned int arm10 = (params[STATEPING_ARM10_SLOT] >= 0.001f) ? 1u : 0u;
+    unsigned int arm18 = (params[STATEPING_ARM18_SLOT] >= 0.001f) ? 1u : 0u;
     float gainL = 1.0f;
     float gainR = 1.0f;
 
