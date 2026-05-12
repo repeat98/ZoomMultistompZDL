@@ -439,10 +439,16 @@ corresponding to bit `31`.
 
 | Slot | Sweep bits 0..31 | Provisional word | Notes |
 |---:|---|---:|---|
-| `ctx[2]` | `11000111100011111111111111111111` | `0xfffff1e3` | stock state/scratch candidate |
+| `ctx[2]` | `11011000011100000000000000000000` | `0x00000e1b` | stock state/scratch candidate; repeat supersedes earlier reading |
 | `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | stock state/scratch candidate; repeat-confirmed |
 | `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | stock modulation/state candidate |
 | `ctx[14]` | `11001110011111000000000000000000` | `0x00003e73` | same observed value as `ctx[13]` |
+
+Earlier `ctx[2]` was recorded as
+`11000111100011111111111111111111` / `0xfffff1e3`; a repeat sweep produced
+`11011000011100000000000000000000` / `0x00000e1b`. Treat the earlier
+`ctx[2]` value as likely sweep/transcription error until independently
+reproduced.
 
 Earlier `ctx[3]` was recorded as
 `11011100011111000000000000000000` / `0x00003e3b`; a repeat sweep produced
@@ -463,6 +469,8 @@ Duplicate-instance check:
 Interpretation so far:
 
 * `ctx[13]` and `ctx[14]` matched exactly in this capture.
+* `ctx[2]` currently appears to be `0x00000e1b`; the earlier `0xfffff1e3`
+  reading is not trusted.
 * `ctx[3]` currently appears stable at `0x00003e39`; the earlier
   `0x00003e3b` reading is not trusted.
 * The observed values are small if interpreted as bit-0-first words, so they
