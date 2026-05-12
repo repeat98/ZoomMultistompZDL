@@ -603,3 +603,74 @@ Next firmware target:
 * Search firmware disassembly for the call path that stores into callback
   context slots `[2]`, `[3]`, `[13]`, and `[14]`.
 * Avoid more pedal sweeping until that call path suggests a specific probe.
+
+## 2026-05-12: Firmware Call-Path Triage
+
+Added `build/find_firmware_ctx_call_candidates.py`, a text scanner for
+`main_os.dis`. It finds indirect branches/calls, then reports nearby stores to
+small struct offsets on the same base register. The goal is to find code that
+constructs a ZDL audio call frame or a stock-style state descriptor without
+hand-scanning the full firmware listing.
+
+Command used:
+
+```bash
+python3 -B build/find_firmware_ctx_call_candidates.py \
+  firmware/extracted/main_os.dis \
+  --min-score 50 --max-candidates 30 --limit 10
+```
+
+Current interpretation:
+
+* `c00d3340..c00d3518` is almost certainly not the ZDL audio callback path.
+  It saves/restores CPU state (`CSR`, `AMR`, `IRP`, `ILC`, `RILC`, `SSR`,
+  `TSR`, `ITSR`, `GPLYA`, `GPLYB`) around an indirect branch at `c00d3404`.
+  Treat it as an interrupt/exception/context-save trampoline unless disproven.
+* `c00de7a0..c00de818` is also likely a low-level context/coroutine switch.
+  It swaps `B15`, saves/restores preserved registers, then branches through a
+  stored return/function pointer. It is useful firmware context, but probably
+  not the effect audio frame builder.
+* `c00dbae0` behaves like `memset(dest=A4, byte=B4, len=A6)`. This makes
+  state-initializer candidates much easier to read.
+* `c00de2a0..c00de32c` is the best state-descriptor lead so far:
+  * loads a count from global `0xc00e:d054`;
+  * iterates descriptors returned by `c00e1100(index)`;
+  * reads `descriptor[14]` as a signed halfword;
+  * clears `descriptor[2]` for `descriptor[14] << 5` bytes via `c00dbae0`;
+  * resets `descriptor[3] = descriptor[2]`;
+  * resets `descriptor[5] = 0`, `descriptor[6] = 1`, and
+    halfword `descriptor[16] = 1`.
+* `c00e1100` appears to be an indexed descriptor accessor for a table rooted
+  near `0xc00e:e108`.
+* `c00e1080` checks `descriptor[2]`, reads `descriptor[14]`, and branches to
+  another descriptor helper (`c00e1180`) when the backing pointer exists.
+* `c00e1140` calls the `c00d5a60` helper after zeroing argument registers,
+  which makes `c00d5a60` look like a descriptor use/reset helper rather than
+  an isolated random indirect-call site.
+* `c00d1e40..c00d204c` and `c00d5a60..c00d5bd8` are high-scoring indirect-call
+  candidates. They manipulate structs with fields `[2]`, `[3]`, `[4]`,
+  `[5]`, `[6]`, `[7]` and branch indirectly. These may be descriptor
+  read/write helpers or event/callback wrappers; they are not yet proven to be
+  the actual ZDL `.audio` caller.
+
+Why this matters:
+
+Stock effects treat `ctx[2]` and `ctx[3]` as pointers to runtime structs. The
+`c00de2a0` descriptor reset routine is the first firmware evidence of a
+host-managed memory block with pointer, cursor, size-in-32-byte-units, and
+reset flags. That is the kind of storage model needed for 1:1 Airwindows ports,
+but we still need to connect this descriptor family to one or more audio
+`ctx[]` slots.
+
+Next firmware steps:
+
+1. Trace references to the `0xc00e:d054` descriptor count and `0xc00e:e108`
+   descriptor table.
+2. Trace `c00de200`, which appears in the same descriptor-control neighborhood
+   and may allocate or attach these backing blocks.
+3. Trace callers of `c00de2a0` and the high-scoring `c00d1e40` /
+   `c00d5a60` helpers.
+4. Cross-check stock `.audio` field accesses against the descriptor shape:
+   pointer fields `[2]` / `[3]`, cursor-like fields, and length field `[14]`.
+5. Only after that, build a tiny read/write persistence probe against the most
+   plausible `ctx[]` slot; do not return to manual bit sweeping.
