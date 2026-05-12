@@ -540,9 +540,66 @@ Build result:
 * `.fardata`: 4 bytes
 * ZDL size: 5466 bytes
 
+Hardware/operator result:
+
+* Rejected as a worse workflow than `CtxGate`.
+* Keep the build around only as an optional probe; do not use it as the main
+  mapping workflow.
+
 Next after `CtxNib`:
 
 If `CtxNib` confirms stable compact words, the next probe is a read-only
 dereference mapper only if a candidate field looks pointer-like. If values stay
 small, first map how these compact fields vary by FX slot, preset, bypass, and
 duplicate instance.
+
+## 2026-05-12: Stock Assembly Pivot
+
+Manual sweeping has gone far enough for now. Stock ZDL disassembly gives a
+stronger lead than more hand sweeps.
+
+Added `build/trace_ctx_audio.py`, a lightweight `dis6x` text tracer for
+`.audio` sections. It tracks direct `ctx[]` loads and later memory accesses
+through the loaded registers. It is a triage tool, not a decompiler.
+
+Command used:
+
+```bash
+python3 -B build/disassemble_zdl.py \
+  working_zdls/MS-70CDR_STCHO.ZDL \
+  working_zdls/MS-70CDR_DELAY.ZDL \
+  working_zdls/MS-70CDR_HALL.ZDL \
+  working_zdls/MS-70CDR_MODREV.ZDL \
+  working_zdls/MS-70CDR_TAPEECHO.ZDL \
+  --out-dir /tmp/zoom-stock-state-trace
+
+python3 -B build/trace_ctx_audio.py \
+  /tmp/zoom-stock-state-trace/MS-70CDR_STCHO.ZDL.asm \
+  /tmp/zoom-stock-state-trace/MS-70CDR_DELAY.ZDL.asm \
+  /tmp/zoom-stock-state-trace/MS-70CDR_HALL.ZDL.asm
+```
+
+Key stock findings:
+
+| Stock effect | `ctx[2]` use | `ctx[3]` use | `ctx[13]` / `ctx[14]` use |
+|---|---|---|---|
+| `STCHO` | base pointer; reads/writes fields including `[0]`, `[1]`, `[3]`, `[5]` | base pointer; repeated reads from `[0]`, `[1]`, `[2]` | `ctx[13]` dereferenced and written through; `ctx[14]` dereferenced/read |
+| `DELAY` | base pointer; derived struct at `ctx[2] + 0x10`, fields read/written | base pointer; fields `[0]`, `[1]`, `[2]` read | not used in this audio entry |
+| `HALL` | base pointer; derived struct and state fields read/written | base pointer; fields `[0]`, `[1]`, `[2]` read | not used in this audio entry |
+| `TAPEECHO` | base pointer; fields `[0]`, `[2]`, `[3]` read/written | base pointer; fields `[0]`, `[1]`, `[2]` read | not used in this audio entry |
+
+Interpretation:
+
+* Stock stateful effects treat `ctx[2]` and `ctx[3]` as pointers to runtime
+  structs, not merely scalar flags.
+* `STCHO` additionally treats `ctx[13]` and `ctx[14]` as pointer-like fields,
+  possibly a host scratch or transfer pair.
+* Our manual bit sweeps are still useful as behavioral probes, but they are not
+  enough to recover actual addresses. The next target is firmware code that
+  constructs the `ctx[]` array before calling an effect's `.audio` function.
+
+Next firmware target:
+
+* Search firmware disassembly for the call path that stores into callback
+  context slots `[2]`, `[3]`, `[13]`, and `[14]`.
+* Avoid more pedal sweeping until that call path suggests a specific probe.
