@@ -7,8 +7,8 @@
  * and params[6]. CtxMap's generated oscillator was ambiguous, so this probe
  * avoids generated audio entirely. Feed guitar or another signal through it:
  *
- *   selected bit = 0 -> quiet input pass-through
- *   selected bit = 1 -> louder input pass-through
+ *   selected bit = 0 -> stronger left-side pass-through
+ *   selected bit = 1 -> stronger right-side pass-through
  *
  * The selected ctx word is read as a raw 32-bit value and is never
  * dereferenced.
@@ -92,10 +92,14 @@ void Fx_FLT_CtxGate(unsigned int *ctx)
 
     unsigned int word = ctx[slot & 15u];
     unsigned int bit_on = (word >> (bit & 31u)) & 1u;
-    float gain = bit_on ? 1.25f : 0.10f;
+    float gainL = bit_on ? 0.05f : 2.00f;
+    float gainR = bit_on ? 2.00f : 0.05f;
 
     int i;
-    for (i = 0; i < 16; i++) {
-        outBuf[i] += fxBuf[i] * gain;
+    for (i = 0; i < 8; i++) {
+        outBuf[i] += fxBuf[i] * gainL;
+    }
+    for (i = 8; i < 16; i++) {
+        outBuf[i] += fxBuf[i] * gainR;
     }
 }

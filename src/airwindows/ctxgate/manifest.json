@@ -1,6 +1,6 @@
 {
   "effect_name": "CtxGate",
-  "comment": "Hardware ABI probe. Reads ctx[Slot] as a raw 32-bit word and uses Bit to gate input-signal loudness. No generated oscillator, no fardata, no dereference of the selected ctx word.",
+  "comment": "Hardware ABI probe. Reads ctx[Slot] as a raw 32-bit word and uses Bit to pan/weight the input signal left or right. No generated oscillator, no fardata, no dereference of the selected ctx word.",
 
   "audio_func_name": "Fx_FLT_CtxGate",
 

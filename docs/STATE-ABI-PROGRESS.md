@@ -376,6 +376,46 @@ Build result:
 * `.fardata`: 0 bytes
 * ZDL size: 5814 bytes
 
+Hardware result:
+
+* Startup survived.
+* Sweeping bits across different slots produced many audible volume changes.
+* Sweeping bit `0` across slots did not change the sound.
+* Conclusion: `CtxGate` is now receiving parameter changes and reading some
+  `ctx[]`-dependent signal, but the quiet/loud gain encoding is too ambiguous
+  to reconstruct words reliably. The pedal's existing dry/output path likely
+  masks the intended binary distinction.
+
+## 2026-05-12: Probe 3c - `CtxGate` Stereo Encoder
+
+Changed `CtxGate` to encode the selected bit as stereo balance rather than
+plain volume.
+
+Behavior:
+
+* Selected bit `0` -> stronger left-side pass-through.
+* Selected bit `1` -> stronger right-side pass-through.
+* Still uses the threshold selector from Probe 3b.
+* Still does not dereference the selected `ctx[]` word.
+* Still uses no `.fardata`.
+
+Interpretation:
+
+* Record or monitor in stereo.
+* Classify left-leaning settings as `0`.
+* Classify right-leaning settings as `1`.
+* If bit `0` remains unchanged across slots, document it as a likely constant
+  low bit rather than spending time on it.
+
+Build result:
+
+* Command: `python3 -B build_all.py ctxgate`
+* Output: `dist/CtxGate.ZDL`
+* `.audio`: 1568 bytes
+* `.text`: 0 bytes
+* `.fardata`: 0 bytes
+* ZDL size: 5974 bytes
+
 ## Next Probe
 
 If `CtxGate` maps stable pointer-looking words, the next probe is a read-only
