@@ -442,10 +442,28 @@ corresponding to bit `31`.
 | `ctx[2]` | `11000111100011111111111111111111` | `0xfffff1e3` | stock state/scratch candidate |
 | `ctx[3]` | `11011100011111000000000000000000` | `0x00003e3b` | stock state/scratch candidate |
 | `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | stock modulation/state candidate |
+| `ctx[14]` | `11001110011111000000000000000000` | `0x00003e73` | same observed value as `ctx[13]` |
 
 If the bit strings were instead written most-significant-bit first, the words
 would be `0xc78fffff`, `0xdc7c0000`, and `0xce7c0000`. The next capture should
 explicitly confirm whether the first typed character is bit `0`.
+
+Duplicate-instance check:
+
+| Condition | Slot | Sweep bits 0..31 | Provisional word | Notes |
+|---|---:|---|---:|---|
+| Duplicate `CtxGate` in second FX slot | `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | changed from `0x00003e3b` by bit 1 |
+| Same duplicate-instance condition | `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | unchanged |
+
+Interpretation so far:
+
+* `ctx[13]` and `ctx[14]` matched exactly in this capture.
+* `ctx[3]` changed under duplicate-instance conditions, which makes it more
+  interesting as a possible runtime/instance field than `ctx[13]` in this
+  specific test.
+* The observed values are small if interpreted as bit-0-first words, so they
+  do not yet look like direct memory pointers. They may be flags, indexes,
+  compact descriptors, or the bit order may still need confirmation.
 
 ## Next Probe
 
