@@ -25,6 +25,8 @@ PLUGINS = [
     ("purestdrive", PLUGIN_DIR / "purestdrive" / "build.py"),
     ("tapehack",    PLUGIN_DIR / "tapehack"    / "build.py"),
     ("totape9",     PLUGIN_DIR / "totape9"     / "build.py"),
+    ("stereochorus", PLUGIN_DIR / "stereochorus" / "build.py"),
+    ("ctxmap",      PLUGIN_DIR / "ctxmap"      / "build.py"),
     ("bitcrush",    PLUGIN_DIR / "bitcrush"    / "build.py"),
 ]
 
@@ -40,7 +42,7 @@ def main(argv: list[str]) -> int:
     failures: list[str] = []
     for name, build_py in plugins:
         print(f"\n========== {name} ==========")
-        rc = subprocess.run([sys.executable, str(build_py)]).returncode
+        rc = subprocess.run([sys.executable, "-B", str(build_py)]).returncode
         if rc != 0:
             failures.append(name)
 

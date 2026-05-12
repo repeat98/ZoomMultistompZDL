@@ -1,0 +1,50 @@
+{
+  "effect_name": "CtxMap",
+  "comment": "Hardware-only ABI probe. Reads one raw ctx[] word and turns a selected bit into an audible tone, without dereferencing unknown ctx pointers.",
+
+  "audio_func_name": "Fx_FLT_CtxMap",
+
+  "gid": 2,
+  "gid_comment": "0x02 = Filter category. This is a diagnostic, not a musical effect.",
+
+  "fxid": 405,
+  "fxid_comment": "0x0195, after StChorus in the custom Airwindows/probe id range.",
+
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+
+  "params": [
+    {
+      "name": "Slot",
+      "type": "knob",
+      "max": 15,
+      "default": 1,
+      "audio_min": 0.0,
+      "audio_max": 15.0,
+      "audio_default": 0.0666667,
+      "comment": "ctx[] index to inspect. Use 0-15 first; never dereferenced."
+    },
+    {
+      "name": "Bit",
+      "type": "knob",
+      "max": 31,
+      "default": 0,
+      "audio_min": 0.0,
+      "audio_max": 31.0,
+      "audio_default": 0.0,
+      "comment": "Bit index inside the selected 32-bit ctx word."
+    },
+    {
+      "name": "Level",
+      "type": "knob",
+      "max": 100,
+      "default": 40,
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.4,
+      "comment": "Probe tone level. Keep modest when testing on hardware."
+    }
+  ],
+
+  "audio_nop": false
+}

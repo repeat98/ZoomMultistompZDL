@@ -1,0 +1,46 @@
+{
+  "effect_name": "StChorus",
+  "comment": "EXPERIMENTAL ABI probe for Airwindows StereoChorus. Source parameter metadata is present, but the DSP is not release-quality until the exact source delay-line algorithm can run safely.",
+
+  "audio_func_name": "Fx_MOD_StChorus",
+
+  "gid": 6,
+  "gid_comment": "0x06 = Modulation category. 0x03 is Drive.",
+
+  "fxid": 404,
+  "fxid_comment": "0x0194, after ToTape9 in the custom Airwindows id range.",
+
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+
+  "params": [
+    {
+      "name": "Speed",
+      "type": "knob",
+      "max": 100,
+      "default": 0,
+      "scale": "source_pow10",
+      "audio_min": 0.0000115292,
+      "audio_max": 0.000745,
+      "audio_default": 0.0,
+      "source_default": 0.0,
+      "source_formula": "pow(0.32 + (A / 6.0), 10.0)",
+      "comment": "Airwindows A. Chorus sweep speed."
+    },
+    {
+      "name": "Depth",
+      "type": "knob",
+      "max": 100,
+      "default": 0,
+      "scale": "source_depth_over_speed",
+      "audio_min": 0.0,
+      "audio_max": 1445.877,
+      "audio_default": 0.0,
+      "source_default": 0.0,
+      "source_formula": "(B / 60.0) / speed",
+      "comment": "Airwindows B. Chorus delay depth; default 0 is dry."
+    }
+  ],
+
+  "audio_nop": false
+}

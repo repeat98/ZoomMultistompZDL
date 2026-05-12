@@ -1,5 +1,24 @@
 # Airwindows Port Layout
 
+Before adding or deepening a port, read
+[AGENT_CONTEXT.md](AGENT_CONTEXT.md) and
+[../../docs/SAFE-DSP-RULES.md](../../docs/SAFE-DSP-RULES.md). The short
+version: exact source parameter metadata is good; full desktop DSP with large
+state is not automatically safe on the pedal.
+
+also [AIRWINDOWS-EXACT-PORTS.md]
+
+For effects marketed as Airwindows ports, also read
+[../../docs/AIRWINDOWS-EXACT-PORTS.md](../../docs/AIRWINDOWS-EXACT-PORTS.md).
+If the DSP is an approximation or an ABI probe, say that plainly in the
+manifest and comments. `StChorus` is currently such a probe, not a 1:1
+`StereoChorus` port.
+
+`CtxMap` is a dedicated hardware ABI probe, not an Airwindows effect. Its
+findings belong in
+[../../docs/STATE-ABI-PROGRESS.md](../../docs/STATE-ABI-PROGRESS.md) before
+they are used to justify a stateful port.
+
 Each effect directory is meant to be buildable on its own and through
 `python3 build_all.py`.
 

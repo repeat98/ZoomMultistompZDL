@@ -7,8 +7,12 @@ A ZDL is a ZOOM-specific wrapper around a TI C674x ELF shared object:
     +---------+-----------------+---------------------+--------------+
        0..3       4..19              20..75              76..76+elf_size
 
+Standard files start the ELF immediately after the INFO block at offset 76.
+Some files carry an extended payload (`BCAB` or `CABI`) between INFO and ELF;
+for those, the SIZE block's header-size field must be honored.
+
 All multi-byte integers are little-endian. The ZDL "magic" is four leading
-zero bytes; ELF starts immediately after the INFO block at offset 76.
+zero bytes.
 
 Reference: zoom-fx-modding-ref/library/CH_4.md
 """
@@ -80,6 +84,7 @@ class Zdl:
     info: ZdlInfo
     elf:  bytes
     header_size: int = HEADER_SIZE_TYPICAL  # 56 typical; 232 with BCAB, 312 with CABI
+    extra_header_payload: bytes = b""       # optional BCAB/CABI bytes after INFO
 
     @classmethod
     def load(cls, path: str | Path) -> "Zdl":
@@ -95,22 +100,37 @@ class Zdl:
             raise ValueError("not a ZDL: missing INFO block")
         info_size = struct.unpack("<I", data[24:28])[0]
         if info_size != INFO_PAYLOAD_SIZE:
-            # BCAB (168) and CABI (248) extend the header; not handled here yet.
             raise NotImplementedError(f"INFO size {info_size} not supported")
         info = ZdlInfo.unpack(data[28:28 + INFO_PAYLOAD_SIZE])
         elf_start = 4 + 8 + 8 + header_size  # NULL + SIZEhdr + INFOhdr + payload
+        info_end = 28 + INFO_PAYLOAD_SIZE
+        if elf_start < info_end:
+            raise ValueError(f"header_size {header_size} ends before INFO payload")
+        extra_header_payload = data[info_end:elf_start]
         elf = data[elf_start:elf_start + elf_size]
         if elf[:4] != b"\x7fELF":
             raise ValueError("ELF magic not found at expected offset")
-        return cls(info=info, elf=elf, header_size=header_size)
+        return cls(
+            info=info,
+            elf=elf,
+            header_size=header_size,
+            extra_header_payload=extra_header_payload,
+        )
 
     def pack(self) -> bytes:
         info_bytes = self.info.pack()
         assert len(info_bytes) == INFO_PAYLOAD_SIZE
+        header_size = HEADER_SIZE_TYPICAL + len(self.extra_header_payload)
+        if self.header_size != header_size:
+            raise ValueError(
+                f"header_size {self.header_size} does not match INFO+extra payload "
+                f"size {header_size}"
+            )
         out = bytearray()
         out += ZDL_NULL_PREFIX
-        out += b"SIZE" + struct.pack("<II", 8, self.header_size) + struct.pack("<I", len(self.elf))
+        out += b"SIZE" + struct.pack("<II", 8, header_size) + struct.pack("<I", len(self.elf))
         out += b"INFO" + struct.pack("<I", INFO_PAYLOAD_SIZE) + info_bytes
+        out += self.extra_header_payload
         out += self.elf
         return bytes(out)
 

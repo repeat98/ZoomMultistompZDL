@@ -2,14 +2,16 @@
  * totape9_zoom.c
  *
  * ToTape9 by Chris Johnson (airwindows) – MIT licence
- * Ported to TI TMS320C674x for Zoom Multistomp (MS-50G / MS-60B / MS-70CDR)
+ * Experimental TI TMS320C674x / Zoom Multistomp build.
  *
  * Release status
  * --------------
- * This is a flash-safe stateless beta. The original Airwindows algorithm has
+ * This is a flash-safe stateless beta, not a release-quality exact port.
+ * The original Airwindows algorithm has
  * several kilobytes of persistent state, but large writable .fardata segments
  * currently freeze MS-series pedals while loading a custom ZDL. Until that ABI
- * is solved, TOTAPE9_PERSISTENT_STATE stays 0 and flutter is disabled.
+ * is solved, TOTAPE9_PERSISTENT_STATE stays 0 and flutter is approximated by
+ * the small-stack release path instead of using the original delay buffer.
  *
  * Assumptions
  * -----------
@@ -27,7 +29,7 @@
  *            ID6 = FlutSpd   A3[9]   0-1  → flutter LFO speed
  *            ID7 = Bias      A3[10]  0-1  → tape bias (0=dark, 0.5=neutral, 1=bright)
  *    Page 3  ID8 = HeadBump  A3[11]  0-1  → head-bump resonance amount
- *            ID9 = HeadFrq   A3[12]  0-1  → head-bump freq (maps 0-1 → 25-200 Hz)
+ *            ID9 = HeadFrq   A3[12]  0-1  → head-bump freq (H^2 → 25-200 Hz)
  *            ID10= Output    A3[13]  0-1  → output gain 0-2×
  *
  *    A3[0]  = on/off multiplier (1.0 when on, 0.0 when off)
@@ -55,6 +57,13 @@
 #include "../common/zoom_params.h"
 #include "totape9_params.h"
 
+/* Persistent .fardata larger than a few hundred bytes currently freezes
+ * MS-series pedals during load. Keep the release build stateless until the
+ * per-effect state ABI is solved; the 9-param UI and core tape stages still
+ * make a useful beta. */
+#define TOTAPE9_PERSISTENT_STATE 0
+#define TOTAPE9_FULL_DSP 0
+
 ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Input_edit,   2, 20);
 ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Tilt_edit,    3, 24);
 ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Shape_edit,   4, 28);
@@ -65,6 +74,7 @@ ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_HeadBmp_edit, 8, 44);
 ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_HeadFrq_edit, 9, 48);
 ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Output_edit, 10, 52);
 
+#if TOTAPE9_FULL_DSP
 /* =========================================================================
  * Inline math functions
  *
@@ -135,6 +145,7 @@ static float zoom_tanf(float x)
 #define sinf(x) zoom_sinf(x)
 #define logf(x) zoom_logf(x)
 #define tanf(x) zoom_tanf(x)
+#endif
 
 #pragma CODE_SECTION(Fx_FLT_ToTape9, ".audio")
 
@@ -153,13 +164,6 @@ static float zoom_tanf(float x)
 #define FLUTTER_BUF  502   /* must be > max flutter depth (498) + 2 */
 #define PHI          1.6180339887498948f
 #define KNOB_NORM    (1.0f / 0.14f)
-
-/* Persistent .fardata larger than a few hundred bytes currently freezes
- * MS-series pedals during load. Keep the release build stateless until the
- * per-effect state ABI is solved; the 9-param UI and core tape stages still
- * make a useful beta. */
-#define TOTAPE9_PERSISTENT_STATE 0
-#define TOTAPE9_FULL_DSP 0
 
 /* -------------------------------------------------------------------------
  * gslew layout: 9 stages × 3 words = [prevL, prevR, threshold]  (27 words)
@@ -234,6 +238,7 @@ static int   wasPosClipR, wasNegClipR;
  * Head-bump biquad coefficient calculation
  * ====================================================================== */
 
+#if TOTAPE9_FULL_DSP
 static void computeHDB(float *hdb, float normalizedFreq, float reso)
 {
     hdb[HDB_FREQ] = normalizedFreq;
@@ -246,6 +251,7 @@ static void computeHDB(float *hdb, float normalizedFreq, float reso)
     hdb[HDB_B1] =  2.0f * (K * K - 1.0f) * norm;
     hdb[HDB_B2] =  (1.0f - K / reso + K * K) * norm;
 }
+#endif
 
 /* =========================================================================
  * Main entry point
@@ -270,9 +276,9 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
 
     if (params[0] < 0.5f) return;
 
-    /* Small-stack/no-divide release core. The full Airwindows body below is
-     * kept for future state-ABI work, but this path avoids the large stack
-     * frame and runtime divf calls that freeze hardware on first audio tick. */
+    /* Small-stack release core. The full Airwindows body below is kept for
+     * future state-ABI work, but this path avoids the large state block that
+     * freezes hardware while preserving the source parameter control laws. */
     float pInput   = zoom_param_norm(params[TOTAPE9_INPUT_SLOT],   TOTAPE9_INPUT_DEFAULT_NORM);
     float pTilt    = zoom_param_norm(params[TOTAPE9_TILT_SLOT],    TOTAPE9_TILT_DEFAULT_NORM);
     float pShape   = zoom_param_norm(params[TOTAPE9_SHAPE_SLOT],   TOTAPE9_SHAPE_DEFAULT_NORM);
@@ -283,20 +289,51 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
     float pHeadFrq = zoom_param_norm(params[TOTAPE9_HEADFRQ_SLOT], TOTAPE9_HEADFRQ_DEFAULT_NORM);
     float pOutput  = zoom_param_norm(params[TOTAPE9_OUTPUT_SLOT],  TOTAPE9_OUTPUT_DEFAULT_NORM);
 
-    float inputGain = pInput * pInput * 4.0f;
-    float drive = 1.0f + pShape * 3.0f + pHeadBmp * 2.0f;
-    float wet = 0.35f + pTilt * 0.45f;
-    float dry = 1.0f - wet;
-    float bias = (pBias - 0.5f) * 0.35f;
-    float flutterTrim = 1.0f - pFlutter * pFlutSpd * 0.08f;
-    float headLift = 1.0f + pHeadBmp * (0.25f + pHeadFrq * 0.25f);
+    float inputGain = pInput * 2.0f;
+    inputGain *= inputGain;
+
+    float dublyAmount = pTilt * 2.0f;
+    float outlyAmount = (1.0f - pTilt) * -2.0f;
+    if (outlyAmount < -1.0f) outlyAmount = -1.0f;
+
+    float iirEncFreq = 1.0f - pShape;
+    float iirDecFreq = pShape;
+
+    float flutterPow2 = pFlutter * pFlutter;
+    float flutterDepth = flutterPow2 * flutterPow2 * flutterPow2 * 50.0f;
+    float flutSpdPow3 = pFlutSpd * pFlutSpd * pFlutSpd;
+    float flutFrequency = 0.02f * flutSpdPow3;
+
+    float bias = pBias * 2.0f - 1.0f;
+    float underBias = bias * bias;
+    underBias = underBias * underBias * 0.25f;
+    float overBias = 1.0f - bias;
+    overBias = overBias * overBias * overBias;
+    if (bias > 0.0f) underBias = 0.0f;
+    if (bias < 0.0f) overBias = 1.0f;
+
+    float headBumpDrive = pHeadBmp * 0.1f;
+    float headBumpMix = pHeadBmp * 0.5f;
+    float headHz = pHeadFrq * pHeadFrq * 175.0f + 25.0f;
     float outputGain = pOutput * 2.0f;
+
+    /* Stateless approximations of ToTape9's stateful blocks. These keep the
+     * same source-derived knob tapers while avoiding large persistent memory. */
+    float encodeAmt = dublyAmount * (0.35f + iirEncFreq * 0.65f);
+    float decodeAmt = -outlyAmount * (0.35f + iirDecFreq * 0.65f);
+    float tapeDrive = 1.0f + encodeAmt * 0.35f + headBumpDrive * 12.0f;
+    float headLift = 1.0f + headBumpMix * (1.0f + (200.0f - headHz) * (1.0f / 175.0f));
+    float flutterTrim = 1.0f - flutterDepth * flutFrequency * 0.1f;
+    float biasCurve = bias * (0.12f + underBias * 0.18f + overBias * 0.018f);
+    float wet = 0.35f + encodeAmt * 0.25f + decodeAmt * 0.15f;
+    if (wet > 0.9f) wet = 0.9f;
+    float dry = 1.0f - wet;
 
     int i;
     for (i = 0; i < 16; i++) {
         float x = fxBuf[i] * inputGain;
-        float biased = x + bias * x * x;
-        float driven = biased * drive * flutterTrim * headLift;
+        float biased = x + biasCurve * x * x;
+        float driven = biased * tapeDrive * flutterTrim * headLift;
         if (driven >  2.305929f) driven =  2.305929f;
         if (driven < -2.305929f) driven = -2.305929f;
 
@@ -416,8 +453,8 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
     float headBumpDrive = pHeadBmp * 0.1f;
     float headBumpMix   = pHeadBmp * 0.5f;
 
-    /* HeadFrq: 0-1 → 25-200 Hz, normalised by 44100 */
-    float hfA = (25.0f + pHeadFrq * 175.0f) / 44100.0f;
+    /* HeadFrq: H^2 maps 0-1 to 25-200 Hz, normalised by 44100 */
+    float hfA = (25.0f + pHeadFrq * pHeadFrq * 175.0f) / 44100.0f;
     float hfB = hfA * 0.9375f;
     float reso = 0.6180339887498948f;
     computeHDB(hdbA, hfA, reso);

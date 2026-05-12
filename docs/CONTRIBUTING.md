@@ -41,6 +41,9 @@
 
 ## Workflow rules of thumb
 
+* **Read the safe-DSP rules first.** New ports should follow
+  [SAFE-DSP-RULES.md](SAFE-DSP-RULES.md): start load-safe, avoid large state,
+  and add DSP complexity only after a hardware smoke test.
 * **One small experiment per build.** Real hardware is the only
   source of truth for anything not directly observed in stock ELFs.
   Don't pile multiple unverified changes into one flash.

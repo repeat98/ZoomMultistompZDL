@@ -1,6 +1,6 @@
 {
   "effect_name": "ToTape9",
-  "comment": "Airwindows ToTape9 port. Nine-parameter tape-machine model with dubly, flutter, bias, head bump, saturation, and output trim.",
+  "comment": "EXPERIMENTAL ABI probe for Airwindows ToTape9. Source parameter metadata/control laws are present, but the release DSP is not the exact full source algorithm until the persistent-state ABI is solved.",
 
   "audio_func_name": "Fx_FLT_ToTape9",
 
@@ -14,15 +14,15 @@
   "flags_byte": 1,
 
   "params": [
-    {"name": "Input",   "type": "knob", "max": 100, "default": 50, "scale": "linear", "audio_min": 0.0, "audio_max": 4.0, "audio_default": 0.5, "comment": "Input gain. 50 = unity, 100 = 4x."},
-    {"name": "Tilt",    "type": "knob", "max": 100, "default": 50, "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "comment": "Dubly encode/decode tilt."},
-    {"name": "Shape",   "type": "knob", "max": 100, "default": 50, "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "comment": "Dubly IIR shape/frequency."},
-    {"name": "Flutter", "type": "knob", "max": 100, "default": 0,  "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.0, "comment": "Wow/flutter depth. Default 0 in the stateless beta."},
-    {"name": "FlutSpd", "type": "knob", "max": 100, "default": 50, "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "comment": "Flutter LFO speed."},
-    {"name": "Bias",    "type": "knob", "max": 100, "default": 50, "scale": "bipolar", "audio_min": -1.0, "audio_max": 1.0, "audio_default": 0.5, "comment": "Tape bias. 50 = neutral."},
-    {"name": "HeadBmp", "type": "knob", "max": 100, "default": 20, "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.2, "comment": "Head-bump resonance amount."},
-    {"name": "HeadFrq", "type": "knob", "max": 100, "default": 50, "scale": "hz", "unit": "Hz", "audio_min": 25.0, "audio_max": 200.0, "audio_default": 0.5, "comment": "Head-bump frequency, 25..200 Hz."},
-    {"name": "Output",  "type": "knob", "max": 100, "default": 50, "scale": "linear", "audio_min": 0.0, "audio_max": 2.0, "audio_default": 0.5, "comment": "Output gain. 50 = unity, 100 = 2x."}
+    {"name": "Input",   "type": "knob", "max": 100, "default": 50, "scale": "source_pow2_gain", "audio_min": 0.0, "audio_max": 4.0, "audio_default": 0.5, "source_default": 0.5, "source_formula": "pow(A * 2.0, 2.0)", "comment": "Airwindows A. Input gain; 50 = unity, 100 = 4x."},
+    {"name": "Tilt",    "type": "knob", "max": 100, "default": 50, "scale": "source_normalized", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "source_default": 0.5, "source_formula": "dublyAmount = B * 2.0; outlyAmount = max((1.0 - B) * -2.0, -1.0)", "comment": "Airwindows B. Dubly encode/decode tilt."},
+    {"name": "Shape",   "type": "knob", "max": 100, "default": 50, "scale": "source_normalized", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "source_default": 0.5, "source_formula": "iirEncFreq = 1.0 - C; iirDecFreq = C", "comment": "Airwindows C. Dubly IIR shape/frequency."},
+    {"name": "Flutter", "type": "knob", "max": 100, "default": 50, "scale": "source_pow6", "audio_min": 0.0, "audio_max": 50.0, "audio_default": 0.5, "source_default": 0.5, "source_formula": "pow(D, 6.0) * 50.0", "comment": "Airwindows D. Flutter depth in samples at 44.1 kHz."},
+    {"name": "FlutSpd", "type": "knob", "max": 100, "default": 50, "scale": "source_pow3", "audio_min": 0.0, "audio_max": 0.02, "audio_default": 0.5, "source_default": 0.5, "source_formula": "0.02 * pow(E, 3.0)", "comment": "Airwindows E. Flutter sweep speed."},
+    {"name": "Bias",    "type": "knob", "max": 100, "default": 50, "scale": "source_bipolar", "audio_min": -1.0, "audio_max": 1.0, "audio_default": 0.5, "source_default": 0.5, "source_formula": "(F * 2.0) - 1.0", "comment": "Airwindows F. Tape bias; 50 = neutral."},
+    {"name": "HeadBmp", "type": "knob", "max": 100, "default": 50, "scale": "source_head_bump", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "source_default": 0.5, "source_formula": "headBumpDrive = G * 0.1; headBumpMix = G * 0.5", "comment": "Airwindows G. Head-bump resonance amount."},
+    {"name": "HeadFrq", "type": "knob", "max": 100, "default": 50, "scale": "source_squared_hz", "unit": "Hz", "audio_min": 25.0, "audio_max": 200.0, "audio_default": 0.5, "source_default": 0.5, "source_formula": "((H * H) * 175.0) + 25.0", "comment": "Airwindows H. Head-bump frequency; 50 displays 68.75 Hz."},
+    {"name": "Output",  "type": "knob", "max": 100, "default": 50, "scale": "source_linear_gain", "audio_min": 0.0, "audio_max": 2.0, "audio_default": 0.5, "source_default": 0.5, "source_formula": "I * 2.0", "comment": "Airwindows I. Output gain; 50 = unity, 100 = 2x."}
   ],
 
   "audio_nop": false

@@ -13,9 +13,23 @@ The repo holds:
 * **A reverse-engineered ABI document** ([build/ABI.md](build/ABI.md))
   detailing how the firmware loads and runs a plugin — symbol contract,
   parameter table, calling convention, memory layout, gotchas.
+* **A ZDL/pedal RE status map**
+  ([docs/ZDL-REVERSE-ENGINEERING-STATUS.md](docs/ZDL-REVERSE-ENGINEERING-STATUS.md))
+  tracking the wrapper format, extended headers, stock corpus findings, and
+  the remaining blockers for exact stateful ports.
+* **A 1:1 Airwindows roadmap**
+  ([docs/AIRWINDOWS-1TO1-PORT-ROADMAP.md](docs/AIRWINDOWS-1TO1-PORT-ROADMAP.md))
+  describing the state-ABI work needed before delay, reverb, chorus, and tape
+  plugins can be honest source-equivalent ports.
+* **A state ABI progress log**
+  ([docs/STATE-ABI-PROGRESS.md](docs/STATE-ABI-PROGRESS.md)) recording each
+  hardware probe and finding so the reverse-engineering trail does not live
+  only in chat.
 * **A growing collection of ports** under
   [src/airwindows/](src/airwindows/) (so far: HELLO, GAIN,
-  PurestDrive, TapeHack, ToTape9, BitCrush). Most are Airwindows kernels.
+  PurestDrive, TapeHack, ToTape9, BitCrush, StChorus, CtxMap). Some are exact or
+  near-source kernels; state-heavy effects are clearly marked as experiments
+  until the state ABI is solved.
 * **Stock-derived handlers and helpers** ([build/linesel_handlers.bin](build/linesel_handlers.bin),
   [src/airwindows/common/zoom_edit_handlers.h](src/airwindows/common/zoom_edit_handlers.h),
   [build/divf_rts.bin](build/divf_rts.bin)) used to provide OnOff,
@@ -109,10 +123,11 @@ ZoomMultistompZDL/
 │       ├── purestdrive/     Airwindows PurestDrive port (1 knob)
 │       ├── tapehack/        Airwindows TapeHack port
 │       ├── totape9/         Airwindows ToTape9 stateless beta (9 params)
-│       └── bitcrush/        bit-depth/sample-rate crusher (1 knob)
+│       ├── bitcrush/        bit-depth/sample-rate crusher (1 knob)
+│       └── stereochorus/    Airwindows StereoChorus state/ABI experiment
 ├── build_all.py             rebuild every plugin into ./dist/
 ├── dist/                    output ZDLs land here (point Effect Manager at this)
-├── working_zdls/            128 stock factory ZDLs — used as references and templates
+├── working_zdls/            stock factory ZDLs — used as references and templates
 ├── airwindows-ref/          full Airwindows source tree (read-only reference)
 ├── zoom-fx-modding-ref/     community RE notes and disassembly walkthroughs
 └── ZoomPedalFun-main/       independent RE of firmware structures
