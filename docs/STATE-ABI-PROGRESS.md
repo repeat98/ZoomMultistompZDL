@@ -473,6 +473,7 @@ Chain-position check:
 | One `CtxGate`, physical FX slot 2, no effect in slot 1 | `ctx[3]` | `10011100011111000000000000000000` | `0x00003e39` | differs by bit 1 |
 | One `CtxGate`, physical FX slot 1 | `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | unchanged across positions |
 | One `CtxGate`, physical FX slot 2, no effect in slot 1 | `ctx[13]` | `11001110011111000000000000000000` | `0x00003e73` | unchanged across positions |
+| One `CtxGate`, physical FX slot 2, no effect in slot 1 | `ctx[14]` | `11001110011111000000000000000000` | `0x00003e73` | matches `ctx[13]` |
 
 Interpretation so far:
 
@@ -485,6 +486,8 @@ Interpretation so far:
   `0x00003e39`.
 * `ctx[13]` stayed fixed at `0x00003e73` across physical FX slot 1 and 2 in
   this test.
+* `ctx[14]` also read `0x00003e73` in physical FX slot 2, matching `ctx[13]`
+  and the earlier `ctx[14]` sweep.
 * The observed values are small if interpreted as bit-0-first words, so they
   do not yet look like direct memory pointers. They may be flags, indexes,
   compact descriptors, or the bit order may still need confirmation.
