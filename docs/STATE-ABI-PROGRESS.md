@@ -857,3 +857,47 @@ Build result for capped version:
 * `.text`: 384 bytes
 * `.fardata`: 0 bytes
 * ZDL size: 5602 bytes
+
+Hardware/operator result:
+
+* Interacting with the `Word` parameter still froze the pedal and produced a
+  high-pitched sine/square-like tone.
+* This makes the interactive depth selector itself unsafe on hardware, not just
+  the previously tested `Word=31` endpoint.
+
+Follow-up fix:
+
+Removed the interactive `Word` parameter from `StatePing`. Depth probes are now
+separate fixed-word ZDL variants that only expose the previously proven
+`Arm10` and `Arm18` switches:
+
+* `StatePing.ZDL`: fixed word 0.
+* `StateP12.ZDL`: fixed word 12.
+* `StateP18.ZDL`: fixed word 18.
+* `StateP19.ZDL`: fixed word 19.
+
+For each fixed variant:
+
+* `Arm10=1` writes/increments `ctx[2] + 0x10 + fixed_word*4`.
+* `Arm18=1` writes/increments `ctx[2] + 0x18 + fixed_word*4`.
+* `Arm18` still takes priority when both switches are on.
+
+Testing guidance:
+
+Do not continue hardware testing with any `StatePing` build that still has a
+`Word` parameter. Use the fixed-word variants only. Test `StateP12` first, then
+`StateP18`, then `StateP19` cautiously if the earlier variants load and wobble.
+
+Build result for fixed-word variant set:
+
+* Command: `python3 -B build_all.py stateping`
+* Outputs:
+  * `dist/StatePing.ZDL`: fixed word 0.
+  * `dist/StateP12.ZDL`: fixed word 12.
+  * `dist/StateP18.ZDL`: fixed word 18.
+  * `dist/StateP19.ZDL`: fixed word 19.
+* Each output:
+  * `.audio`: 512 bytes.
+  * `.text`: 0 bytes.
+  * `.fardata`: 0 bytes.
+  * ZDL size: 4914 bytes.

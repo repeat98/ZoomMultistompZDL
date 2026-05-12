@@ -12,6 +12,34 @@
 
   "fxid_version": "1.00",
   "flags_byte": 1,
+  "fixed_word": 0,
+
+  "variants": [
+    {
+      "effect_name": "StatePing",
+      "fxid": 409,
+      "fixed_word": 0,
+      "screen_label": "State 0"
+    },
+    {
+      "effect_name": "StateP12",
+      "fxid": 410,
+      "fixed_word": 12,
+      "screen_label": "State 12"
+    },
+    {
+      "effect_name": "StateP18",
+      "fxid": 411,
+      "fixed_word": 18,
+      "screen_label": "State 18"
+    },
+    {
+      "effect_name": "StateP19",
+      "fxid": 412,
+      "fixed_word": 19,
+      "screen_label": "State 19"
+    }
+  ],
 
   "params": [
     {
@@ -22,7 +50,7 @@
       "audio_min": 0.0,
       "audio_max": 1.0,
       "audio_default": 0.0,
-      "comment": "0=safe pass-through, 1=test word 0 at ctx[2]+0x10."
+      "comment": "0=safe pass-through, 1=test the variant's fixed word at ctx[2]+0x10."
     },
     {
       "name": "Arm18",
@@ -32,17 +60,7 @@
       "audio_min": 0.0,
       "audio_max": 1.0,
       "audio_default": 0.0,
-      "comment": "0=safe pass-through, 1=test word 0 at ctx[2]+0x18. Takes priority if both arms are on."
-    },
-    {
-      "name": "Word",
-      "type": "knob",
-      "max": 19,
-      "default": 0,
-      "audio_min": 0.0,
-      "audio_max": 19.0,
-      "audio_default": 0.0,
-      "comment": "Word index inside the selected derived ctx[2] state block. Capped below known-freezing word 31."
+      "comment": "0=safe pass-through, 1=test the variant's fixed word at ctx[2]+0x18. Takes priority if both arms are on."
     }
   ],
 
