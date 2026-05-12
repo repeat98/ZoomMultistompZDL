@@ -813,3 +813,27 @@ Immediate next questions:
 3. Does bypass/preset switching reset this block the same way stock effects do?
 4. Can we influence the block size from ZDL metadata, or is the custom block a
    fixed host allocation?
+
+Follow-up build:
+
+Extended `StatePing` with a `Word` knob (`0..31`) so the same probe can test
+state depth. The two arms still select the derived block:
+
+* `Arm10=1`: write/increment `ctx[2] + 0x10 + Word*4`.
+* `Arm18=1`: write/increment `ctx[2] + 0x18 + Word*4`.
+
+Suggested next hardware points:
+
+* `Arm10=1`, `Word=12` because stock `DELAY` uses through derived word 12.
+* `Arm18=1`, `Word=18` because stock `TAPEECHO` uses through derived word 18.
+* If those work, try `Word=19`, then `Word=31` cautiously to find whether the
+  custom allocation extends beyond the stock-observed range.
+
+Build result for word-selector version:
+
+* Command: `python3 -B build_all.py stateping`
+* Output: `dist/StatePing.ZDL`
+* `.audio`: 576 bytes
+* `.text`: 768 bytes
+* `.fardata`: 0 bytes
+* ZDL size: 5986 bytes

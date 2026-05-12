@@ -33,6 +33,16 @@
       "audio_max": 1.0,
       "audio_default": 0.0,
       "comment": "0=safe pass-through, 1=test word 0 at ctx[2]+0x18. Takes priority if both arms are on."
+    },
+    {
+      "name": "Word",
+      "type": "knob",
+      "max": 31,
+      "default": 0,
+      "audio_min": 0.0,
+      "audio_max": 31.0,
+      "audio_default": 0.0,
+      "comment": "Word index inside the selected derived ctx[2] state block."
     }
   ],
 
