@@ -91,10 +91,13 @@ static inline float pow10_source(float x)
 static inline int stage_from_raw(float raw)
 {
     if (!(raw > 0.001f && raw < 0.2f)) return 0;
-    int stage = (int)((raw * (5.0f / ZOOM_PARAM_RAW_MAX)) + 0.5f);
-    if (stage < 0) stage = 0;
-    if (stage > 5) stage = 5;
-    return stage;
+    int ui = (int)((raw * (100.0f / ZOOM_PARAM_RAW_MAX)) + 0.5f);
+    if (ui < 20) return 0;
+    if (ui < 40) return 1;
+    if (ui < 60) return 2;
+    if (ui < 80) return 3;
+    if (ui < 100) return 4;
+    return 5;
 }
 
 static inline void reset_state_header(StChorusState *st)

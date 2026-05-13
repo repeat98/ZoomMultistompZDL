@@ -37,6 +37,10 @@ descriptor range and probably never advanced past the decoded Stage 0. The
 follow-up build uses a 0..100 Stage knob, where 20/40/60/80/100 map to stages
 1/2/3/4/5.
 
+Follow-up note: a crash around UI Stage 12 showed the decoder was still entering
+Stage 1 too early. The current build uses explicit UI bands so Stage 1 starts at
+20, not around 10.
+
 ## Source Anchors
 
 Airwindows upstream source:

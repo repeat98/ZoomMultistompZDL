@@ -1842,3 +1842,32 @@ Changed `Stage` to a normal `0..100` UI knob. Test positions now map as:
 
 Retest those exact values and report the first one that crashes or starts
 changing the sound.
+
+Hardware/operator result:
+
+* The pedal crashed/froze after Stage reached about UI value 12 while the FX
+  was engaged.
+
+Interpretation:
+
+This is still consistent with Stage 1 turning on too early. The previous
+decoder rounded `raw * 5`, so the Stage 1 descriptor-read path began around UI
+value 10 instead of the documented value 20. Treat this as likely
+descriptor-read failure until retested with fixed UI bands.
+
+Follow-up decoder fix:
+
+Changed `stage_from_raw()` to decode by UI bands:
+
+| UI range | Stage |
+|---:|---:|
+| 0-19 | 0 |
+| 20-39 | 1 |
+| 40-59 | 2 |
+| 60-79 | 3 |
+| 80-99 | 4 |
+| 100 | 5 |
+
+Retest by setting Stage directly to 0, then 20, then 40, 60, 80, and 100. Do
+not sweep slowly through the low values for this pass; the goal is to confirm
+whether the first real crash boundary is Stage 1.
