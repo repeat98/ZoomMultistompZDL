@@ -1809,3 +1809,36 @@ Next hardware check:
 2. Unbypass with `Stage=0`. This should not crash; it should pass through.
 3. If stage 0 is stable, test `Stage=1`, then `2`, `3`, `4`, and `5`.
 4. Report the first stage that crashes or produces the high-pitched lockup.
+
+Hardware/operator result:
+
+* Initial unbypass without touching parameters had crashed earlier.
+* After reboot, interacting with the parameters before unbypass avoided the
+  crash.
+* Every visible Stage position passed audio through cleanly.
+* No audible change occurred with Speed and Depth at middle values.
+
+Interpretation:
+
+This staged result is inconclusive for the descriptor ladder. The `Stage`
+descriptor used `max=5`, while the current edit handlers appear to emit a raw
+float scaled by the descriptor maximum. That means full-scale Stage likely
+wrote only about `5 / 100` of the usual raw knob range, and
+`stage_from_raw()` rounded it back to Stage 0. So the build probably remained
+in safe pass-through for all visible Stage positions.
+
+Follow-up Stage-scaling fix:
+
+Changed `Stage` to a normal `0..100` UI knob. Test positions now map as:
+
+| UI value | Expected stage |
+|---:|---:|
+| 0 | 0 |
+| 20 | 1 |
+| 40 | 2 |
+| 60 | 3 |
+| 80 | 4 |
+| 100 | 5 |
+
+Retest those exact values and report the first one that crashes or starts
+changing the sound.

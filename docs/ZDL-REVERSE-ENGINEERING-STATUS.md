@@ -32,6 +32,11 @@ control. `Stage=0` is safe pass-through; stages 1..5 progressively enable
 descriptor read, header write, one clear chunk, full lazy clear, and chorus
 processing.
 
+The first staged hardware result was inconclusive because `Stage` used a 0..5
+descriptor range and probably never advanced past the decoded Stage 0. The
+follow-up build uses a 0..100 Stage knob, where 20/40/60/80/100 map to stages
+1/2/3/4/5.
+
 ## Source Anchors
 
 Airwindows upstream source:

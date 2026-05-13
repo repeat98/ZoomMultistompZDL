@@ -17,13 +17,13 @@
     {
       "name": "Stage",
       "type": "knob",
-      "max": 5,
+      "max": 100,
       "default": 0,
       "scale": "diagnostic_stage",
       "audio_min": 0.0,
       "audio_max": 5.0,
       "audio_default": 0.0,
-      "comment": "Temporary hardware diagnostic. 0=pass-through, 1=read ctx[3], 2=write header, 3=clear one small chunk, 4=full lazy clear, 5=run chorus."
+      "comment": "Temporary hardware diagnostic. UI values 0/20/40/60/80/100 map to stages 0..5: pass-through, read ctx[3], write header, clear one chunk, full lazy clear, run chorus."
     },
     {
       "name": "Speed",
