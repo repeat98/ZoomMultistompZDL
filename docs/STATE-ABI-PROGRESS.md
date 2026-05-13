@@ -1408,3 +1408,62 @@ Testing guidance:
 Test downward from `Dsz003K` to `Dsz0640`. If none of these wobble, the size
 probe's descriptor-length measurement disagrees with `DescComb`'s write result,
 and the next step should probe `ctx[3][2]`/span separately from `end - base`.
+
+Correction / hardware-operator result:
+
+The previous "no wobble" report was a monitoring mistake: the clean signal was
+being monitored on the mixer. Retest shows all `DescSize` probes wobble,
+including `Dsz512K`.
+
+Corrected interpretation:
+
+The default custom `ctx[3]` descriptor allocation is at least 524288 bytes as
+measured by `ctx[3][1] - ctx[3][0]`. That is enough for the raw memory required
+by Airwindows `StereoChorus`'s two `int[65536]` delay arrays:
+
+`2 * 65536 * 4 = 524288 bytes`.
+
+This removes the biggest memory-size blocker for an exact `StereoChorus` port.
+The remaining ABI checks are instance isolation, reset/bypass behavior, and
+safe stereo lane partitioning.
+
+## 2026-05-13: Probe 10 - `DescIso`
+
+Added `src/airwindows/desciso/`, a duplicate-instance isolation probe for
+descriptor base memory.
+
+Purpose:
+
+* Test whether the large `ctx[3]` descriptor buffer is per effect instance.
+* Use one installed ZDL duplicated in two FX slots, avoiding the earlier
+  two-ZDL loader conflict pattern.
+
+Behavior:
+
+* `Arm=0`: pass-through, no `ctx[3]` dereference.
+* `Arm=1`: validate `ctx[3]`, then write a role-specific magic stamp into
+  descriptor base memory.
+* `Role=0`: writes `0x13579BDF`.
+* `Role=1`: writes `0x2468ACE0`.
+* If a running instance sees a nonzero stamp from the opposite role, it reports
+  that as stereo wobble.
+
+Testing guidance:
+
+1. Flash `DescIso.ZDL`.
+2. Load one instance, set `Arm=1`, `Role=0`. It should settle to pass-through.
+3. Load two `DescIso` instances in one patch.
+4. Set slot 1 to `Arm=1`, `Role=0`.
+5. Set slot 2 to `Arm=1`, `Role=1`.
+6. Continuous wobble means both instances share the same descriptor buffer.
+   Centered/pass-through means the descriptor buffer is likely per instance.
+
+Build result:
+
+* Command: `python3 -B build_all.py desciso`
+* Output: `dist/DescIso.ZDL`
+* `.audio`: 576 bytes.
+* `.text`: 0 bytes.
+* `.fardata`: 0 bytes.
+* Applied object relocations: 0.
+* ZDL size: 4982 bytes.

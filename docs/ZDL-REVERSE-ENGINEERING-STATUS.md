@@ -159,10 +159,11 @@ whether a large-buffer hook exists; we need to measure/default-size it, prove it
 is per instance, and learn whether metadata can request enough memory for
 `StereoChorus`-class delay lines.
 
-`DescSize` is the active size probe. Its first pass found that all thresholds
-from 512 KiB down to 4 KiB load cleanly but do not wobble, so the default
-custom descriptor allocation is below 4096 bytes as measured by
-`ctx[3][1] - ctx[3][0]`. Smaller thresholds down to 640 bytes are now built.
+`DescSize` confirms the default custom descriptor allocation is at least 512
+KiB as measured by `ctx[3][1] - ctx[3][0]`: `Dsz512K` wobbles on hardware. That
+clears the raw memory requirement for `StereoChorus`'s two `int[65536]` delay
+arrays. `DescIso` is now the active probe for whether this large descriptor
+buffer is per effect instance.
 
 Parameter table:
 

@@ -35,6 +35,7 @@ PLUGINS = [
     ("statecomb",   PLUGIN_DIR / "statecomb"   / "build.py"),
     ("desccomb",    PLUGIN_DIR / "desccomb"    / "build.py"),
     ("descsize",    PLUGIN_DIR / "descsize"    / "build.py"),
+    ("desciso",     PLUGIN_DIR / "desciso"     / "build.py"),
     ("bitcrush",    PLUGIN_DIR / "bitcrush"    / "build.py"),
 ]
 

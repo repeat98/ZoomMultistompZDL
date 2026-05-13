@@ -1,0 +1,45 @@
+{
+  "effect_name": "DescIso",
+  "comment": "Hardware ABI probe. Tests whether ctx[3] descriptor base memory is private per effect instance by stamping role-specific magic into descriptor memory. Use two instances of this same effect in one patch.",
+
+  "audio_func_name": "Fx_FLT_DescIso",
+
+  "gid": 2,
+  "gid_comment": "0x02 = Filter category. Diagnostic only.",
+
+  "fxid": 426,
+  "fxid_comment": "0x01aa, follows DescSize probe IDs.",
+
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "descriptor": "ctx[3]",
+  "stamp_word": 0,
+  "phase_word": 1,
+  "role_a_magic": "0x13579BDF",
+  "role_b_magic": "0x2468ACE0",
+
+  "params": [
+    {
+      "name": "Arm",
+      "type": "switch",
+      "max": 1,
+      "default": 0,
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.0,
+      "comment": "0=safe pass-through, 1=read/stamp ctx[3] descriptor memory."
+    },
+    {
+      "name": "Role",
+      "type": "switch",
+      "max": 1,
+      "default": 0,
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.0,
+      "comment": "0=role A magic, 1=role B magic. Set duplicate instances to opposite roles."
+    }
+  ],
+
+  "audio_nop": false
+}

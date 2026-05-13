@@ -356,6 +356,9 @@ from `ctx[3][0]`, compare against `ctx[3][1]`, and subtract/reload
 `ctx[3][2]` when wrapping. Custom `DescComb.ZDL` first proved the descriptor is
 readable/plausible (`Arm=1`, `UseBuf=0` stereo wobble), then proved descriptor
 base memory is writable audio history (`UseBuf=1` sounded like a delay effect).
+`DescSize` then proved the default descriptor allocation is at least 524288
+bytes (`Dsz512K` wobbles), enough for the raw two-array memory requirement of
+Airwindows `StereoChorus`.
 
 ### 5.3 Init `Fx_FLT_<Name>_init`
 
