@@ -50,6 +50,16 @@ Fixed-stage hardware testing shows `StChS0` through `StChS4` survive and only
 chorus processing core. The current `StChS5` rebuild removes runtime float
 division to isolate the previous `__c6xabi_divf` dependency.
 
+Latest hardware note: the no-division `StChS5` build survives and choruses, but
+Speed and Depth audibly stopped changing around UI value 14. That points to a
+parameter-scaling mismatch rather than state failure: the shared
+`zoom_param_norm()` helper treated `0.14f` as full scale, while this
+`StereoChorus` handler path appears to deliver normal 0..1 knob values. The
+current `StereoChorus` source therefore uses a local normalizer and a
+multiply-only reciprocal estimate for the Airwindows `depth = B / 60 / speed`
+law, avoiding `__c6xabi_divf` while bringing the control range much closer to
+the source plugin.
+
 ## Source Anchors
 
 Airwindows upstream source:
@@ -207,6 +217,12 @@ Parameter table:
 | `params[5]` | user knob 1 raw value |
 | `params[6]` | user knob 2 raw value |
 | `params[7]..params[13]` | user knobs 3..9 |
+
+Parameter-scaling caution: different handler/descriptor combinations may expose
+different raw ranges. The old custom-port helper assumes `0.14f` is full scale,
+but the current fixed-stage `StereoChorus` path behaves like 0..1. Do not make
+new 1:1 control-law claims without confirming the raw knob scale for that
+effect's handler path.
 
 ## `ctx[]` Field Status
 

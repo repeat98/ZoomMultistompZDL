@@ -94,6 +94,34 @@ static inline float pow10_source(float x)
     return x8 * x2;
 }
 
+static inline float stchorus_param_norm(float raw, float fallback_norm)
+{
+    /* This handler path behaves like 0..1; the shared 0.14 helper saturates at UI 14. */
+    if (raw <= 0.0001f) return zoom_clamp01(fallback_norm);
+    if (raw <= 1.0f) return zoom_clamp01(raw);
+    return zoom_clamp01(raw * 0.01f);
+}
+
+static inline float recip_approx(float x)
+{
+    union {
+        float f;
+        uint32_t u;
+    } v;
+    union {
+        float f;
+        uint32_t u;
+    } y;
+
+    v.f = x;
+    /* Fast reciprocal seed plus Newton steps, avoiding the crashy divide helper. */
+    y.u = 0x7EF311C3u - v.u;
+    y.f = y.f * (2.0f - (x * y.f));
+    y.f = y.f * (2.0f - (x * y.f));
+    y.f = y.f * (2.0f - (x * y.f));
+    return y.f;
+}
+
 static inline void reset_state_header(StChorusState *st)
 {
     int i;
@@ -201,18 +229,12 @@ void STCHORUS_AUDIO_FUNC(unsigned int *ctx)
     }
     if (stage == 4) return;
 
-    float A = zoom_param_norm(params[STCHORUS_SPEED_SLOT], STCHORUS_SPEED_DEFAULT_NORM);
-    float B = zoom_param_norm(params[STCHORUS_DEPTH_SLOT], STCHORUS_DEPTH_DEFAULT_NORM);
+    float A = stchorus_param_norm(params[STCHORUS_SPEED_SLOT], STCHORUS_SPEED_DEFAULT_NORM);
+    float B = stchorus_param_norm(params[STCHORUS_DEPTH_SLOT], STCHORUS_DEPTH_DEFAULT_NORM);
 
     float speedBase = 0.32f + (A * 0.16666666667f);
     float speed = pow10_source(speedBase);
-    /* Crash-isolation approximation: avoids __c6xabi_divf while keeping the
-     * source's depth growth in the same broad range for first hardware tests. */
-    float invBaseApprox = 8.84615385f - (12.01923077f * speedBase);
-    if (invBaseApprox < 2.0f) invBaseApprox = 2.0f;
-    if (invBaseApprox > 5.0f) invBaseApprox = 5.0f;
-    float invSpeedApprox = pow10_source(invBaseApprox);
-    float depth = B * 0.01666666667f * invSpeedApprox;
+    float depth = B * 0.01666666667f * recip_approx(speed);
     if (depth > 3000.0f) depth = 3000.0f;
     const float twoPi = 6.28318530718f;
 

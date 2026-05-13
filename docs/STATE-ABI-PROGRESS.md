@@ -1958,3 +1958,32 @@ Next hardware check:
 Retest only `StChS5.ZDL`. If it survives, the divide/helper path was the likely
 crash source. If it still crashes, the next split is inside the chorus core:
 air compensation vs. integer delay write/read vs. output assignment.
+
+Hardware/operator result:
+
+* `StChS5` now survives and produces a semi-working chorus.
+* The audible Speed and Depth response saturated around UI value 14.
+
+Interpretation:
+
+The crash boundary was likely the runtime float division/helper path, not the
+`ctx[3]` descriptor state itself. The Speed/Depth saturation matches the old
+shared `zoom_param_norm()` assumption that knob raw values top out around
+`0.14f`; this build's controls instead behave like normal 0..1 knob values
+(`0.14f` at UI 14, `1.0f` at UI 100). `StereoChorus` now uses a local parameter
+normalizer until the per-handler parameter convention is fully mapped.
+
+Follow-up control-law build:
+
+* `StereoChorus` no longer divides Speed/Depth raw values by `0.14f`.
+* The Stage 5 depth law now uses a three-step multiply-only reciprocal estimate
+  for `1 / speed`, replacing the very rough crash-isolation approximation.
+* This keeps `__c6xabi_divf` out of the ZDL while tracking the Airwindows depth
+  curve closely enough for hardware listening tests.
+
+Next hardware check:
+
+Retest `dist/StChS5.ZDL`. Speed and Depth should now keep changing across the
+full 0..100 UI range. If that works, the remaining non-1:1 differences are the
+float32 port, the sine approximation, omitted dither, and any still-unknown Zoom
+buffer/parameter conventions.
