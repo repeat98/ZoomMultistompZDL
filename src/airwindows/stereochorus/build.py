@@ -58,6 +58,9 @@ def main() -> None:
         flags_byte=manifest.get("flags_byte", 0x01),
         screen_image=make_airwindows_tape_screen("Chorus", ""),
         audio_nop=manifest.get("audio_nop", False),
+        synthesize_linesel_edit_handlers=True,
+        synth_edit_start_index=2,
+        knob3_blob_path=HERE / "unused_air_knob3_edit.bin",
     )
     link(cfg)
 

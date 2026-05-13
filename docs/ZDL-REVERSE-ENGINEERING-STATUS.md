@@ -26,9 +26,11 @@ Zoom C path uses float32 math, an inline sine approximation, and currently
 omits the source dither tail.
 
 Hardware note: the first MOD-category `Fx_MOD_StChorus` build loaded but froze
-the pedal on unbypass with a high-pitched tone. The current follow-up build is
-temporarily emitted as `gid=2` / `Fx_FLT_StChorus`, because every successful
-custom `ctx[3]` probe so far used that host path.
+the pedal on unbypass with a high-pitched tone. The FLT-category follow-up also
+froze on unbypass, so the current build is staged with a temporary `Stage`
+control. `Stage=0` is safe pass-through; stages 1..5 progressively enable
+descriptor read, header write, one clear chunk, full lazy clear, and chorus
+processing.
 
 ## Source Anchors
 

@@ -1,6 +1,6 @@
 {
   "effect_name": "StChorus",
-  "comment": "First ctx[3]-backed Airwindows StereoChorus port attempt. Uses the source delay-line topology and control laws; temporarily uses the FLT host category because all successful ctx[3] probes used that path.",
+  "comment": "Staged ctx[3]-backed Airwindows StereoChorus port attempt. Stage defaults to safe pass-through so hardware can isolate descriptor read/write/clear/process failures.",
 
   "audio_func_name": "Fx_FLT_StChorus",
 
@@ -14,6 +14,17 @@
   "flags_byte": 1,
 
   "params": [
+    {
+      "name": "Stage",
+      "type": "knob",
+      "max": 5,
+      "default": 0,
+      "scale": "diagnostic_stage",
+      "audio_min": 0.0,
+      "audio_max": 5.0,
+      "audio_default": 0.0,
+      "comment": "Temporary hardware diagnostic. 0=pass-through, 1=read ctx[3], 2=write header, 3=clear one small chunk, 4=full lazy clear, 5=run chorus."
+    },
     {
       "name": "Speed",
       "type": "knob",

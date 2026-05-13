@@ -88,6 +88,15 @@ static inline float pow10_source(float x)
     return x8 * x2;
 }
 
+static inline int stage_from_raw(float raw)
+{
+    if (!(raw > 0.001f && raw < 0.2f)) return 0;
+    int stage = (int)((raw * (5.0f / ZOOM_PARAM_RAW_MAX)) + 0.5f);
+    if (stage < 0) stage = 0;
+    if (stage > 5) stage = 5;
+    return stage;
+}
+
 static inline void reset_state_header(StChorusState *st)
 {
     int i;
@@ -148,6 +157,9 @@ void Fx_FLT_StChorus(unsigned int *ctx)
 
     if (params[0] < 0.5f) return;
 
+    int stage = stage_from_raw(params[STCHORUS_STAGE_SLOT]);
+    if (stage <= 0) return;
+
     unsigned int *desc = ZDL_PTR(unsigned int *, ctx[3]);
     if (!desc) return;
 
@@ -160,6 +172,7 @@ void Fx_FLT_StChorus(unsigned int *ctx)
     if ((base & 3u) != 0u || (end & 3u) != 0u || (span & 3u) != 0u) return;
     if (bytes < 524288u || span < bytes) return;
     if (bytes > 0x00800000u || span > 0x00800000u) return;
+    if (stage == 1) return;
 
     uintptr_t stateBase = align4(base);
     uintptr_t pLBase = align4(stateBase + sizeof(StChorusState));
@@ -171,13 +184,25 @@ void Fx_FLT_StChorus(unsigned int *ctx)
     int *pL = (int *)pLBase;
     int *pR = (int *)pRBase;
 
+    if (stage == 2) {
+        reset_state_header(st);
+        return;
+    }
+
     if (st->magic != STCHORUS_MAGIC || st->version != STCHORUS_VERSION) {
         reset_state_header(st);
     }
+
+    if (stage == 3) {
+        clear_delay_chunk(st, pL, pR);
+        return;
+    }
+
     if (!st->initialized) {
         clear_delay_chunk(st, pL, pR);
         return;
     }
+    if (stage == 4) return;
 
     float A = zoom_param_norm(params[STCHORUS_SPEED_SLOT], STCHORUS_SPEED_DEFAULT_NORM);
     float B = zoom_param_norm(params[STCHORUS_DEPTH_SLOT], STCHORUS_DEPTH_DEFAULT_NORM);

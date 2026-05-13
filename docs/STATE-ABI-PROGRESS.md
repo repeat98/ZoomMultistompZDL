@@ -1760,3 +1760,52 @@ Retest this FLT-path `StChorus.ZDL`. If it no longer crashes on unbypass, the
 next problem is learning how to request or safely access the stock MOD
 descriptor contract. If it still crashes, the culprit is probably descriptor
 base writes or the chorus state layout itself, not the category.
+
+Hardware/operator result:
+
+* The FLT-path `StChorus.ZDL` also freezes/crashes on unbypass.
+* The output again becomes a high-pitched sine/square-like tone.
+
+Interpretation:
+
+The host category is not the primary cause. Since the crash still happens when
+unbypass enables the DSP path, the next suspected boundary is inside the
+descriptor-state sequence itself: descriptor read, descriptor-base header write,
+delay-line clear, or full chorus processing.
+
+Follow-up staged build:
+
+Added a temporary `Stage` control before `Speed` and `Depth`, defaulting to
+safe pass-through. This makes unbypass safe unless the operator deliberately
+turns the stage up.
+
+| Stage | Behavior |
+|---:|---|
+| 0 | Pass-through; do not dereference `ctx[3]` |
+| 1 | Read and validate `ctx[3]` descriptor only |
+| 2 | Write/reset the small state header at descriptor base |
+| 3 | Clear one 512-sample chunk from each delay line, then return |
+| 4 | Continue lazy clearing until initialized, then return |
+| 5 | Run the current chorus core |
+
+The third knob now uses a synthesized LineSel-cloned edit handler; the old AIR
+knob3 blob is not included in this build.
+
+Build result:
+
+* Command: `python3 -B build_all.py stereochorus`
+* Output: `dist/StChorus.ZDL`
+* ZDL size: 8066 bytes.
+* `.audio`: 3040 bytes.
+* `.fardata`: 0 bytes.
+* External symbols: `__c6xabi_divf` only.
+* Symbols verified: `Fx_FLT_StChorus`, `Fx_FLT_StChorus_Stage_edit`,
+  `Fx_FLT_StChorus_Speed_edit`, `Fx_FLT_StChorus_Depth_edit`,
+  `ZDL_FLT_StChorus.out`.
+
+Next hardware check:
+
+1. Flash the new staged `dist/StChorus.ZDL`.
+2. Unbypass with `Stage=0`. This should not crash; it should pass through.
+3. If stage 0 is stable, test `Stage=1`, then `2`, `3`, `4`, and `5`.
+4. Report the first stage that crashes or produces the high-pitched lockup.
