@@ -362,9 +362,11 @@ Airwindows `StereoChorus`.
 `DescIso` showed two duplicate instances in separate FX slots do not see each
 other's descriptor-memory stamps, so `ctx[3]` is currently treated as
 per-instance.
-`Dsz688K` wobbles while `Dsz696K` does not, bracketing the default descriptor
-allocation at `>= 704512` and `< 712704` bytes. Tighter 689, 690, 692, and
-694 KiB thresholds are built for the next hardware pass.
+`Dsz689K` wobbles. If the "works up to 689K" report means `Dsz690K` and higher
+were silent, the default descriptor allocation is bracketed at `>= 705536` and
+`< 706560` bytes. The exact byte count is no longer required for the first
+`StereoChorus` exact-port attempt; the important ABI result is a per-instance
+large descriptor arena of at least 705536 bytes.
 
 ### 5.3 Init `Fx_FLT_<Name>_init`
 

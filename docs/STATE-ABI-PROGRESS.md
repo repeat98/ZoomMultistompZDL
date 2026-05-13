@@ -1642,3 +1642,27 @@ Build result for near-final thresholds:
 Testing guidance:
 
 Test high to low: `Dsz694K`, `Dsz692K`, `Dsz690K`, then `Dsz689K`.
+
+Hardware/operator result:
+
+* Reported as "works up to `Dsz689K`."
+* Working interpretation: `Dsz689K` wobbles; `Dsz690K` and higher near-final
+  probes do not. If that phrasing meant only `Dsz689K` was tested, the
+  conservative lower bound still holds.
+
+Interpretation:
+
+The practical descriptor allocation result is now enough for exact
+`StereoChorus` work. With `Dsz689K` wobbling, `ctx[3]` provides at least
+705536 bytes. That leaves at least 181248 bytes above `StereoChorus`'s raw
+524288-byte two-delay-line requirement. If `Dsz690K` was confirmed silent, the
+descriptor allocation is bracketed very tightly at `>= 705536` and `< 706560`
+bytes.
+
+Decision:
+
+Stop spending hardware time on exact byte-size probing unless a future port
+needs the last kilobyte. The next useful step is to use `ctx[3]` as a bounded
+per-instance arena for the first real `StereoChorus` exact-port attempt, while
+continuing to keep scalar state in the small proven `ctx[2] + 0x18` area or in
+the front of the descriptor arena with explicit layout.
