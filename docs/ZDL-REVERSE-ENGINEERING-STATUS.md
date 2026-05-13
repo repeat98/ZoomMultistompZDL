@@ -143,8 +143,21 @@ The strongest current large-buffer candidate is `ctx[3]`. Stock `DELAY`,
 use the values as a base pointer, end pointer, and wrap/span while reading or
 writing sample history. `DescComb.ZDL` confirms custom ZDLs can read `ctx[3]`
 and see a plausible descriptor: `Arm=1`, `UseBuf=0` produced stereo wobble on
-hardware. The first descriptor-memory write test was only weakly audible, so a
-larger-ring `DescComb` build is now the active probe.
+hardware. The larger-ring `UseBuf=1` build then sounded like a delay effect,
+confirming descriptor base memory is writable audio history for custom ZDLs.
+
+Current large-buffer model:
+
+| Field | Working meaning |
+|---:|---|
+| `ctx[3][0]` | large-buffer base pointer |
+| `ctx[3][1]` | large-buffer end pointer |
+| `ctx[3][2]` | wrap span / byte length |
+
+The remaining Airwindows blocker has narrowed: we no longer need to find
+whether a large-buffer hook exists; we need to measure/default-size it, prove it
+is per instance, and learn whether metadata can request enough memory for
+`StereoChorus`-class delay lines.
 
 Parameter table:
 

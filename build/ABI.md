@@ -342,19 +342,20 @@ writable, persistent, and likely per-instance for at least words 0, 12, 18, and
 19. `StateComb` used `ctx[2] + 0x18` words 0..15 plus word 18 as a tiny comb
 history, so this block can hold small DSP state.
 
-Stock delay/modulation disassembly points to `ctx[3]` as the likely large
-host-managed buffer descriptor:
+Stock delay/modulation disassembly and `DescComb` hardware testing confirm
+`ctx[3]` as the large host-managed buffer descriptor:
 
 ```
-ctx[3][0]  candidate base pointer
-ctx[3][1]  candidate end pointer
-ctx[3][2]  candidate wrap span / byte length
+ctx[3][0]  base pointer
+ctx[3][1]  end pointer
+ctx[3][2]  wrap span / byte length
 ```
 
 Stock `DELAY`, `ANLGDLY`, `TAPEECHO`, and `STCHO` form sample-history addresses
 from `ctx[3][0]`, compare against `ctx[3][1]`, and subtract/reload
-`ctx[3][2]` when wrapping. This is still not hardware-confirmed for custom
-ZDLs; `DescComb.ZDL` is the current probe.
+`ctx[3][2]` when wrapping. Custom `DescComb.ZDL` first proved the descriptor is
+readable/plausible (`Arm=1`, `UseBuf=0` stereo wobble), then proved descriptor
+base memory is writable audio history (`UseBuf=1` sounded like a delay effect).
 
 ### 5.3 Init `Fx_FLT_<Name>_init`
 

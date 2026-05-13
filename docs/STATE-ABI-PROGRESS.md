@@ -1270,3 +1270,32 @@ Testing guidance for larger-ring version:
 4. If it still barely changes sound, the descriptor may be readable but either
    not writable for custom ZDLs, not mapped to an audible delay-sized region, or
    being reset/owned by host code in a way the tiny probe does not control.
+
+Hardware/operator result:
+
+* Larger-ring `DescComb` with `UseBuf=1` sounds like a delay effect.
+
+Interpretation:
+
+This is the first hardware confirmation of the large-buffer mechanism. Custom
+ZDLs receive a usable `ctx[3]` descriptor, and descriptor base memory can be
+used as writable audio history. The current model is:
+
+* `ctx[2] + offset`: small per-instance scalar/history state.
+* `ctx[3][0]`: large-buffer base pointer.
+* `ctx[3][1]`: large-buffer end pointer.
+* `ctx[3][2]`: wrap span / byte length.
+
+This likely matches the stock delay/modulation buffer path observed in
+`DELAY`, `ANLGDLY`, `TAPEECHO`, `STCHO`, and `STDELAY`.
+
+Remaining questions before a real Airwindows `StereoChorus` port:
+
+1. How large is the default `ctx[3]` allocation for custom ZDLs?
+2. Is `ctx[3]` per instance like the tested `ctx[2] + 0x18` state?
+3. Can ZDL metadata, `gid`, stock template choice, or header payloads request a
+   larger descriptor allocation?
+4. Does the descriptor memory survive bypass/preset changes the same way stock
+   delay/modulation memory does?
+5. Can we safely split the descriptor buffer into stereo lanes for algorithms
+   that need independent L/R delay histories?
