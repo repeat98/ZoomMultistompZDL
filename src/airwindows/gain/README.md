@@ -1,5 +1,11 @@
 # GAIN — first ground-up plugin for the v2 builder
 
+Historical note: this README records the original v2 linker smoke test. The
+open questions about basic parameter population and the old v1 ToTape9
+pagination bug have since moved on. Current porting status lives in
+[../../../docs/ZDL-REVERSE-ENGINEERING-STATUS.md](../../../docs/ZDL-REVERSE-ENGINEERING-STATUS.md)
+and [../../../docs/STATE-ABI-PROGRESS.md](../../../docs/STATE-ABI-PROGRESS.md).
+
 The simplest possible custom-built ZDL: pass-through with one Level knob.
 Built end-to-end through the v2 full-ELF linker pipeline. No template
 ZDL, no opcode patching — every byte of the output ZDL is generated

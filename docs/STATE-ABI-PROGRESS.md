@@ -2032,6 +2032,29 @@ Build result:
 * Output: `dist/ToTape9.ZDL`
 * ZDL size: 17,258 bytes.
 * `.fardata`: 0 bytes.
-* Known hardware-risk boundary: this first full-kernel probe still links
-  `__c6xabi_divf`, so if the pedal freezes like early `StereoChorus`, the next
-  split is the math-helper path rather than state allocation.
+* Pre-test hardware-risk boundary: this first full-kernel probe still links
+  `__c6xabi_divf`, so a freeze like early `StereoChorus` would point at the
+  math-helper path before implicating state allocation.
+
+Hardware result:
+
+* The current `dist/ToTape9.ZDL` crashes on load on the test MS-70CDR.
+* A rebuild still links mechanically, but the load shape is much larger than
+  the known-good `StereoChorus` release:
+  * `.audio`: 7,328 bytes.
+  * 9 user parameters.
+  * 7 synthesized LineSel-cloned edit handlers for knobs 3..9.
+  * external symbols: `__c6xabi_divf` and `__c6xabi_call_stub`.
+  * `.fardata`: 0 bytes.
+
+Current inference:
+
+The crash happens before we can judge the audio kernel. Do not treat it as a
+failure of `ctx[3]` persistent state by itself. The next useful ToTape9 ladder
+is:
+
+1. Same manifest/descriptor/edit-handler shape with `audio_nop: true`.
+2. Same 9-parameter UI shape with tiny pass-through DSP.
+3. Reduced 2- or 3-parameter ToTape9 shell to isolate page 2/3 handlers.
+4. Full DSP with divide/helper use removed or gated, if the UI/load shape
+   survives.

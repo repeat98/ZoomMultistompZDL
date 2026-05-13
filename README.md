@@ -48,7 +48,7 @@ as unverified until someone reports a clean load and audio test.
 | File | Status |
 |---|---|
 | [StChorus.ZDL](dist/StChorus.ZDL) | Airwindows `StereoChorus`; hardware-tested and currently the best reference port in this repo. |
-| [ToTape9.ZDL](dist/ToTape9.ZDL) | Airwindows `ToTape9`; experimental state-backed port that still needs hardware validation. |
+| [ToTape9.ZDL](dist/ToTape9.ZDL) | Airwindows `ToTape9`; current full-kernel probe crashes on load on the test MS-70CDR, so do not install it unless debugging. |
 | [TapeHack.ZDL](dist/TapeHack.ZDL) | Airwindows `TapeHack`; early port, needs broader listening and hardware reports. |
 | [PurestDr.ZDL](dist/PurestDr.ZDL) | Airwindows `PurestDrive`; early port, needs broader listening and hardware reports. |
 | [GAIN.ZDL](dist/GAIN.ZDL) | Small utility/reference effect used to validate the build path. |
@@ -57,7 +57,9 @@ as unverified until someone reports a clean load and audio test.
 
 - Only the Zoom MS-70CDR firmware 2.10 has been tested seriously so far.
 - Experimental builds can freeze or crash the pedal until it is power-cycled.
-- `ToTape9.ZDL` is not yet a confirmed 1:1 hardware release.
+- `ToTape9.ZDL` currently crashes on load on the test MS-70CDR. The next
+  debugging split is the load shape itself: audio-NOP, parameter/edit-handler
+  count, and helper-symbol usage.
 - Parameter scaling is part of the porting work. A port should not be called
   source-equivalent until its raw knob ranges have been confirmed on hardware.
 - These are `.ZDL` builds, not `.ZD2` builds.
@@ -133,7 +135,9 @@ The core pieces are:
 
 The important recent finding is that custom effects can use the host-managed
 large state descriptor at `ctx[3]`. That is what made the stateful
-`StereoChorus` port possible and is now being used for `ToTape9`.
+`StereoChorus` port possible. `ToTape9` is now testing the next boundary:
+whether a much larger 9-parameter tape kernel can use the same state strategy
+without tripping load-time handler, relocation, or helper-symbol issues.
 
 Known runtime map for custom ZDLs:
 

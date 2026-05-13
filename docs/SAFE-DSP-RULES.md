@@ -11,6 +11,9 @@ experiment, not a port.
 
 1. Start every new effect with `audio_nop: true` or a tiny dry/pass-through
    DSP. Verify it appears on the pedal before adding audio code.
+   For complex effects, keep the final parameter count, descriptor shape, and
+   edit-handler strategy in this smoke test so load-time UI/linker problems are
+   caught before the DSP is involved.
 2. Add one DSP behavior at a time. If the pedal freezes on load or first
    interaction, the last DSP change is guilty until proven otherwise.
 3. Keep the initial hardware-test DSP boring: no persistent state, no stack
@@ -53,6 +56,9 @@ experiment, not a port.
 * Small statics compiled into `.bss` or B14/SBR-relative addressing.
 * New external `__c6xabi_*` helpers beyond the tiny set already handled by
   the linker.
+* Large all-at-once release shapes: 9 parameters, synthesized page 2/3 edit
+  handlers, helper symbols, and a full DSP kernel in the same first hardware
+  build. Current `ToTape9` crashes on load in this category.
 * Stock edit-handler blobs whose internal references were not cloned or
   patched for this plugin.
 * Category/SONAME mismatch, for example `gid=3` with `ZDL_MOD_...` or
@@ -69,7 +75,7 @@ For a new Airwindows port:
    for the DSP object, and no unexpected external symbols.
 5. Only after the pedal loads cleanly, introduce approximations of the real
    algorithm in small patches.
-6. Do not add full persistent delay/reverb/chorus buffers until the per-effect
-   state ABI is solved and documented.
+6. Use `ctx[3]` for full persistent delay/reverb/chorus buffers, validate its
+   base/end/span fields before use, and initialize large memory lazily.
 7. Do not publish an Airwindows effect as a port until the source DSP is the
    DSP being run.

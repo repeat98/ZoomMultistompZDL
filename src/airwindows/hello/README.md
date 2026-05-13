@@ -12,7 +12,7 @@ DSP code from Airwindows.
 |-------------------|----------------------------------------------------------|
 | `manifest.json`   | Declarative description of HELLO (label, INFO block).    |
 | `build.py`        | Builds `HELLO.ZDL` from the manifest + LineSel template. |
-| `HELLO.ZDL`       | Build artifact (9217 bytes; checked-in for convenience). |
+| `HELLO.ZDL`       | Historical build artifact; no longer checked in.         |
 
 ## Build
 
@@ -20,10 +20,10 @@ DSP code from Airwindows.
 python3 hello/build.py
 ```
 
-This loads [working_zdls/MS-70CDR_LINESEL.ZDL](../working_zdls/MS-70CDR_LINESEL.ZDL),
+This loads [working_zdls/MS-70CDR_LINESEL.ZDL](../../../working_zdls/MS-70CDR_LINESEL.ZDL),
 patches the on-screen label slot from `LineSel` to `HELLO`, rewrites the
 INFO block (`sort_index = 250` so the unit shows it as a *new* effect rather
-than overwriting LineSel), and writes [HELLO.ZDL](HELLO.ZDL).
+than overwriting LineSel), and writes `HELLO.ZDL`.
 
 Identical input + manifest produces a byte-identical output. Verify with:
 
@@ -41,11 +41,11 @@ seven in the visible-label slot.
   knobs LineSel has (EFX_L / OUT_L). They still operate on the real
   LineSel DSP because that is the host ELF we're carrying.
 * Audio passes through untouched when "on" (per the LineSel design,
-  see [zoom-fx-modding-ref/library/CH_2.md](../zoom-fx-modding-ref/library/CH_2.md)).
+  see optional local reference `zoom-fx-modding-ref/library/CH_2.md`).
 
 This is intentional. We are *only* exercising the container/header/flash
 path here. Real DSP work happens in the next iteration once we replace the
-ELF body — see [build/README.md](../build/README.md) for that workflow.
+ELF body — see [build/README.md](../../../build/README.md) for that workflow.
 
 ## Next steps (deliberately not in this plugin)
 
@@ -59,10 +59,8 @@ Where real Airwindows ports will diverge from HELLO:
    already does this on save.
 3. **Repaint the picture** in the `.const` section. The picture format is
    a simple RLE described in
-   [zoom-fx-modding-ref/howto/RTFM.md](../zoom-fx-modding-ref/howto/RTFM.md);
-   a Python encoder/decoder lives at
-   [zoom-fx-modding-ref/diy/encode_picture.py](../zoom-fx-modding-ref/diy/) /
-   `decode_picture.py`.
+   optional local reference `zoom-fx-modding-ref/howto/RTFM.md`; a Python
+   encoder/decoder lives in optional local reference `zoom-fx-modding-ref/diy/`.
 4. **Add knob captions** the same way the label is patched (anchor + offset
    into a fixed slot).
 

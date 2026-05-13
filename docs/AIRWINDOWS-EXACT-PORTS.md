@@ -81,3 +81,15 @@ Current Zoom substitutions to verify:
 
 See `docs/ZDL-REVERSE-ENGINEERING-STATUS.md` for the broader ZDL/pedal map and
 the current state-research plan.
+
+## ToTape9 Specific Finding
+
+The current `ToTape9` source is an exact-port attempt, not a finished port. It
+uses a `ToTape9State` struct in `ctx[3]` instead of the old stateless
+approximation, keeps `.fardata` at 0 bytes, and exposes all 9 Airwindows
+parameters.
+
+Hardware result: the current `dist/ToTape9.ZDL` crashes on load on the test
+MS-70CDR. Until that load-time failure is split, `ToTape9` must be described as
+a failing full-kernel probe. The next evidence needed is an audio-NOP build with
+the same 9-parameter descriptor/edit-handler shape.

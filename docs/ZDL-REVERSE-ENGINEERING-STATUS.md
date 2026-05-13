@@ -1,6 +1,6 @@
 # ZDL and Pedal Reverse-Engineering Status
 
-Date: 2026-05-12
+Date: 2026-05-13
 
 This is the working map of what we know, what is only inferred, and what
 still blocks true 1:1 Airwindows ports on Zoom MS-series pedals.
@@ -20,10 +20,10 @@ source uses a fixed-point stereo delay core with:
 
 The two delay lines alone are 524,288 bytes on a 32-bit `int` target. That
 state now lives in the proven per-instance `ctx[3]` descriptor arena, not in
-`.fardata`. The current build preserves the source delay topology and control
-laws, but still needs hardware validation and numerical comparison because the
-Zoom C path uses float32 math, an inline sine approximation, and currently
-omits the source dither tail.
+`.fardata`. The current release has been hardware-tested and reported to sound
+like Airwindows `StereoChorus`. Remaining exactness work is numerical
+comparison: the Zoom C path uses float32 math, an inline sine approximation,
+and currently omits the source dither tail.
 
 Hardware note: the first MOD-category `Fx_MOD_StChorus` build loaded but froze
 the pedal on unbypass with a high-pitched tone. The FLT-category follow-up also
@@ -74,7 +74,16 @@ ToTape9 follow-up: with the `ctx[3]` state model proven by `StereoChorus`,
 `ToTape9` has been rebuilt as a first full-kernel probe using host-descriptor
 persistent state instead of `.fardata` or the old stateless approximation.
 This is not yet a final 1:1 claim: it still uses the Zoom float32 port and
-links `__c6xabi_divf`, which must be hardware-tested as the next boundary.
+links `__c6xabi_divf`, which was the pre-test risk boundary.
+
+Latest ToTape9 hardware result: the current `dist/ToTape9.ZDL` crashes on load
+on the test MS-70CDR. That moves the immediate problem earlier than "does the
+full DSP sound right": the next split must isolate the load-time shape itself.
+Suspects are the 9-parameter descriptor/edit-handler arrangement, the seven
+synthesized LineSel-cloned edit handlers, linked helper symbols
+(`__c6xabi_divf` and call-stub support), or another loader constraint exposed
+by the larger `.audio`/handler image. Because the crash occurs on load, it is
+not yet evidence against the `ctx[3]` audio-state strategy by itself.
 
 Public documentation note: after the repo was shared publicly, the README was
 rewritten to put `dist/` first as the download folder for release ZDLs, document
@@ -281,8 +290,10 @@ A 1:1 port needs three separate things to be true:
    plugin instance state.
 
 The first item is mostly solved. The second is tractable for stateless or
-small-state plugins. The third is the hard blocker for chorus, delay, tape,
-and reverb effects.
+small-state plugins. The third is solved well enough for `StereoChorus` and is
+now a per-effect engineering constraint rather than the single global blocker.
+`ToTape9` shows the next hard boundary: a source-shaped state layout can still
+be unsafe if the loader/edit-handler/helper-symbol shape is too ambitious.
 
 ## Exact-Port Workflow
 
@@ -300,14 +311,20 @@ For each Airwindows plugin:
 
 Anything that skips step 7 is an experiment, not a port.
 
+For current `ToTape9` work, step 6 needs to be repeated with the exact same
+descriptor and edit-handler shape as the failing build. If audio-NOP still
+crashes, the bug is load/UI/linker shape. If audio-NOP loads, the split moves
+back into DSP helpers and kernel code.
+
 ## Open Questions
 
 Highest priority:
 
-* Where does stock firmware keep state for delay/reverb/modulation effects?
-  The stock corpus does not show large writable ELF memory, so the likely
-  answers are host-managed scratch, hidden runtime allocation, or state in
-  structures reached through handler callbacks.
+* Which part of the current `ToTape9` load shape crashes the pedal: 9
+  parameters, synthesized page 2/3 edit handlers, helper symbols, `.audio`
+  size, or some interaction between them?
+* What are the remaining stock state/lifecycle semantics around `ctx[3]`:
+  bypass, preset switching, duplicate instances, and reload behavior?
 * What exactly are `ctx[11]` and `ctx[12]`, and is the shuttle required once
   we write more complex stateful effects?
 * What are the semantics of extended `BCAB` and `CABI` header payloads?

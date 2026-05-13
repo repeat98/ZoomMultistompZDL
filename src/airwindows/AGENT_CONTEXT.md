@@ -50,6 +50,11 @@ probes have now proven enough per-instance space in `ctx[3]`; use that arena
 for large state and keep `.fardata` tiny. Record the exact source parameter laws
 in the manifest and document any math substitutions.
 
+`ToTape9` is the current warning case: the full `ctx[3]` kernel builds with
+`.fardata: 0 bytes`, but crashes on load. Before deepening another 9-parameter
+or helper-heavy port, prove the final UI/descriptor/edit-handler shape with
+audio-NOP and tiny DSP builds.
+
 Any beta core that is not source DSP is only for ABI probing. It must not be
 described as a finished Airwindows port unless it runs the source algorithm.
 

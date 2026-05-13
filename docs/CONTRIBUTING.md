@@ -2,38 +2,28 @@
 
 ## What this repo most needs (in priority order)
 
-1. **Hardware test results for 3+ knob plugins.** Flash the current
-   3-knob TapeHack and report:
-   * Does the third knob (`Output`) modulate audio when turned?
-   * Does it freeze the unit at FX-select time?
-   * Does the icon render correctly?
+1. **ToTape9 load-safety results.** The current full-kernel `ToTape9.ZDL`
+   crashes on load on the test MS-70CDR. The most useful reports now are
+   tightly split variants: same 9-parameter UI with `audio_nop: true`, same UI
+   with pass-through DSP, reduced 2- or 3-parameter shells, and no-divide DSP
+   builds.
 
-   The result settles [build/ABI.md](../build/ABI.md) §5.3.b — the
-   single biggest open question — and unblocks pages 2 and 3 (knobs
-   4–9).
+2. **Hardware results for page 2/3 parameter handlers.** The linker can now
+   synthesize LineSel-cloned edit handlers for knobs 3..9, but the current
+   ToTape9 failure means this area still needs isolated confirmation. Report
+   whether 4+ knob builds load, render, and update `params[7..13]`.
 
-2. **A reloc-free knob 4–9 edit handler.** Every stock 9-knob effect
-   (LO-FI Dly, etc.) has handlers tightly coupled to lookup tables
-   that don't exist in our plugins. Two paths:
-   * Carve a 4th–9th handler out of *any* stock effect that happens to
-     have a self-contained one (the kind of needle-in-haystack search
-     where 76-byte, 0-relocation patterns from `.rela.dyn` analysis
-     are the right tool).
-   * Hand-write one in TI assembly that reads the host-state pointer,
-     calls the host's "get knob value" callback with the right
-     `knob_id`, and writes the result to `params[N]`. The LineSel
-     handlers (extracted in [build/linesel_handlers.bin](../build/linesel_handlers.bin))
-     are the template.
+3. **A cleaner reloc-free knob 4-9 edit handler.** Every stock 9-knob effect
+   (LO-FI Dly, etc.) has handlers tightly coupled to lookup tables that do not
+   exist in our plugins. A compact hand-written or proven stock-derived handler
+   would reduce the load-shape risk.
 
-3. **A working `_init` handler.** Right now the linker uses a
-   NOP_RETURN for `_init` because LineSel's init has unresolved
-   coefficient-table refs. Most plugins don't need an init (they're
-   stateless) but anything with persistent state across blocks
-   (filters with history, reverbs, delays) does. Solving the static
-   `.fardata` problem in [build/ABI.md](../build/ABI.md) §6 unblocks
-   most of the Airwindows catalogue.
+4. **Preset/bypass/state lifecycle reports.** `ctx[3]` is proven enough for
+   `StereoChorus`, but we still need precise reports about whether bypass,
+   preset switching, duplicate instances, and reloads preserve or clear state
+   like stock effects.
 
-4. **Block size empirical confirmation.** The audio loop processes
+5. **Block size empirical confirmation.** The audio loop processes
    "8 samples per channel × 2 channels" per call (`MVK 2,B0` outer
    loop in stock effects), but the call frequency is inferred. A
    plugin that emits a known-period tone from a sample counter would

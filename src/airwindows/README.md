@@ -77,7 +77,10 @@ ZOOM_EDIT_HANDLER(Fx_FLT_MyEffect_Tone_edit, 3, 24);  /* params[6] */
 ZOOM_EDIT_HANDLER(Fx_FLT_MyEffect_Mix_edit,  4, 28);  /* params[7] */
 ```
 
-Keep writable `.fardata` tiny. The linker rejects large writable images
-by default because big static state has frozen real pedals during load.
-Until the state ABI is solved, prefer stateless or very small-state beta
-ports.
+Keep writable `.fardata` tiny. The linker rejects large writable images by
+default because big static state has frozen real pedals during load. For large
+stateful ports, use the proven `ctx[3]` descriptor arena and validate the
+descriptor before touching memory. `StereoChorus` proves this can work, but
+`ToTape9` currently crashes on load, so new full-kernel ports still need a
+load-safety ladder: audio-NOP with the final UI shape, tiny pass-through DSP,
+then helper-free DSP increments.

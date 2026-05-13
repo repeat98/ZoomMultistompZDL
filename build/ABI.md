@@ -554,18 +554,21 @@ unchanged — the SIZE field is recomputed from `len(elf)` on save.
 
 ## 9. Open questions to settle empirically
 
-After incorporating v1's findings the list shrinks to:
+After incorporating v1's findings and the 2026-05-13 hardware probes, the list
+shrinks to:
 
-1. **The per-effect state ABI.** Large writable `.fardata` freezes
-   current custom builds, so stateful Airwindows ports need either a
-   proven scratch-buffer mapping or a different persistence strategy.
+1. **Load-safe shape for complex ports.** `ctx[3]` is proven enough for large
+   per-instance state, and `StereoChorus` uses it successfully. The current
+   `ToTape9` build still crashes on load, so the open problem is now the whole
+   load-time shape: 9 parameters, synthesized page 2/3 edit handlers, helper
+   symbols, and a larger `.audio` image.
 2. The two unknown words at `effectTypeImageInfo` offsets 0x18 / 0x1C
    (Exciter has 32 / 17; LineSel has different values). Stock ZDLs all
    work with these as observed; we copy them. Their semantic role is
    irrelevant for now.
-4. The `+0x18` reserved word in each SonicStomp entry — non-zero in
+3. The `+0x18` reserved word in each SonicStomp entry — non-zero in
    delay/pitch effects only. May encode a sub-range or sub-tick value.
-5. The `ctx[11]` / `ctx[12]` "magic shuttle" in the audio loop — what
+4. The `ctx[11]` / `ctx[12]` "magic shuttle" in the audio loop — what
    bytes are these, and what breaks if we skip the read-and-rewrite?
 
 Lower priority — already resolved well enough for v2:
@@ -578,5 +581,6 @@ Lower priority — already resolved well enough for v2:
 * `--mem_model:data=far` requirement ✓
 * `.fardata` `memsz == filesz` ✓
 * `effectTypeImageInfo` exactly 212 bytes, exactly 3 knob slots ✓
+* `ctx[3][0..2]` large host-managed state descriptor ✓
 * `Dll_<Name>` body: NoiseGate verbatim, 200 bytes ✓
 * `KNOB_INFO = {20, 15, 11, 0, 2, 0}` ✓

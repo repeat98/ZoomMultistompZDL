@@ -52,7 +52,8 @@ Maybe we don't set default values for the parameters and they are omitted / not 
 
 1- and 2-param plugins from the same linker work correctly. Stock
 3-param effects (Exciter, OptComp, ZNR) work correctly. A renamed
-clone of stock Exciter ([dist/TapeHKEx.ZDL](../dist/TapeHKEx.ZDL))
+clone of stock Exciter (`dist/TapeHKEx.ZDL`, historical diagnostic artifact no
+longer shipped in the clean release `dist/`)
 shows 3 knobs on the same hardware. So:
 * Pedal/firmware can render 3 knobs ✓
 * Our linker output for 3 params has *something* malformed that
@@ -216,9 +217,10 @@ in isolation. Cheapest next hardware test.
 
 ## Working artifacts produced during the investigation
 
-* [dist/AirCtl.ZDL](../dist/AirCtl.ZDL) — minimally-modified stock AIR
+* `dist/AirCtl.ZDL` — historical minimally-modified stock AIR diagnostic, no
+  longer shipped in the clean release `dist/`
   (renamed, fxid bumped). Confirms 6-param render works on hardware.
-* [dist/TapeHKEx.ZDL](../dist/TapeHKEx.ZDL) — minimally-modified stock
+* `dist/TapeHKEx.ZDL` — historical minimally-modified stock
   Exciter (renamed, fxid bumped). Confirms 3-param render works.
 * [src/airwindows/tapehack/build_via_template.py](../src/airwindows/tapehack/build_via_template.py)
   — splices a compiled `.audio` section into a stock 3+ param ZDL as

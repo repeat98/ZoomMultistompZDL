@@ -1,9 +1,16 @@
 # Airwindows 1:1 Port Roadmap
 
-Date: 2026-05-12
+Date: 2026-05-13
 
 This is the practical plan for getting from safe ABI probes to real 1:1
 Airwindows ports.
+
+Current status update: `ctx[3]` is no longer just a lead. Hardware probes and
+the working `StereoChorus` release show it is a usable per-instance descriptor
+arena for large state. The next blocker is more specific: current `ToTape9`
+crashes on load with the full 9-parameter, synthesized-handler,
+helper-linking build shape. That must be split before we can judge the
+Airwindows tape kernel itself.
 
 ## What the TI PDFs Tell Us
 
@@ -46,14 +53,14 @@ Observed audio-entry reads:
 | `MS-70CDR_HALL.ZDL` | `ctx[1]`, `ctx[2]`, `ctx[3]`, `ctx[5]`, `ctx[11]`, `ctx[12]` |
 | `MS-70CDR_TAPEECHO.ZDL` | same family of fields, plus dense reads/writes through a structure loaded from `ctx[1]`/`ctx[2]` |
 
-That is the strongest current lead. `ctx[2]`, `ctx[3]`, `ctx[13]`, and
-`ctx[14]` are likely host-provided state, delay-buffer descriptors, or
-effect-private runtime structures. We need to map them before attempting large
-Airwindows state.
+That was the strongest lead, and the `ctx[3]` part is now confirmed enough for
+custom ZDLs: `ctx[3][0..2]` describe a host-managed large buffer. `ctx[2]`
+small state and `ctx[13]`/`ctx[14]` still deserve mapping, but they no longer
+block every large-state Airwindows attempt.
 
 ## Required Milestones
 
-### 1. Map the full audio `ctx`
+### 1. Keep mapping the full audio `ctx`
 
 Build tiny hardware probes that read one candidate field at a time and encode
 the result audibly or visibly. Do not dereference unknown pointers first.
@@ -84,18 +91,17 @@ For each:
 
 Goal: a documented struct map, not just "some pointer probably works".
 
-### 3. Reproduce a small stock-style state allocation
+### 3. Keep the proven `ctx[3]` state path load-safe
 
-Before Airwindows:
+`StereoChorus` proves the large-buffer route can work. For each new stateful
+plugin:
 
-1. Implement a tiny delay using the discovered host state pointer.
-2. Keep the delay under stock-like sizes first.
-3. Prove it persists across audio blocks.
+1. Validate `ctx[3][0..2]` before use.
+2. Keep `.fardata` at 0 or tiny.
+3. Initialize large memory lazily across audio callbacks.
 4. Prove two instances do not share state.
-5. Prove bypass and preset switching reset or preserve state in the same way
-   stock effects do.
-
-Only after that should we scale toward `StereoChorus`-sized buffers.
+5. Prove bypass and preset switching reset or preserve state in a documented
+   way.
 
 ### 4. Build a desktop Airwindows equivalence harness
 
@@ -127,17 +133,16 @@ inactive unless the host rate is ever proven different.
 
 ## Immediate Work Items
 
-1. Use `build/disassemble_zdl.py` to extract ELF from stock ZDLs, run `dis6x`,
-   and summarize likely `ctx[...]` root accesses.
-2. Extend `build/ABI.md` with provisional fields for `ctx[2]`, `ctx[3]`,
-   `ctx[13]`, and `ctx[14]`, clearly marked as unresolved.
-3. Build a state mapper plugin with one knob selecting which `ctx` slot to
-   inspect and another selecting the bit to sonify. First pass:
-   `src/airwindows/ctxmap/`, documented in `docs/STATE-ABI-PROGRESS.md`.
-4. Build a tiny host-state delay after the mapper identifies a writable
-   per-instance region.
-5. Only then revisit `src/airwindows/stereochorus/stereochorus.c` and replace
-   the small 56-sample ring with the actual Airwindows algorithm.
+1. Build a ToTape9 load-safety ladder:
+   * same 9-parameter descriptor/edit-handler shape with `audio_nop: true`;
+   * same UI shape with tiny pass-through DSP;
+   * reduced 2- or 3-parameter shell to isolate page 2/3 handlers;
+   * full DSP with divide/helper use removed or gated.
+2. Add a desktop equivalence harness before calling ToTape9 1:1.
+3. Continue mapping `ctx[2]`, `ctx[13]`, and `ctx[14]` from stock delay,
+   modulation, and tape effects.
+4. Record every hardware result in `docs/STATE-ABI-PROGRESS.md` before moving
+   the claim into release docs.
 
 ## Stop Conditions
 
