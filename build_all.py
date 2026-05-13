@@ -32,6 +32,7 @@ PLUGINS = [
     ("ctxnib",      PLUGIN_DIR / "ctxnib"      / "build.py"),
     ("stateping",   PLUGIN_DIR / "stateping"   / "build.py"),
     ("stateiso",    PLUGIN_DIR / "stateiso"    / "build.py"),
+    ("statecomb",   PLUGIN_DIR / "statecomb"   / "build.py"),
     ("bitcrush",    PLUGIN_DIR / "bitcrush"    / "build.py"),
 ]
 

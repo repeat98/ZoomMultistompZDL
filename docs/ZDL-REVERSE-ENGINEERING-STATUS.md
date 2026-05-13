@@ -124,6 +124,13 @@ for host-provided effect state, delay-buffer descriptors, or related runtime
 structures. Use `build/disassemble_zdl.py` for repeatable stock-effect
 summaries, and see `docs/AIRWINDOWS-1TO1-PORT-ROADMAP.md`.
 
+Hardware probes now show that custom ZDLs can write persistent words through
+stock-style derived state blocks at `ctx[2] + 0x10` and `ctx[2] + 0x18`.
+Words 0, 12, 18, and 19 wobble successfully at both bases. A duplicate-instance
+probe did not show cross-instance stamp leakage, so `ctx[2] + 0x18` is currently
+treated as likely per-instance for the tested words. This is enough for small
+scalar DSP state, but not enough for large Airwindows delay/reverb history.
+
 Parameter table:
 
 | Slot | Meaning |

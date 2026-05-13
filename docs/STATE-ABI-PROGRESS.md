@@ -1046,3 +1046,61 @@ Build result for single-effect duplicate-instance version:
 * `.text`: 0 bytes.
 * `.fardata`: 0 bytes.
 * ZDL size: 4958 bytes.
+
+Hardware/operator result:
+
+* Two `StateIso` instances loaded in FX slot 1 and FX slot 2 did not produce
+  wobble in either `Role` switch position.
+
+Interpretation:
+
+This is the expected result for isolated per-instance host state: slot 1 and
+slot 2 do not see each other's word-19 stamp at `ctx[2] + 0x18`. Based on the
+earlier successful two-control probes, the working conclusion is that the
+`ctx[2] + 0x18` derived block is per effect instance, at least for the tested
+words. That gives custom ZDLs a small, proven per-instance state region.
+
+Remaining caveat:
+
+This does not prove the block is large enough for Airwindows delay lines, and
+it assumes the `Role` switch is reaching the second parameter slot correctly.
+The next useful probe should use the same host-state words as actual audio
+history so the state mechanism is tested as DSP memory, not just counters and
+magic stamps.
+
+## 2026-05-13: Probe 7 - `StateComb`
+
+Added `src/airwindows/statecomb/`, a tiny audio-history probe.
+
+Purpose:
+
+* Test whether the proven `ctx[2] + 0x18` words behave like normal DSP history.
+* Use actual sample history instead of counters/magic stamps.
+* Stay within the proven safe word range.
+
+Behavior:
+
+* `Arm=0`: pass-through, no `ctx[2]` dereference.
+* `Arm=1`: uses `ctx[2] + 0x18`.
+* Words `0..15` store a mono 16-sample feedback comb ring.
+* Word `18` stores the ring index.
+* `Mix` controls the delayed comb contribution.
+
+Expected hardware interpretation:
+
+* If the host state persists across audio callbacks, `Arm=1` should color the
+  sound with a small comb/filter-like effect.
+* If the host state is reset every callback, `Arm=1` should mostly behave like
+  pass-through or only create a very weak transient.
+* This is not a production delay and not an Airwindows port. It is only a
+  state-memory sanity check.
+
+Build result:
+
+* Command: `python3 -B build_all.py statecomb`
+* Output: `dist/StateComb.ZDL`
+* `.audio`: 640 bytes.
+* `.text`: 0 bytes.
+* `.fardata`: 0 bytes.
+* Applied object relocations: 0.
+* ZDL size: 5062 bytes.
