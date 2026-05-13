@@ -41,6 +41,10 @@ Follow-up note: a crash around UI Stage 12 showed the decoder was still entering
 Stage 1 too early. The current build uses explicit UI bands so Stage 1 starts at
 20, not around 10.
 
+The Stage-knob approach still crashed around UI Stage 13, so it has been
+replaced by fixed-stage ZDLs: `StChS0` through `StChS5`. These remove parameter
+scaling from the test. `StChS1` is now the clean descriptor-read-only boundary.
+
 ## Source Anchors
 
 Airwindows upstream source:

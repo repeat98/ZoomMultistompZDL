@@ -1,6 +1,6 @@
 {
   "effect_name": "StChorus",
-  "comment": "Staged ctx[3]-backed Airwindows StereoChorus port attempt. Stage defaults to safe pass-through so hardware can isolate descriptor read/write/clear/process failures.",
+  "comment": "Fixed-stage ctx[3]-backed Airwindows StereoChorus port probes. Separate ZDLs remove the Stage knob/raw-scaling ambiguity.",
 
   "audio_func_name": "Fx_FLT_StChorus",
 
@@ -8,23 +8,56 @@
   "gid_comment": "0x02 = Filter category. Temporary safety choice: ctx[3] descriptor probes were proven under FLT; MOD ctx[3] dereference crashed on unbypass.",
 
   "fxid": 404,
-  "fxid_comment": "0x0194, after ToTape9 in the custom Airwindows id range.",
+  "fxid_comment": "Stage probes use 0x01bd..0x01c2 to avoid collisions with earlier probes.",
 
   "fxid_version": "1.00",
   "flags_byte": 1,
+  "variants": [
+    {
+      "effect_name": "StChS0",
+      "audio_func_name": "Fx_FLT_StChS0",
+      "fxid": 445,
+      "fixed_stage": 0,
+      "screen_label": "ChS0"
+    },
+    {
+      "effect_name": "StChS1",
+      "audio_func_name": "Fx_FLT_StChS1",
+      "fxid": 446,
+      "fixed_stage": 1,
+      "screen_label": "ChS1"
+    },
+    {
+      "effect_name": "StChS2",
+      "audio_func_name": "Fx_FLT_StChS2",
+      "fxid": 447,
+      "fixed_stage": 2,
+      "screen_label": "ChS2"
+    },
+    {
+      "effect_name": "StChS3",
+      "audio_func_name": "Fx_FLT_StChS3",
+      "fxid": 448,
+      "fixed_stage": 3,
+      "screen_label": "ChS3"
+    },
+    {
+      "effect_name": "StChS4",
+      "audio_func_name": "Fx_FLT_StChS4",
+      "fxid": 449,
+      "fixed_stage": 4,
+      "screen_label": "ChS4"
+    },
+    {
+      "effect_name": "StChS5",
+      "audio_func_name": "Fx_FLT_StChS5",
+      "fxid": 450,
+      "fixed_stage": 5,
+      "screen_label": "ChS5"
+    }
+  ],
 
   "params": [
-    {
-      "name": "Stage",
-      "type": "knob",
-      "max": 100,
-      "default": 0,
-      "scale": "diagnostic_stage",
-      "audio_min": 0.0,
-      "audio_max": 5.0,
-      "audio_default": 0.0,
-      "comment": "Temporary hardware diagnostic. UI values 0/20/40/60/80/100 map to stages 0..5: pass-through, read ctx[3], write header, clear one chunk, full lazy clear, run chorus."
-    },
     {
       "name": "Speed",
       "type": "knob",

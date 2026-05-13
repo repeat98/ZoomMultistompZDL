@@ -14,7 +14,19 @@
 #include "../common/zoom_params.h"
 #include "stereochorus_params.h"
 
-#pragma CODE_SECTION(Fx_FLT_StChorus, ".audio")
+#ifndef STCHORUS_AUDIO_FUNC
+#define STCHORUS_AUDIO_FUNC Fx_FLT_StChorus
+#endif
+
+#ifndef STCHORUS_FIXED_STAGE
+#define STCHORUS_FIXED_STAGE 0
+#endif
+
+#define STCHORUS_DO_PRAGMA(x) _Pragma(#x)
+#define STCHORUS_EXPAND_PRAGMA(x) STCHORUS_DO_PRAGMA(x)
+#define STCHORUS_CODE_SECTION(func) STCHORUS_EXPAND_PRAGMA(CODE_SECTION(func, ".audio"))
+
+STCHORUS_CODE_SECTION(STCHORUS_AUDIO_FUNC)
 
 #define ZDL_PTR(type, word) ((type)(uintptr_t)(word))
 
@@ -88,18 +100,6 @@ static inline float pow10_source(float x)
     return x8 * x2;
 }
 
-static inline int stage_from_raw(float raw)
-{
-    if (!(raw > 0.001f && raw < 0.2f)) return 0;
-    int ui = (int)((raw * (100.0f / ZOOM_PARAM_RAW_MAX)) + 0.5f);
-    if (ui < 20) return 0;
-    if (ui < 40) return 1;
-    if (ui < 60) return 2;
-    if (ui < 80) return 3;
-    if (ui < 100) return 4;
-    return 5;
-}
-
 static inline void reset_state_header(StChorusState *st)
 {
     int i;
@@ -149,7 +149,7 @@ static inline void clear_delay_chunk(StChorusState *st, int *pL, int *pR)
     }
 }
 
-void Fx_FLT_StChorus(unsigned int *ctx)
+void STCHORUS_AUDIO_FUNC(unsigned int *ctx)
 {
     float *params = ZDL_PTR(float *, ctx[1]);
     float *fxBuf = ZDL_PTR(float *, ctx[5]);
@@ -160,10 +160,10 @@ void Fx_FLT_StChorus(unsigned int *ctx)
 
     if (params[0] < 0.5f) return;
 
-    int stage = stage_from_raw(params[STCHORUS_STAGE_SLOT]);
+    int stage = STCHORUS_FIXED_STAGE;
     if (stage <= 0) return;
 
-    unsigned int *desc = ZDL_PTR(unsigned int *, ctx[3]);
+    volatile unsigned int *desc = ZDL_PTR(volatile unsigned int *, ctx[3]);
     if (!desc) return;
 
     uintptr_t base = (uintptr_t)desc[0];

@@ -1871,3 +1871,51 @@ Changed `stage_from_raw()` to decode by UI bands:
 Retest by setting Stage directly to 0, then 20, then 40, 60, 80, and 100. Do
 not sweep slowly through the low values for this pass; the goal is to confirm
 whether the first real crash boundary is Stage 1.
+
+Hardware/operator result:
+
+* The pedal still crashed/froze after about UI Stage 13.
+
+Interpretation:
+
+The Stage parameter itself is now too ambiguous to keep using. Either the
+handler's raw scaling still differs from our decoder assumption, or parameter
+editing while engaged is interacting badly with the staged DSP. This prevents a
+clean read/write/clear boundary test.
+
+Follow-up fixed-ZDL stage build:
+
+Removed the `Stage` parameter entirely and replaced the single staged
+`StChorus.ZDL` with fixed-stage ZDL variants:
+
+| ZDL | Fixed behavior |
+|---|---|
+| `StChS0.ZDL` | pass-through; do not dereference `ctx[3]` |
+| `StChS1.ZDL` | volatile read/validate `ctx[3]` descriptor only |
+| `StChS2.ZDL` | write/reset the small state header at descriptor base |
+| `StChS3.ZDL` | clear one 512-sample chunk from each delay line |
+| `StChS4.ZDL` | continue lazy clearing until initialized, then return |
+| `StChS5.ZDL` | run the current chorus core |
+
+`dist/StChorus.ZDL` is removed by the build so the stale Stage-knob artifact
+cannot be flashed accidentally. `StChS1` uses a `volatile` descriptor pointer
+so the compiler cannot optimize away the descriptor read.
+
+Build result:
+
+* Command: `python3 -B build_all.py stereochorus`
+* Outputs:
+  * `dist/StChS0.ZDL`: 4394 bytes.
+  * `dist/StChS1.ZDL`: 4458 bytes.
+  * `dist/StChS2.ZDL`: 4778 bytes.
+  * `dist/StChS3.ZDL`: 4898 bytes.
+  * `dist/StChS4.ZDL`: 4930 bytes.
+  * `dist/StChS5.ZDL`: 6954 bytes.
+* All outputs have `.fardata`: 0 bytes.
+* `StChS5` is the only variant that still needs injected `__c6xabi_divf`.
+
+Next hardware check:
+
+Flash/test one fixed-stage ZDL at a time, starting with `StChS0`, then
+`StChS1`. Stop at the first one that crashes. This finally removes Stage-knob
+scaling from the experiment.
