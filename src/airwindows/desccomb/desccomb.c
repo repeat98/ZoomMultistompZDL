@@ -11,7 +11,8 @@
  * Arm off: pass-through, no ctx[3] dereference.
  * Arm on, UseBuf off: read descriptor only. If it looks plausible, report that
  * with stereo wobble using the already proven ctx[2]+0x18 counter.
- * Arm on, UseBuf on: use descriptor base memory as a tiny 16-sample comb ring.
+ * Arm on, UseBuf on: use descriptor base memory as a larger power-of-two comb
+ * ring when the descriptor reports enough space.
  */
 
 #include <stdint.h>
@@ -21,8 +22,7 @@
 #pragma CODE_SECTION(Fx_FLT_DescComb, ".audio")
 
 #define ZDL_PTR(type, word) ((type)(uintptr_t)(word))
-#define DESCCOMB_RING_MASK 15u
-#define DESCCOMB_INDEX_WORD 16u
+#define DESCCOMB_DATA_START_WORD 32u
 #define DESCCOMB_REPORT_WORD 18u
 
 void Fx_FLT_DescComb(unsigned int *ctx)
@@ -102,8 +102,30 @@ void Fx_FLT_DescComb(unsigned int *ctx)
         return;
     }
 
+    unsigned int ringCount = 0u;
+    unsigned int ringMask = 0u;
+    if (bytes >= ((DESCCOMB_DATA_START_WORD + 2048u) * 4u)) {
+        ringCount = 2048u;
+        ringMask = 2047u;
+    } else if (bytes >= ((DESCCOMB_DATA_START_WORD + 512u) * 4u)) {
+        ringCount = 512u;
+        ringMask = 511u;
+    } else if (bytes >= ((DESCCOMB_DATA_START_WORD + 128u) * 4u)) {
+        ringCount = 128u;
+        ringMask = 127u;
+    }
+
+    if (ringCount == 0u) {
+        int m;
+        for (m = 0; m < 8; m++) {
+            outBuf[m] += fxBuf[m];
+            outBuf[m + 8] += fxBuf[m + 8];
+        }
+        return;
+    }
+
     unsigned int *ring = (unsigned int *)base;
-    unsigned int idx = ring[DESCCOMB_INDEX_WORD] & DESCCOMB_RING_MASK;
+    unsigned int idx = ring[0] & ringMask;
 
     int i;
     for (i = 0; i < 8; i++) {
@@ -114,7 +136,7 @@ void Fx_FLT_DescComb(unsigned int *ctx)
             float f;
             unsigned int u;
         } bits;
-        bits.u = ring[idx];
+        bits.u = ring[DESCCOMB_DATA_START_WORD + idx];
         float delayed = bits.f;
 
         if (!(delayed > -4.0f && delayed < 4.0f)) {
@@ -127,7 +149,7 @@ void Fx_FLT_DescComb(unsigned int *ctx)
             delayed = -1.5f;
         }
 
-        float store = mono + delayed * 0.55f;
+        float store = mono + delayed * 0.35f;
         if (!(store > -4.0f && store < 4.0f)) {
             store = 0.0f;
         }
@@ -139,12 +161,12 @@ void Fx_FLT_DescComb(unsigned int *ctx)
         }
 
         bits.f = store;
-        ring[idx] = bits.u;
-        idx = (idx + 1u) & DESCCOMB_RING_MASK;
+        ring[DESCCOMB_DATA_START_WORD + idx] = bits.u;
+        idx = (idx + 1u) & ringMask;
 
-        outBuf[i] += inL * 0.72f + delayed * 0.40f;
-        outBuf[i + 8] += inR * 0.72f + delayed * 0.40f;
+        outBuf[i] += inL * 0.55f + delayed * 0.75f;
+        outBuf[i + 8] += inR * 0.55f + delayed * 0.75f;
     }
 
-    ring[DESCCOMB_INDEX_WORD] = idx;
+    ring[0] = idx;
 }

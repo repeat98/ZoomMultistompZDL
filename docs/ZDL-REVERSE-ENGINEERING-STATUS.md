@@ -141,8 +141,10 @@ state or reproduce stock bypass behavior.
 The strongest current large-buffer candidate is `ctx[3]`. Stock `DELAY`,
 `ANLGDLY`, `TAPEECHO`, and `STCHO` read fields 0, 1, and 2 from `ctx[3]`, then
 use the values as a base pointer, end pointer, and wrap/span while reading or
-writing sample history. `DescComb.ZDL` is the first hardware probe for whether
-custom ZDLs receive the same descriptor.
+writing sample history. `DescComb.ZDL` confirms custom ZDLs can read `ctx[3]`
+and see a plausible descriptor: `Arm=1`, `UseBuf=0` produced stereo wobble on
+hardware. The first descriptor-memory write test was only weakly audible, so a
+larger-ring `DescComb` build is now the active probe.
 
 Parameter table:
 

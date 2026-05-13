@@ -1225,3 +1225,48 @@ Build result:
 * `.fardata`: 0 bytes.
 * Applied object relocations: 0.
 * ZDL size: 5666 bytes.
+
+Hardware/operator result:
+
+* `UseBuf=0`, `Arm=0`: no wobble.
+* `UseBuf=0`, `Arm=1`: stereo wobble.
+* `UseBuf=1`: might introduce slight comb filtering, but if so it is very
+  hard to hear.
+
+Interpretation:
+
+The read-only stage is a strong positive result: custom ZDLs can dereference
+`ctx[3]`, and `ctx[3][0..2]` look like a plausible stock buffer descriptor on
+hardware. That moves `ctx[3]` from stock-disassembly hypothesis to live custom
+ZDL evidence.
+
+The write stage is inconclusive, not negative. The first `UseBuf=1` build used
+only a 16-sample ring at the descriptor base, so the audible effect was expected
+to be subtle. Rebuild `DescComb` with a larger descriptor-memory ring:
+
+* Use descriptor word 0 as the ring index.
+* Start sample history at descriptor word 32.
+* Use a 2048-sample ring when the descriptor reports enough space.
+* Fall back to 512 samples, then 128 samples for smaller descriptors.
+* Increase delayed contribution so successful descriptor writes are easier to
+  hear.
+
+Build result for larger-ring version:
+
+* Command: `python3 -B build_all.py desccomb`
+* Output: `dist/DescComb.ZDL`
+* `.audio`: 1760 bytes.
+* `.text`: 0 bytes.
+* `.fardata`: 0 bytes.
+* Applied object relocations: 0.
+* ZDL size: 6178 bytes.
+
+Testing guidance for larger-ring version:
+
+1. Retest `Arm=1`, `UseBuf=0` first. It should still wobble.
+2. Then set `UseBuf=1`.
+3. If descriptor memory is writable audio history, the effect should now be
+   much easier to hear than the 16-sample version.
+4. If it still barely changes sound, the descriptor may be readable but either
+   not writable for custom ZDLs, not mapped to an audible delay-sized region, or
+   being reset/owned by host code in a way the tiny probe does not control.
