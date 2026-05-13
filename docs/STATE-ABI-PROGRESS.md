@@ -1362,3 +1362,49 @@ Build result:
   * `.text`: 0 bytes.
   * `.fardata`: 0 bytes.
   * Applied object relocations: 0.
+
+Hardware/operator result:
+
+* All `DescSize` threshold ZDLs flashed and loaded cleanly.
+* None of the thresholds from 512 KiB down to 4 KiB wobbled when armed.
+
+Interpretation:
+
+The default descriptor allocation for this custom ZDL is below 4096 bytes, at
+least as measured by `ctx[3][1] - ctx[3][0]`. This is consistent with
+larger-ring `DescComb` sounding like a delay only because it could fall back to
+a much smaller ring. It also means the default custom descriptor allocation is
+not enough for Airwindows `StereoChorus`.
+
+Follow-up build:
+
+Added smaller thresholds around the range `DescComb` actually used:
+
+| ZDL | Threshold |
+|---|---:|
+| `Dsz003K.ZDL` | 3072 bytes |
+| `Dsz002K.ZDL` | 2048 bytes |
+| `Dsz001K.ZDL` | 1024 bytes |
+| `Dsz0640.ZDL` | 640 bytes |
+
+`Dsz0640` is especially important because larger-ring `DescComb` needed at
+least `(32 + 128) * 4 = 640` bytes for its smallest fallback ring.
+
+Build result for smaller thresholds:
+
+* Command: `python3 -B build_all.py descsize`
+* New outputs:
+  * `dist/Dsz003K.ZDL`: 4842 bytes.
+  * `dist/Dsz002K.ZDL`: 4850 bytes.
+  * `dist/Dsz001K.ZDL`: 4850 bytes.
+  * `dist/Dsz0640.ZDL`: 4866 bytes.
+* Each new output:
+  * `.text`: 0 bytes.
+  * `.fardata`: 0 bytes.
+  * Applied object relocations: 0.
+
+Testing guidance:
+
+Test downward from `Dsz003K` to `Dsz0640`. If none of these wobble, the size
+probe's descriptor-length measurement disagrees with `DescComb`'s write result,
+and the next step should probe `ctx[3][2]`/span separately from `end - base`.

@@ -6,7 +6,7 @@
   "gid_comment": "0x02 = Filter category. Diagnostic only.",
 
   "fxid": 417,
-  "fxid_comment": "0x01a1..0x01a5, follows DescComb probe ID.",
+  "fxid_comment": "0x01a1..0x01a9, follows DescComb probe ID.",
 
   "fxid_version": "1.00",
   "flags_byte": 1,
@@ -47,6 +47,34 @@
       "fxid": 421,
       "threshold_bytes": 4096,
       "screen_label": "Size4"
+    },
+    {
+      "effect_name": "Dsz003K",
+      "audio_func_name": "Fx_FLT_Dsz003K",
+      "fxid": 422,
+      "threshold_bytes": 3072,
+      "screen_label": "Size3"
+    },
+    {
+      "effect_name": "Dsz002K",
+      "audio_func_name": "Fx_FLT_Dsz002K",
+      "fxid": 423,
+      "threshold_bytes": 2048,
+      "screen_label": "Size2"
+    },
+    {
+      "effect_name": "Dsz001K",
+      "audio_func_name": "Fx_FLT_Dsz001K",
+      "fxid": 424,
+      "threshold_bytes": 1024,
+      "screen_label": "Size1"
+    },
+    {
+      "effect_name": "Dsz0640",
+      "audio_func_name": "Fx_FLT_Dsz0640",
+      "fxid": 425,
+      "threshold_bytes": 640,
+      "screen_label": "Size640"
     }
   ],
 
