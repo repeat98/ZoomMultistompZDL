@@ -1,6 +1,6 @@
 {
   "effect_name": "ToTape9",
-  "comment": "EXPERIMENTAL ABI probe for Airwindows ToTape9. Source parameter metadata/control laws are present, but the release DSP is not the exact full source algorithm until the persistent-state ABI is solved.",
+  "comment": "EXPERIMENTAL ctx[3]-backed Airwindows ToTape9 full-kernel probe. Persistent state is host-allocated, but math-helper and float32 differences still need hardware and numerical validation.",
 
   "audio_func_name": "Fx_FLT_ToTape9",
 

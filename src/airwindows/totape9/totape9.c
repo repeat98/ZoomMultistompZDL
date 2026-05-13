@@ -6,12 +6,9 @@
  *
  * Release status
  * --------------
- * This is a flash-safe stateless beta, not a release-quality exact port.
- * The original Airwindows algorithm has
- * several kilobytes of persistent state, but large writable .fardata segments
- * currently freeze MS-series pedals while loading a custom ZDL. Until that ABI
- * is solved, TOTAPE9_PERSISTENT_STATE stays 0 and flutter is approximated by
- * the small-stack release path instead of using the original delay buffer.
+ * This is the first ctx[3]-backed ToTape9 full-kernel attempt. Persistent DSP
+ * state lives in the per-instance host descriptor arena proven by StereoChorus,
+ * not in .fardata.
  *
  * Assumptions
  * -----------
@@ -57,12 +54,8 @@
 #include "../common/zoom_params.h"
 #include "totape9_params.h"
 
-/* Persistent .fardata larger than a few hundred bytes currently freezes
- * MS-series pedals during load. Keep the release build stateless until the
- * per-effect state ABI is solved; the 9-param UI and core tape stages still
- * make a useful beta. */
-#define TOTAPE9_PERSISTENT_STATE 0
-#define TOTAPE9_FULL_DSP 0
+#define TOTAPE9_PERSISTENT_STATE 1
+#define TOTAPE9_FULL_DSP 1
 
 ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Input_edit,   2, 20);
 ZOOM_EDIT_HANDLER(Fx_FLT_ToTape9_Tilt_edit,    3, 24);
@@ -161,9 +154,12 @@ static float zoom_tanf(float x)
  * Constants
  * ---------------------------------------------------------------------- */
 
-#define FLUTTER_BUF  502   /* must be > max flutter depth (498) + 2 */
+#define FLUTTER_BUF  1002
 #define PHI          1.6180339887498948f
 #define KNOB_NORM    (1.0f / 0.14f)
+
+#define TOTAPE9_MAGIC 0x54395039u
+#define TOTAPE9_VERSION 1u
 
 /* -------------------------------------------------------------------------
  * gslew layout: 9 stages × 3 words = [prevL, prevR, threshold]  (27 words)
@@ -190,49 +186,124 @@ static float zoom_tanf(float x)
  * Persistent state (single-instance)
  * ====================================================================== */
 
-#if TOTAPE9_PERSISTENT_STATE
-/* Dubly encode */
-static float iirEncL, iirEncR;
-static float compEncL, compEncR;
-static float avgEncL, avgEncR;
+typedef struct ToTape9State {
+    uint32_t magic;
+    uint32_t version;
 
-/* Dubly decode */
-static float iirDecL, iirDecR;
-static float compDecL, compDecR;
-static float avgDecL, avgDecR;
+    float iirEncL, iirEncR;
+    float compEncL, compEncR;
+    float avgEncL, avgEncR;
 
-/* Flutter */
-static float dL[FLUTTER_BUF];
-static float dR[FLUTTER_BUF];
-static float sweepL  = 3.14159265358979f;  /* start at π, matching reference */
-static float sweepR  = 3.14159265358979f;
-static float nextmaxL = 0.5f;              /* must be non-zero or sweep never advances */
-static float nextmaxR = 0.5f;
-static int   gcount;
+    float iirDecL, iirDecR;
+    float compDecL, compDecR;
+    float avgDecL, avgDecR;
 
-/* Bias slew */
-static float gslew[GSLEW_TOTAL];
+    float dL[FLUTTER_BUF];
+    float dR[FLUTTER_BUF];
+    float sweepL;
+    float sweepR;
+    float nextmaxL;
+    float nextmaxR;
+    int gcount;
 
-/* Hysteresis */
-static float hysteresisL, hysteresisR;
+    float gslew[GSLEW_TOTAL];
+    float hysteresisL, hysteresisR;
 
-/* TapeHack2 – avg2 only at 44100 Hz */
-static float avg2L[2],  avg2R[2];
-static float post2L[2], post2R[2];
-static int   avgPos;
-static float lastDarkL, lastDarkR;
+    float avg2L[2], avg2R[2];
+    float post2L[2], post2R[2];
+    int avgPos;
+    float lastDarkL, lastDarkR;
 
-/* Head bump */
-static float headBumpL,  headBumpR;
-static float hdbA[HDB_TOTAL], hdbB[HDB_TOTAL];
+    float headBumpL, headBumpR;
+    float hdbA[HDB_TOTAL], hdbB[HDB_TOTAL];
 
-/* ClipOnly3  (spacing = 1) */
-static float lastSampL, lastSampR;
-static float intermedL, intermedR;
-static float slewArrL[2], slewArrR[2];
-static int   wasPosClipL, wasNegClipL;
-static int   wasPosClipR, wasNegClipR;
-#endif
+    float lastSampL, lastSampR;
+    float intermedL, intermedR;
+    float slewArrL[2], slewArrR[2];
+    int wasPosClipL, wasNegClipL;
+    int wasPosClipR, wasNegClipR;
+
+    uint32_t fpdL;
+    uint32_t fpdR;
+} ToTape9State;
+
+static inline uintptr_t align4(uintptr_t x)
+{
+    return (x + 3u) & ~(uintptr_t)3u;
+}
+
+static inline float totape9_param_norm(float raw, float fallback_norm)
+{
+    if (raw <= 0.0001f) return zoom_clamp01(fallback_norm);
+    if (raw <= 1.0f) return zoom_clamp01(raw);
+    return zoom_clamp01(raw * 0.01f);
+}
+
+static void reset_totape9_state(ToTape9State *st)
+{
+    int i;
+    unsigned char *p = (unsigned char *)st;
+    for (i = 0; i < (int)sizeof(ToTape9State); i++) {
+        p[i] = 0u;
+    }
+
+    st->magic = TOTAPE9_MAGIC;
+    st->version = TOTAPE9_VERSION;
+    st->compEncL = 1.0f;
+    st->compEncR = 1.0f;
+    st->compDecL = 1.0f;
+    st->compDecR = 1.0f;
+    st->sweepL = 3.14159265359f;
+    st->sweepR = 3.14159265359f;
+    st->nextmaxL = 0.5f;
+    st->nextmaxR = 0.5f;
+    st->fpdL = 0x1234567u;
+    st->fpdR = 0x89ABCDFu;
+}
+
+#define iirEncL (st->iirEncL)
+#define iirEncR (st->iirEncR)
+#define compEncL (st->compEncL)
+#define compEncR (st->compEncR)
+#define avgEncL (st->avgEncL)
+#define avgEncR (st->avgEncR)
+#define iirDecL (st->iirDecL)
+#define iirDecR (st->iirDecR)
+#define compDecL (st->compDecL)
+#define compDecR (st->compDecR)
+#define avgDecL (st->avgDecL)
+#define avgDecR (st->avgDecR)
+#define dL (st->dL)
+#define dR (st->dR)
+#define sweepL (st->sweepL)
+#define sweepR (st->sweepR)
+#define nextmaxL (st->nextmaxL)
+#define nextmaxR (st->nextmaxR)
+#define gcount (st->gcount)
+#define gslew (st->gslew)
+#define hysteresisL (st->hysteresisL)
+#define hysteresisR (st->hysteresisR)
+#define avg2L (st->avg2L)
+#define avg2R (st->avg2R)
+#define post2L (st->post2L)
+#define post2R (st->post2R)
+#define avgPos (st->avgPos)
+#define lastDarkL (st->lastDarkL)
+#define lastDarkR (st->lastDarkR)
+#define headBumpL (st->headBumpL)
+#define headBumpR (st->headBumpR)
+#define hdbA (st->hdbA)
+#define hdbB (st->hdbB)
+#define lastSampL (st->lastSampL)
+#define lastSampR (st->lastSampR)
+#define intermedL (st->intermedL)
+#define intermedR (st->intermedR)
+#define slewArrL (st->slewArrL)
+#define slewArrR (st->slewArrR)
+#define wasPosClipL (st->wasPosClipL)
+#define wasNegClipL (st->wasNegClipL)
+#define wasPosClipR (st->wasPosClipR)
+#define wasNegClipR (st->wasNegClipR)
 
 /* =========================================================================
  * Head-bump biquad coefficient calculation
@@ -384,29 +455,45 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
 #endif
 
     /* --- Decode context structure --- */
-    unsigned int *params   = ZDL_PTR(unsigned int *, ctx[1]);
-    float        *fxBuf    = ZDL_PTR(float *,        ctx[5]);  /* L:[0..7] R:[8..15] */
+    float *params = ZDL_PTR(float *, ctx[1]);
+    float *fxBuf = ZDL_PTR(float *, ctx[5]);  /* L:[0..7] R:[8..15] */
 
     /* Magic pass-through (bookkeeping value the firmware expects) */
     unsigned int *magicDst = ZDL_PTR(unsigned int *, *(unsigned int *)ZDL_PTR(unsigned int *, ctx[11]));
     unsigned int *magicSrc = ZDL_PTR(unsigned int *, ctx[12]);
+    *magicDst = *magicSrc;
 
-    if (*(float *)&params[0] < 0.5f) return;
+    if (params[0] < 0.5f) return;
 
-    /* Generic Zoom edit handlers write a raw ~0..0.14 float, so normalize
-     * here instead of relying on params[4] from stock init code. */
-    float pInput   = zoom_clamp01(*(float *)&params[5]  * KNOB_NORM);  /* Page 1 */
-    float pTilt    = zoom_clamp01(*(float *)&params[6]  * KNOB_NORM);
-    float pShape   = zoom_clamp01(*(float *)&params[7]  * KNOB_NORM);
-    float pFlutter = zoom_clamp01(*(float *)&params[8]  * KNOB_NORM);  /* Page 2 */
-#if !TOTAPE9_PERSISTENT_STATE
-    pFlutter = 0.0f;
-#endif
-    float pFlutSpd = zoom_clamp01(*(float *)&params[9]  * KNOB_NORM);
-    float pBias    = zoom_clamp01(*(float *)&params[10] * KNOB_NORM);
-    float pHeadBmp = zoom_clamp01(*(float *)&params[11] * KNOB_NORM);  /* Page 3 */
-    float pHeadFrq = zoom_clamp01(*(float *)&params[12] * KNOB_NORM);
-    float pOutput  = zoom_clamp01(*(float *)&params[13] * KNOB_NORM);
+    volatile unsigned int *desc = ZDL_PTR(volatile unsigned int *, ctx[3]);
+    if (!desc) return;
+
+    uintptr_t base = (uintptr_t)desc[0];
+    uintptr_t end = (uintptr_t)desc[1];
+    unsigned int span = desc[2];
+    uintptr_t stateBase = align4(base);
+    uintptr_t requiredEnd = stateBase + sizeof(ToTape9State);
+    uintptr_t bytes = end - base;
+
+    if (base == 0u || end <= base) return;
+    if ((base & 3u) != 0u || (end & 3u) != 0u || (span & 3u) != 0u) return;
+    if (bytes < sizeof(ToTape9State) || span < bytes) return;
+    if (requiredEnd > end) return;
+
+    ToTape9State *st = (ToTape9State *)stateBase;
+    if (st->magic != TOTAPE9_MAGIC || st->version != TOTAPE9_VERSION) {
+        reset_totape9_state(st);
+    }
+
+    float pInput   = totape9_param_norm(params[TOTAPE9_INPUT_SLOT],   TOTAPE9_INPUT_DEFAULT_NORM);
+    float pTilt    = totape9_param_norm(params[TOTAPE9_TILT_SLOT],    TOTAPE9_TILT_DEFAULT_NORM);
+    float pShape   = totape9_param_norm(params[TOTAPE9_SHAPE_SLOT],   TOTAPE9_SHAPE_DEFAULT_NORM);
+    float pFlutter = totape9_param_norm(params[TOTAPE9_FLUTTER_SLOT], TOTAPE9_FLUTTER_DEFAULT_NORM);
+    float pFlutSpd = totape9_param_norm(params[TOTAPE9_FLUTSPD_SLOT], TOTAPE9_FLUTSPD_DEFAULT_NORM);
+    float pBias    = totape9_param_norm(params[TOTAPE9_BIAS_SLOT],    TOTAPE9_BIAS_DEFAULT_NORM);
+    float pHeadBmp = totape9_param_norm(params[TOTAPE9_HEADBMP_SLOT], TOTAPE9_HEADBMP_DEFAULT_NORM);
+    float pHeadFrq = totape9_param_norm(params[TOTAPE9_HEADFRQ_SLOT], TOTAPE9_HEADFRQ_DEFAULT_NORM);
+    float pOutput  = totape9_param_norm(params[TOTAPE9_OUTPUT_SLOT],  TOTAPE9_OUTPUT_DEFAULT_NORM);
 
     /* --- Derive algorithm parameters (matching ToTape9 formulas exactly)
      *     overallscale = 1.0 throughout                                  --- */
@@ -468,7 +555,6 @@ void Fx_FLT_ToTape9(unsigned int *ctx)
 
     for (int i = 0; i < 8; i++)
     {
-        *magicDst = magicSrc[i];
         float sL = fxL[i];
         float sR = fxR[i];
 

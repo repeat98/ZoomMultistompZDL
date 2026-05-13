@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "build"))
 sys.path.insert(0, str(HERE.parent / "common"))
 
 from linker import LinkerConfig, link, params_from_manifest  # noqa: E402
-from airwindows_image import make_airwindows_tape_screen  # noqa: E402
+from airwindows_image import make_airwindows_totape_screen  # noqa: E402
 from manifest_params import write_param_header  # noqa: E402
 
 TI_ROOT = Path("/Applications/ti/ccs2050/ccs/tools/compiler/ti-cgt-c6000_8.5.0.LTS")
@@ -56,7 +56,8 @@ def main() -> None:
         output_path=out_zdl,
         fxid_version=manifest.get("fxid_version", "1.00").encode("ascii"),
         flags_byte=manifest.get("flags_byte", 0x01),
-        screen_image=make_airwindows_tape_screen("ToTape", "9"),
+        screen_image=make_airwindows_totape_screen(),
+        knob_positions=[(2, 14, 43), (3, 55, 43), (4, 96, 43)],
         audio_nop=manifest.get("audio_nop", False),
         # Input/Tilt use LineSel's stock handlers. Shape and pages 2/3 use
         # LineSel-cloned handlers with patched knob ids/param offsets.

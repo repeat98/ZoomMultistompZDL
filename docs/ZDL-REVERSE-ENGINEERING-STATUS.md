@@ -70,6 +70,12 @@ Release polish note: `StChorus` now has dedicated chorus screen art and explicit
 Speed/Depth knob placement. The temporary `BitCrush` verification effect has
 been removed completely so the release set stays focused on Airwindows ports.
 
+ToTape9 follow-up: with the `ctx[3]` state model proven by `StereoChorus`,
+`ToTape9` has been rebuilt as a first full-kernel probe using host-descriptor
+persistent state instead of `.fardata` or the old stateless approximation.
+This is not yet a final 1:1 claim: it still uses the Zoom float32 port and
+links `__c6xabi_divf`, which must be hardware-tested as the next boundary.
+
 ## Source Anchors
 
 Airwindows upstream source:

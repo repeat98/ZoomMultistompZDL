@@ -2008,3 +2008,30 @@ Follow-up release polish:
 * Placed the two visible knob overlays explicitly at the Speed and Depth wells.
 * Removed the temporary `BitCrush` verification effect from source, `dist/`, and
   the default release build list.
+
+## 2026-05-13: ToTape9 ctx[3] Full-Kernel Probe
+
+Now that `StereoChorus` proves the large descriptor arena can host real
+per-instance delay state, `ToTape9` has moved off the old stateless beta path.
+
+Changes:
+
+* `ToTape9` now enables the full DSP path and uses a `ToTape9State` struct
+  stored in `ctx[3]`.
+* The old large `.fardata` state remains gone; all persistent tape/flutter/head
+  bump/clip state is host-descriptor-backed.
+* Parameter normalization now follows the 0..1 raw convention confirmed while
+  fixing `StereoChorus`.
+* The release image now uses the same Airwindows visual grammar as
+  `StereoChorus`: title top-left, `AIRWINDOWS` top-right, effect graphic in the
+  middle, knob wells along the bottom.
+
+Build result:
+
+* Command: `python3 -B build_all.py totape9`
+* Output: `dist/ToTape9.ZDL`
+* ZDL size: 17,258 bytes.
+* `.fardata`: 0 bytes.
+* Known hardware-risk boundary: this first full-kernel probe still links
+  `__c6xabi_divf`, so if the pedal freezes like early `StereoChorus`, the next
+  split is the math-helper path rather than state allocation.

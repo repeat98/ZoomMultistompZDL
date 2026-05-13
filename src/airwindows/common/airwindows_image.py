@@ -96,3 +96,34 @@ def make_airwindows_chorus_screen() -> bytes:
     c.vline(64, 39, 60)
 
     return encode_zoom_rle(c)
+
+
+def make_airwindows_totape_screen() -> bytes:
+    """ToTape9 bitmap using the shared Airwindows title/knob layout."""
+    c = Canvas()
+
+    c.rect(0, 0, 127, 63)
+    c.draw_text("TO", 6, 5, scale=2, spacing=1)
+    c.draw_text("TAPE9", 27, 5, scale=2, spacing=1)
+    c.draw_text("AIRWINDOWS", 84, 7, scale=1, spacing=1)
+
+    c.hline(5, 122, 21)
+    _draw_reel(c, 28, 31, 9)
+    _draw_reel(c, 62, 31, 9)
+    c.rect(41, 25, 49, 34)
+    c.hline(37, 53, 35)
+    c.hline(37, 53, 37)
+    _draw_wave(c, 82, 119, 31, 5.0, 1.25, 0.0)
+
+    c.draw_text("INPUT", 12, 35, scale=1, spacing=1)
+    c.draw_text("TILT", 55, 35, scale=1, spacing=1)
+    c.draw_text("SHAPE", 92, 35, scale=1, spacing=1)
+
+    c.rect(7, 42, 39, 60)
+    c.rect(48, 42, 80, 60)
+    c.rect(89, 42, 121, 60)
+    c.hline(10, 36, 39)
+    c.hline(51, 77, 39)
+    c.hline(92, 118, 39)
+
+    return encode_zoom_rle(c)
