@@ -1299,3 +1299,66 @@ Remaining questions before a real Airwindows `StereoChorus` port:
    delay/modulation memory does?
 5. Can we safely split the descriptor buffer into stereo lanes for algorithms
    that need independent L/R delay histories?
+
+## 2026-05-13: Probe 9 - `DescSize`
+
+Added `src/airwindows/descsize/`, fixed-threshold descriptor size probes.
+
+Purpose:
+
+* Measure whether the default custom `ctx[3]` descriptor allocation is large
+  enough for `StereoChorus`.
+* Avoid a size-selection knob by building fixed-threshold variants.
+* Keep hardware interaction to a single `Arm` switch per test.
+
+Why these thresholds:
+
+Airwindows `StereoChorus` needs two `int[65536]` delay lines. On the C674x
+target, `int` is 32-bit, so the delay lines alone need:
+
+`2 * 65536 * 4 = 524288 bytes`.
+
+Variants:
+
+| ZDL | Threshold |
+|---|---:|
+| `Dsz512K.ZDL` | 524288 bytes |
+| `Dsz256K.ZDL` | 262144 bytes |
+| `Dsz128K.ZDL` | 131072 bytes |
+| `Dsz064K.ZDL` | 65536 bytes |
+| `Dsz004K.ZDL` | 4096 bytes |
+
+Behavior:
+
+* `Arm=0`: pass-through, no `ctx[3]` dereference.
+* `Arm=1`: read `ctx[3][0..2]`, validate descriptor shape, and wobble only if
+  `ctx[3][1] - ctx[3][0]` is at least the variant threshold.
+* No descriptor-buffer writes.
+
+Testing guidance:
+
+Flash/test one threshold at a time if the pedal dislikes multiple diagnostic
+ZDLs installed together. Start with `Dsz512K.ZDL`:
+
+1. Load `Dsz512K.ZDL`.
+2. `Arm=0`: should pass through.
+3. `Arm=1`: if it wobbles, the default descriptor allocation is at least
+   512 KiB, enough for the raw `StereoChorus` L/R delay arrays.
+4. If `Dsz512K` does not wobble, test `Dsz256K`, then `Dsz128K`, then
+   `Dsz064K`, then `Dsz004K`.
+5. The highest wobbling threshold is the first coarse lower bound for the
+   default descriptor allocation.
+
+Build result:
+
+* Command: `python3 -B build_all.py descsize`
+* Outputs:
+  * `dist/Dsz512K.ZDL`: 4898 bytes.
+  * `dist/Dsz256K.ZDL`: 4898 bytes.
+  * `dist/Dsz128K.ZDL`: 4898 bytes.
+  * `dist/Dsz064K.ZDL`: 4898 bytes.
+  * `dist/Dsz004K.ZDL`: 4842 bytes.
+* Each output:
+  * `.text`: 0 bytes.
+  * `.fardata`: 0 bytes.
+  * Applied object relocations: 0.

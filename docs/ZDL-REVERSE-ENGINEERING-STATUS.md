@@ -159,6 +159,9 @@ whether a large-buffer hook exists; we need to measure/default-size it, prove it
 is per instance, and learn whether metadata can request enough memory for
 `StereoChorus`-class delay lines.
 
+`DescSize` is the active size probe. Its `Dsz512K` variant tests the raw memory
+required by `StereoChorus`'s two `int[65536]` arrays: 524,288 bytes.
+
 Parameter table:
 
 | Slot | Meaning |

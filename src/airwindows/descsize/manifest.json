@@ -1,0 +1,67 @@
+{
+  "effect_name": "Dsz512K",
+  "comment": "Hardware ABI probe. Fixed-threshold ctx[3] descriptor size tests. Flash/test one threshold at a time if multiple diagnostic ZDLs cause loader trouble.",
+
+  "gid": 2,
+  "gid_comment": "0x02 = Filter category. Diagnostic only.",
+
+  "fxid": 417,
+  "fxid_comment": "0x01a1..0x01a5, follows DescComb probe ID.",
+
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "descriptor": "ctx[3]",
+
+  "variants": [
+    {
+      "effect_name": "Dsz512K",
+      "audio_func_name": "Fx_FLT_Dsz512K",
+      "fxid": 417,
+      "threshold_bytes": 524288,
+      "screen_label": "Size512"
+    },
+    {
+      "effect_name": "Dsz256K",
+      "audio_func_name": "Fx_FLT_Dsz256K",
+      "fxid": 418,
+      "threshold_bytes": 262144,
+      "screen_label": "Size256"
+    },
+    {
+      "effect_name": "Dsz128K",
+      "audio_func_name": "Fx_FLT_Dsz128K",
+      "fxid": 419,
+      "threshold_bytes": 131072,
+      "screen_label": "Size128"
+    },
+    {
+      "effect_name": "Dsz064K",
+      "audio_func_name": "Fx_FLT_Dsz064K",
+      "fxid": 420,
+      "threshold_bytes": 65536,
+      "screen_label": "Size64"
+    },
+    {
+      "effect_name": "Dsz004K",
+      "audio_func_name": "Fx_FLT_Dsz004K",
+      "fxid": 421,
+      "threshold_bytes": 4096,
+      "screen_label": "Size4"
+    }
+  ],
+
+  "params": [
+    {
+      "name": "Arm",
+      "type": "switch",
+      "max": 1,
+      "default": 0,
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.0,
+      "comment": "0=safe pass-through, 1=read ctx[3] and wobble only if descriptor byte length meets this variant threshold."
+    }
+  ],
+
+  "audio_nop": false
+}
