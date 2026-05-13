@@ -76,6 +76,12 @@ persistent state instead of `.fardata` or the old stateless approximation.
 This is not yet a final 1:1 claim: it still uses the Zoom float32 port and
 links `__c6xabi_divf`, which must be hardware-tested as the next boundary.
 
+Public documentation note: after the repo was shared publicly, the README was
+rewritten to put `dist/` first as the download folder for release ZDLs, document
+the Zoom Effect Manager folder-import workflow, remove stale references to
+ignored local research trees from the repo layout, and keep experimental claims
+separate from hardware-confirmed effects.
+
 ## Source Anchors
 
 Airwindows upstream source:
