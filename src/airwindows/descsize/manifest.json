@@ -173,6 +173,34 @@
       "fxid": 440,
       "threshold_bytes": 692224,
       "screen_label": "Size676"
+    },
+    {
+      "effect_name": "Dsz694K",
+      "audio_func_name": "Fx_FLT_Dsz694K",
+      "fxid": 441,
+      "threshold_bytes": 710656,
+      "screen_label": "Size694"
+    },
+    {
+      "effect_name": "Dsz692K",
+      "audio_func_name": "Fx_FLT_Dsz692K",
+      "fxid": 442,
+      "threshold_bytes": 708608,
+      "screen_label": "Size692"
+    },
+    {
+      "effect_name": "Dsz690K",
+      "audio_func_name": "Fx_FLT_Dsz690K",
+      "fxid": 443,
+      "threshold_bytes": 706560,
+      "screen_label": "Size690"
+    },
+    {
+      "effect_name": "Dsz689K",
+      "audio_func_name": "Fx_FLT_Dsz689K",
+      "fxid": 444,
+      "threshold_bytes": 705536,
+      "screen_label": "Size689"
     }
   ],
 

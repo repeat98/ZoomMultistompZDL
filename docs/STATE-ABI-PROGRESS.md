@@ -1602,3 +1602,43 @@ Test high to low: `Dsz696K`, `Dsz688K`, `Dsz680K`, then `Dsz676K`. The
 highest wobbling threshold is the next lower bound; the lowest silent threshold
 is the next upper bound. Note the naming trap: `Dsz0640` means 640 bytes, while
 the `DszNNNK` files mean KiB-scale thresholds.
+
+Hardware/operator result:
+
+* `Dsz688K` still wobbles.
+* `Dsz696K` does not wobble.
+
+Interpretation:
+
+The default custom `ctx[3]` descriptor allocation is now bracketed at
+`>= 704512` bytes and `< 712704` bytes. That leaves at least 180224 bytes above
+`StereoChorus`'s raw 524288-byte L/R delay-line requirement.
+
+Follow-up near-final size build:
+
+Added thresholds inside the 688-696 KiB window:
+
+| ZDL | Threshold |
+|---|---:|
+| `Dsz694K.ZDL` | 710656 bytes |
+| `Dsz692K.ZDL` | 708608 bytes |
+| `Dsz690K.ZDL` | 706560 bytes |
+| `Dsz689K.ZDL` | 705536 bytes |
+
+Build result for near-final thresholds:
+
+* Command: `python3 -B build_all.py descsize`
+* New outputs:
+  * `dist/Dsz694K.ZDL`: 4906 bytes.
+  * `dist/Dsz692K.ZDL`: 4906 bytes.
+  * `dist/Dsz690K.ZDL`: 4906 bytes.
+  * `dist/Dsz689K.ZDL`: 4906 bytes.
+* Each new output:
+  * `.audio`: 608 bytes.
+  * `.text`: 0 bytes.
+  * `.fardata`: 0 bytes.
+  * Applied object relocations: 0.
+
+Testing guidance:
+
+Test high to low: `Dsz694K`, `Dsz692K`, `Dsz690K`, then `Dsz689K`.
