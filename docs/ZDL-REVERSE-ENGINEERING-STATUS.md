@@ -164,8 +164,9 @@ KiB as measured by `ctx[3][1] - ctx[3][0]`: `Dsz512K` wobbles on hardware. That
 clears the raw memory requirement for `StereoChorus`'s two `int[65536]` delay
 arrays. `DescIso` then showed two armed instances in different FX slots pass
 through with opposite roles, so the large descriptor buffer is currently treated
-as per instance. Higher `DescSize` thresholds from 576 KiB through 4 MiB are now
-built to bracket the allocation more tightly.
+as per instance. `Dsz640K` wobbles while `Dsz768K` and higher do not, so the
+allocation is currently bracketed at at least 655,360 bytes and below 786,432
+bytes. Fine thresholds from 648 KiB through 704 KiB are now built.
 
 Parameter table:
 

@@ -1516,3 +1516,46 @@ Testing guidance:
 Test high to low: `Dsz4096`, `Dsz2048`, `Dsz1024`, `Dsz0768`, `Dsz640K`,
 `Dsz576K`. The highest threshold that wobbles is the next coarse lower bound for
 the descriptor allocation. If `Dsz4096` wobbles, add an even higher ladder.
+
+Hardware/operator result:
+
+* `Dsz640K` still wobbles.
+* `Dsz0768`, `Dsz1024`, `Dsz2048`, and `Dsz4096` do not wobble.
+
+Interpretation:
+
+The descriptor allocation is at least 655360 bytes and below 786432 bytes. This
+is enough for `StereoChorus`'s raw 524288-byte L/R delay-line requirement plus
+roughly 128 KiB of headroom at minimum. It is not a huge pool; exact ports
+should treat the descriptor buffer as precious and avoid unrelated scratch
+allocations there.
+
+Follow-up fine-size build:
+
+Added thresholds between 640 KiB and 768 KiB:
+
+| ZDL | Threshold |
+|---|---:|
+| `Dsz704K.ZDL` | 720896 bytes |
+| `Dsz672K.ZDL` | 688128 bytes |
+| `Dsz656K.ZDL` | 671744 bytes |
+| `Dsz648K.ZDL` | 663552 bytes |
+
+Build result for fine thresholds:
+
+* Command: `python3 -B build_all.py descsize`
+* New outputs:
+  * `dist/Dsz704K.ZDL`: 4898 bytes.
+  * `dist/Dsz672K.ZDL`: 4898 bytes.
+  * `dist/Dsz656K.ZDL`: 4906 bytes.
+  * `dist/Dsz648K.ZDL`: 4898 bytes.
+* Each new output:
+  * `.text`: 0 bytes.
+  * `.fardata`: 0 bytes.
+  * Applied object relocations: 0.
+
+Testing guidance:
+
+Test `Dsz704K`, `Dsz672K`, `Dsz656K`, and `Dsz648K`. The highest one that
+wobbles gives the next lower bound for the allocation; the lowest one that does
+not wobble gives the next upper bound.
