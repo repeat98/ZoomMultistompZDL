@@ -45,6 +45,11 @@ The Stage-knob approach still crashed around UI Stage 13, so it has been
 replaced by fixed-stage ZDLs: `StChS0` through `StChS5`. These remove parameter
 scaling from the test. `StChS1` is now the clean descriptor-read-only boundary.
 
+Fixed-stage hardware testing shows `StChS0` through `StChS4` survive and only
+`StChS5` crashes, so the `ctx[3]` state path works and the failure is in the
+chorus processing core. The current `StChS5` rebuild removes runtime float
+division to isolate the previous `__c6xabi_divf` dependency.
+
 ## Source Anchors
 
 Airwindows upstream source:

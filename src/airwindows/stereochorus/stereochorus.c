@@ -79,17 +79,11 @@ static inline float sin_approx(float x)
     const float invTwoPi = 0.15915494309f;
 
     x = x - twoPi * (float)((int)(x * invTwoPi));
-    if (x < 0.0f) x += twoPi;
+    if (x < -pi) x += twoPi;
+    if (x > pi) x -= twoPi;
 
-    float sign = 1.0f;
-    if (x > pi) {
-        x -= pi;
-        sign = -1.0f;
-    }
-
-    float pmx = pi - x;
-    float xpmx = x * pmx;
-    return sign * ((16.0f * xpmx) / (49.348022f - (4.0f * xpmx)));
+    float y = (1.2732395447f * x) - (0.4052847346f * x * absf_local(x));
+    return y + (0.225f * ((y * absf_local(y)) - y));
 }
 
 static inline float pow10_source(float x)
@@ -212,7 +206,14 @@ void STCHORUS_AUDIO_FUNC(unsigned int *ctx)
 
     float speedBase = 0.32f + (A * 0.16666666667f);
     float speed = pow10_source(speedBase);
-    float depth = (B * 0.01666666667f) / speed;
+    /* Crash-isolation approximation: avoids __c6xabi_divf while keeping the
+     * source's depth growth in the same broad range for first hardware tests. */
+    float invBaseApprox = 8.84615385f - (12.01923077f * speedBase);
+    if (invBaseApprox < 2.0f) invBaseApprox = 2.0f;
+    if (invBaseApprox > 5.0f) invBaseApprox = 5.0f;
+    float invSpeedApprox = pow10_source(invBaseApprox);
+    float depth = B * 0.01666666667f * invSpeedApprox;
+    if (depth > 3000.0f) depth = 3000.0f;
     const float twoPi = 6.28318530718f;
 
     int i;

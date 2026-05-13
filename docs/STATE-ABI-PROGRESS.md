@@ -1919,3 +1919,42 @@ Next hardware check:
 Flash/test one fixed-stage ZDL at a time, starting with `StChS0`, then
 `StChS1`. Stop at the first one that crashes. This finally removes Stage-knob
 scaling from the experiment.
+
+Hardware/operator result:
+
+* `StChS0` through `StChS4` survive.
+* `StChS5` is the only fixed-stage variant that crashes.
+
+Interpretation:
+
+The `ctx[3]` state path is now cleared for this build: descriptor read,
+descriptor-base header write, one-chunk delay clear, and full lazy delay clear
+all work. The crash boundary is the chorus processing core.
+
+The previous `StChS5` was also the only stage variant that pulled in
+`__c6xabi_divf`, because it used float division in the sine approximation and
+in `depth = (B / 60) / speed`. That made runtime division/helper dispatch the
+next most suspicious difference.
+
+Follow-up no-division Stage 5 build:
+
+Changed the Stage 5 chorus core to avoid runtime float division:
+
+* `sin_approx()` now uses a multiply-only fast sine approximation.
+* `depth` now uses a bounded multiply-only reciprocal approximation for crash
+  isolation.
+* This is not the final 1:1 math; it is a hardware safety probe to test whether
+  the divide/helper path caused the crash.
+
+Build result:
+
+* Command: `python3 -B build_all.py stereochorus`
+* `dist/StChS5.ZDL`: 6858 bytes.
+* `StChS5` now has `.fardata`: 0 bytes, no external symbols, and no applied
+  object relocations.
+
+Next hardware check:
+
+Retest only `StChS5.ZDL`. If it survives, the divide/helper path was the likely
+crash source. If it still crashes, the next split is inside the chorus core:
+air compensation vs. integer delay write/read vs. output assignment.
