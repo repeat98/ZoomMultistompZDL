@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build StateIso fixed-magic ZDL variants from stateiso.c + manifest.json."""
+"""Build StateIso.ZDL from stateiso.c + manifest.json."""
 
 from __future__ import annotations
 
@@ -30,74 +30,44 @@ CFLAGS = [
 ]
 
 
-def parse_u32(raw: str | int) -> int:
-    if isinstance(raw, int):
-        return raw & 0xFFFFFFFF
-    return int(raw, 0) & 0xFFFFFFFF
-
-
 def main() -> None:
     manifest = json.loads((HERE / "manifest.json").read_text())
     write_param_header(manifest, HERE / "stateiso_params.h", "STATEISO")
 
     src_c = HERE / "stateiso.c"
+    obj = HERE / "stateiso.obj"
     out_dir = ROOT / "dist"
     out_dir.mkdir(exist_ok=True)
-    params = params_from_manifest(manifest["params"])
-    variants = manifest.get("variants") or [manifest]
-    outputs = []
+    out_zdl = out_dir / f"{manifest['effect_name']}.ZDL"
 
-    for variant in variants:
-        effect_name = variant.get("effect_name", manifest["effect_name"])
-        audio_func_name = variant.get("audio_func_name", manifest.get("audio_func_name"))
-        if audio_func_name is None:
-            audio_func_name = f"Fx_FLT_{effect_name}"
-        fxid = int(variant.get("fxid", manifest["fxid"]))
-        magic = parse_u32(variant.get("magic", "0x13579BDF"))
-        screen_label = variant.get("screen_label", effect_name)
+    print(f"[stateiso] compiling {src_c.name} -> {obj.name}")
+    subprocess.run(
+        [str(CL6X), *CFLAGS, "-c", str(src_c), f"--output_file={obj}"],
+        check=True,
+        cwd=HERE,
+    )
 
-        obj = HERE / f"{effect_name.lower()}.obj"
-        out_zdl = out_dir / f"{effect_name}.ZDL"
+    for junk in ("compiler.opt", "linker.cmd"):
+        p = HERE / junk
+        if p.exists():
+            p.unlink()
 
-        print(f"[stateiso] compiling {src_c.name} -> {obj.name} (magic 0x{magic:08X})")
-        subprocess.run(
-            [
-                str(CL6X),
-                *CFLAGS,
-                f"--define=STATEISO_MAGIC=0x{magic:08X}u",
-                f"--define=STATEISO_AUDIO_FUNC={audio_func_name}",
-                "-c",
-                str(src_c),
-                f"--output_file={obj}",
-            ],
-            check=True,
-            cwd=HERE,
-        )
+    cfg = LinkerConfig(
+        effect_name=manifest["effect_name"],
+        audio_func_name=manifest.get("audio_func_name"),
+        gid=manifest["gid"],
+        fxid=manifest["fxid"],
+        params=params_from_manifest(manifest["params"]),
+        obj_path=obj,
+        output_path=out_zdl,
+        fxid_version=manifest.get("fxid_version", "1.00").encode("ascii"),
+        flags_byte=manifest.get("flags_byte", 0x01),
+        screen_image=make_airwindows_tape_screen("StateIso", ""),
+        audio_nop=manifest.get("audio_nop", False),
+    )
+    link(cfg)
 
-        for junk in ("compiler.opt", "linker.cmd"):
-            p = HERE / junk
-            if p.exists():
-                p.unlink()
-
-        cfg = LinkerConfig(
-            effect_name=effect_name,
-            audio_func_name=audio_func_name,
-            gid=manifest["gid"],
-            fxid=fxid,
-            params=params,
-            obj_path=obj,
-            output_path=out_zdl,
-            fxid_version=manifest.get("fxid_version", "1.00").encode("ascii"),
-            flags_byte=manifest.get("flags_byte", 0x01),
-            screen_image=make_airwindows_tape_screen(screen_label, ""),
-            audio_nop=manifest.get("audio_nop", False),
-        )
-        link(cfg)
-        outputs.append(out_zdl)
-
-    print("\n[stateiso] done")
-    for out_zdl in outputs:
-        print(f"  -> {out_zdl}")
+    print(f"\n[stateiso] done -> {out_zdl}")
 
 
 if __name__ == "__main__":

@@ -4,17 +4,17 @@
  * Instance-isolation probe for the proven ctx[2] + 0x18 state block.
  *
  * With Arm off, this is pass-through and does not dereference ctx[2].
- * With Arm on, each variant writes STATEISO_MAGIC into word 19 of the
- * ctx[2] + 0x18 block. If another variant's magic is already there, the probe
- * reports that foreign stamp as stereo wobble.
+ * With Arm on, this writes a role-specific magic into word 19 of the ctx[2] +
+ * 0x18 block. If the opposite role's magic is already there, the probe reports
+ * that foreign stamp as stereo wobble.
  *
  * Expected interpretation:
- * - StateIsoA alone should settle to centered pass-through after the first
- *   callback, because it only sees its own stamp.
- * - StateIsoA + StateIsoB in separate slots should remain centered if the
+ * - StateIso alone should settle to centered pass-through after the first
+ *   callback, because it only sees its own role stamp.
+ * - Two StateIso instances with opposite roles should remain centered if the
  *   host state block is per instance.
- * - StateIsoA + StateIsoB should wobble continuously if both slots share the
- *   same ctx[2] + 0x18 block.
+ * - Two StateIso instances with opposite roles should wobble continuously if
+ *   both slots share the same ctx[2] + 0x18 block.
  */
 
 #include <stdint.h>
@@ -22,23 +22,15 @@
 #include "stateiso_params.h"
 
 #define ZDL_PTR(type, word) ((type)(uintptr_t)(word))
-#define STATEISO_DO_PRAGMA(x) _Pragma(#x)
-#define STATEISO_EXPAND_PRAGMA(x) STATEISO_DO_PRAGMA(x)
-#define STATEISO_CODE_SECTION(func) STATEISO_EXPAND_PRAGMA(CODE_SECTION(func, ".audio"))
+#pragma CODE_SECTION(Fx_FLT_StateIso, ".audio")
 
-#ifndef STATEISO_MAGIC
-#define STATEISO_MAGIC 0x13579BDFu
-#endif
-
-#ifndef STATEISO_AUDIO_FUNC
-#define STATEISO_AUDIO_FUNC Fx_FLT_StateIsoA
-#endif
+#define STATEISO_ROLE_A_MAGIC 0x13579BDFu
+#define STATEISO_ROLE_B_MAGIC 0x2468ACE0u
 
 #define STATEISO_PHASE_WORD 18u
 #define STATEISO_STAMP_WORD 19u
 
-STATEISO_CODE_SECTION(STATEISO_AUDIO_FUNC)
-void STATEISO_AUDIO_FUNC(unsigned int *ctx)
+void Fx_FLT_StateIso(unsigned int *ctx)
 {
     float *params = ZDL_PTR(float *, ctx[1]);
     float *fxBuf = ZDL_PTR(float *, ctx[5]);
@@ -49,6 +41,8 @@ void STATEISO_AUDIO_FUNC(unsigned int *ctx)
     *magicDst = *magicSrc;
 
     unsigned int arm = (params[STATEISO_ARM_SLOT] >= 0.001f) ? 1u : 0u;
+    unsigned int role = (params[STATEISO_ROLE_SLOT] >= 0.001f) ? 1u : 0u;
+    unsigned int magic = (role != 0u) ? STATEISO_ROLE_B_MAGIC : STATEISO_ROLE_A_MAGIC;
     float gainL = 1.0f;
     float gainR = 1.0f;
 
@@ -59,9 +53,9 @@ void STATEISO_AUDIO_FUNC(unsigned int *ctx)
         unsigned int phase = state[STATEISO_PHASE_WORD] + 1u;
 
         state[STATEISO_PHASE_WORD] = phase;
-        state[STATEISO_STAMP_WORD] = (unsigned int)STATEISO_MAGIC;
+        state[STATEISO_STAMP_WORD] = magic;
 
-        if (prev != 0u && prev != (unsigned int)STATEISO_MAGIC) {
+        if (prev != 0u && prev != magic) {
             if ((phase & 0x20u) != 0u) {
                 gainL = 0.08f;
                 gainR = 1.80f;

@@ -1,6 +1,8 @@
 {
-  "effect_name": "StateIsoA",
-  "comment": "Hardware ABI probe. Tests whether the proven ctx[2]+0x18 state block is private per effect instance by stamping variant-specific magic into word 19.",
+  "effect_name": "StateIso",
+  "comment": "Hardware ABI probe. Tests whether the proven ctx[2]+0x18 state block is private per effect instance by stamping role-specific magic into word 19. Use two instances of this same effect in one patch.",
+
+  "audio_func_name": "Fx_FLT_StateIso",
 
   "gid": 2,
   "gid_comment": "0x02 = Filter category. Diagnostic only.",
@@ -13,23 +15,8 @@
   "state_base": "ctx[2]+0x18",
   "phase_word": 18,
   "stamp_word": 19,
-
-  "variants": [
-    {
-      "effect_name": "StateIsoA",
-      "audio_func_name": "Fx_FLT_StateIsoA",
-      "fxid": 413,
-      "magic": "0x13579BDF",
-      "screen_label": "Iso A"
-    },
-    {
-      "effect_name": "StateIsoB",
-      "audio_func_name": "Fx_FLT_StateIsoB",
-      "fxid": 414,
-      "magic": "0x2468ACE0",
-      "screen_label": "Iso B"
-    }
-  ],
+  "role_a_magic": "0x13579BDF",
+  "role_b_magic": "0x2468ACE0",
 
   "params": [
     {
@@ -41,6 +28,16 @@
       "audio_max": 1.0,
       "audio_default": 0.0,
       "comment": "0=safe pass-through, 1=stamp ctx[2]+0x18 word 19 and report foreign stamps as stereo wobble."
+    },
+    {
+      "name": "Role",
+      "type": "switch",
+      "max": 1,
+      "default": 0,
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.0,
+      "comment": "0=role A magic, 1=role B magic. Set duplicate instances to opposite roles."
     }
   ],
 

@@ -1005,3 +1005,44 @@ Build result for unique-symbol version:
   * ZDL size: 4786 bytes.
 * String check confirms the exported callback/edit/init/onf symbols are
   variant-specific.
+
+Hardware/operator result:
+
+* The pedal still does not boot when both `StateIsoA` and `StateIsoB` are
+  flashed, even after giving the variants unique callback/edit/init/onf symbols.
+
+Interpretation:
+
+The duplicate-symbol hypothesis is ruled out. Two separately installed
+`StateIso` diagnostic ZDLs appear to trigger a loader/package conflict before
+audio-instance testing can begin. Do not flash the A/B pair for further tests.
+
+Follow-up fix:
+
+Replaced the A/B pair with a single `StateIso.ZDL` that can be duplicated in two
+effect slots. It has two safe stock-handler controls:
+
+* `Arm`: `0` = pass-through, `1` = stamp/test `ctx[2] + 0x18`.
+* `Role`: `0` = write role-A magic `0x13579BDF`, `1` = write role-B magic
+  `0x2468ACE0`.
+
+New testing guidance:
+
+1. Flash only `StateIso.ZDL`; remove `StateIsoA.ZDL` and `StateIsoB.ZDL` from
+   the pedal.
+2. Confirm the pedal boots with the single installed effect.
+3. Add one `StateIso` instance, set `Arm=1`, leave `Role=0`. It should pass
+   audio without continuous wobble.
+4. Add two `StateIso` instances in one patch. Set slot 1 to `Arm=1, Role=0`;
+   set slot 2 to `Arm=1, Role=1`.
+5. Continuous wobble means the two instances share the same host state block.
+   Centered/pass-through means the block is likely per instance.
+
+Build result for single-effect duplicate-instance version:
+
+* Command: `python3 -B build_all.py stateiso`
+* Output: `dist/StateIso.ZDL`
+* `.audio`: 544 bytes.
+* `.text`: 0 bytes.
+* `.fardata`: 0 bytes.
+* ZDL size: 4958 bytes.
