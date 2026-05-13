@@ -31,6 +31,14 @@ Start here if you want more than the download folder:
 | [docs/ZDL-REVERSE-ENGINEERING-STATUS.md](docs/ZDL-REVERSE-ENGINEERING-STATUS.md) | Current map of the ZDL wrapper, runtime ABI, and known state fields. |
 | [docs/STATE-ABI-PROGRESS.md](docs/STATE-ABI-PROGRESS.md) | Hardware probe log and findings we do not want to lose. |
 | [docs/AIRWINDOWS-1TO1-PORT-ROADMAP.md](docs/AIRWINDOWS-1TO1-PORT-ROADMAP.md) | Roadmap for making honest source-equivalent Airwindows ports. |
+| [docs/AIRWINDOWS-EXACT-PORTS.md](docs/AIRWINDOWS-EXACT-PORTS.md) | Rules for what can and cannot be called a 1:1 Airwindows port. |
+| [docs/SAFE-DSP-RULES.md](docs/SAFE-DSP-RULES.md) | Pedal-safe DSP/linking constraints learned from hardware failures. |
+| [docs/3-PARAM-LINKER-BUG.md](docs/3-PARAM-LINKER-BUG.md) | Investigation of the old edit-mode parameter-count bug. |
+| [docs/TI-PDF-NOTES.md](docs/TI-PDF-NOTES.md) | Notes distilled from the TI C6000 manuals in this folder. |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Hardware-test asks and contribution notes. |
+| [docs/sprab89b.pdf](docs/sprab89b.pdf) | TI C6000 application note reference. |
+| [docs/sprui03f.pdf](docs/sprui03f.pdf) | TI C6000 compiler/toolchain reference. |
+| [docs/sprui04g.pdf](docs/sprui04g.pdf) | TI C6000 assembly/linker tools reference. |
 | [build/ABI.md](build/ABI.md) | Low-level linker/runtime ABI reference for developers. |
 
 ## Install With Zoom Effect Manager
