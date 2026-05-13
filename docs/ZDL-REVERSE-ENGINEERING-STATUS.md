@@ -162,8 +162,10 @@ is per instance, and learn whether metadata can request enough memory for
 `DescSize` confirms the default custom descriptor allocation is at least 512
 KiB as measured by `ctx[3][1] - ctx[3][0]`: `Dsz512K` wobbles on hardware. That
 clears the raw memory requirement for `StereoChorus`'s two `int[65536]` delay
-arrays. `DescIso` is now the active probe for whether this large descriptor
-buffer is per effect instance.
+arrays. `DescIso` then showed two armed instances in different FX slots pass
+through with opposite roles, so the large descriptor buffer is currently treated
+as per instance. Higher `DescSize` thresholds from 576 KiB through 4 MiB are now
+built to bracket the allocation more tightly.
 
 Parameter table:
 

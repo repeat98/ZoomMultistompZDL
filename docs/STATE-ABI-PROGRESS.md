@@ -1467,3 +1467,52 @@ Build result:
 * `.fardata`: 0 bytes.
 * Applied object relocations: 0.
 * ZDL size: 4982 bytes.
+
+Hardware/operator result:
+
+* Two `DescIso` instances loaded on different FX slots pass audio straight
+  through when both are armed.
+* This stayed true with different `Role` settings and with matching `Role`
+  settings.
+
+Interpretation:
+
+This is the expected result for isolated per-instance descriptor memory. If two
+instances shared the same `ctx[3]` base memory, opposite roles should repeatedly
+see each other's magic stamp and produce stereo wobble. Working conclusion:
+each FX slot gets its own large descriptor buffer.
+
+Follow-up size question:
+
+`Dsz512K` proves the descriptor is at least 512 KiB, but that is still only a
+lower bound. Added higher thresholds to bracket the real allocation size:
+
+| ZDL | Threshold |
+|---|---:|
+| `Dsz4096.ZDL` | 4194304 bytes |
+| `Dsz2048.ZDL` | 2097152 bytes |
+| `Dsz1024.ZDL` | 1048576 bytes |
+| `Dsz0768.ZDL` | 786432 bytes |
+| `Dsz640K.ZDL` | 655360 bytes |
+| `Dsz576K.ZDL` | 589824 bytes |
+
+Build result for higher thresholds:
+
+* Command: `python3 -B build_all.py descsize`
+* New outputs:
+  * `dist/Dsz4096.ZDL`: 4898 bytes.
+  * `dist/Dsz2048.ZDL`: 4906 bytes.
+  * `dist/Dsz1024.ZDL`: 4906 bytes.
+  * `dist/Dsz0768.ZDL`: 4898 bytes.
+  * `dist/Dsz640K.ZDL`: 4898 bytes.
+  * `dist/Dsz576K.ZDL`: 4898 bytes.
+* Each new output:
+  * `.text`: 0 bytes.
+  * `.fardata`: 0 bytes.
+  * Applied object relocations: 0.
+
+Testing guidance:
+
+Test high to low: `Dsz4096`, `Dsz2048`, `Dsz1024`, `Dsz0768`, `Dsz640K`,
+`Dsz576K`. The highest threshold that wobbles is the next coarse lower bound for
+the descriptor allocation. If `Dsz4096` wobbles, add an even higher ladder.

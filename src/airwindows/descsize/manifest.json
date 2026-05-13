@@ -6,7 +6,7 @@
   "gid_comment": "0x02 = Filter category. Diagnostic only.",
 
   "fxid": 417,
-  "fxid_comment": "0x01a1..0x01a9, follows DescComb probe ID.",
+  "fxid_comment": "0x01a1..0x01b0, follows DescComb/DescIso probe IDs.",
 
   "fxid_version": "1.00",
   "flags_byte": 1,
@@ -75,6 +75,48 @@
       "fxid": 425,
       "threshold_bytes": 640,
       "screen_label": "Size640"
+    },
+    {
+      "effect_name": "Dsz4096",
+      "audio_func_name": "Fx_FLT_Dsz4096",
+      "fxid": 427,
+      "threshold_bytes": 4194304,
+      "screen_label": "Size4M"
+    },
+    {
+      "effect_name": "Dsz2048",
+      "audio_func_name": "Fx_FLT_Dsz2048",
+      "fxid": 428,
+      "threshold_bytes": 2097152,
+      "screen_label": "Size2M"
+    },
+    {
+      "effect_name": "Dsz1024",
+      "audio_func_name": "Fx_FLT_Dsz1024",
+      "fxid": 429,
+      "threshold_bytes": 1048576,
+      "screen_label": "Size1M"
+    },
+    {
+      "effect_name": "Dsz0768",
+      "audio_func_name": "Fx_FLT_Dsz0768",
+      "fxid": 430,
+      "threshold_bytes": 786432,
+      "screen_label": "Size768"
+    },
+    {
+      "effect_name": "Dsz640K",
+      "audio_func_name": "Fx_FLT_Dsz640K",
+      "fxid": 431,
+      "threshold_bytes": 655360,
+      "screen_label": "Size640"
+    },
+    {
+      "effect_name": "Dsz576K",
+      "audio_func_name": "Fx_FLT_Dsz576K",
+      "fxid": 432,
+      "threshold_bytes": 589824,
+      "screen_label": "Size576"
     }
   ],
 

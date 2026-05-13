@@ -359,6 +359,9 @@ base memory is writable audio history (`UseBuf=1` sounded like a delay effect).
 `DescSize` then proved the default descriptor allocation is at least 524288
 bytes (`Dsz512K` wobbles), enough for the raw two-array memory requirement of
 Airwindows `StereoChorus`.
+`DescIso` showed two duplicate instances in separate FX slots do not see each
+other's descriptor-memory stamps, so `ctx[3]` is currently treated as
+per-instance.
 
 ### 5.3 Init `Fx_FLT_<Name>_init`
 
