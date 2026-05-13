@@ -335,6 +335,27 @@ floats per call**, channel-interleaved as `LLLLLLLL RRRRRRRR`.
 Implementations use a 2-iteration outer loop over channels (`MVK 2,B0`)
 and 8 inline samples per inner block.
 
+#### Provisional host state fields [hardware + stock-disassembly]
+
+Custom hardware probes prove that `ctx[2] + 0x10` and `ctx[2] + 0x18` are
+writable, persistent, and likely per-instance for at least words 0, 12, 18, and
+19. `StateComb` used `ctx[2] + 0x18` words 0..15 plus word 18 as a tiny comb
+history, so this block can hold small DSP state.
+
+Stock delay/modulation disassembly points to `ctx[3]` as the likely large
+host-managed buffer descriptor:
+
+```
+ctx[3][0]  candidate base pointer
+ctx[3][1]  candidate end pointer
+ctx[3][2]  candidate wrap span / byte length
+```
+
+Stock `DELAY`, `ANLGDLY`, `TAPEECHO`, and `STCHO` form sample-history addresses
+from `ctx[3][0]`, compare against `ctx[3][1]`, and subtract/reload
+`ctx[3][2]` when wrapping. This is still not hardware-confirmed for custom
+ZDLs; `DescComb.ZDL` is the current probe.
+
 ### 5.3 Init `Fx_FLT_<Name>_init`
 
 CH_2.md observed for LineSel: init calls `_onf`, `_edit_efx`, `_edit_out`

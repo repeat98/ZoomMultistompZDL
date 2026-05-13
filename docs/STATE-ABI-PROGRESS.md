@@ -1134,3 +1134,94 @@ Current conclusion:
 * The remaining blocker for 1:1 `StereoChorus` is not whether host state works
   at all; it is finding a safe large-buffer mechanism for the two 65536-sample
   delay lines.
+
+## 2026-05-13: Stock `ctx[3]` Large-Buffer Candidate
+
+Re-disassembled stock delay/modulation effects into
+`/tmp/zoom-large-buffer-trace` and inspected the instruction neighborhoods
+around `ctx[3]`.
+
+Command used:
+
+```bash
+python3 -B build/disassemble_zdl.py \
+  working_zdls/MS-70CDR_STCHO.ZDL \
+  working_zdls/MS-70CDR_DELAY.ZDL \
+  working_zdls/MS-70CDR_TAPEECHO.ZDL \
+  working_zdls/MS-70CDR_MODREV.ZDL \
+  working_zdls/MS-70CDR_STDELAY.ZDL \
+  working_zdls/MS-70CDR_ANLGDLY.ZDL \
+  --out-dir /tmp/zoom-large-buffer-trace
+```
+
+Observed stock pattern:
+
+* `DELAY`, `ANLGDLY`, `TAPEECHO`, and `STCHO` all load `ctx[3]` and read
+  descriptor fields `[0]`, `[1]`, and `[2]`.
+* The code then forms addresses from field `[0]`, compares generated pointers
+  with field `[1]`, and subtracts/reloads field `[2]` when wrapping.
+* This strongly suggests:
+  * `ctx[3][0]` = large-buffer base pointer.
+  * `ctx[3][1]` = large-buffer end pointer.
+  * `ctx[3][2]` = wrap span / buffer byte length.
+* `STDELAY` additionally doubleword-loads through a pointer path rooted in
+  `ctx[3][0]`, consistent with stereo or paired sample history.
+
+Important examples:
+
+* `DELAY` stores a float through `ctx[3][0] + offset`, then later reads
+  `ctx[3][1]` and `ctx[3][2]` around wrap checks.
+* `TAPEECHO` stores computed sample history through the same descriptor shape.
+* `STCHO` does multiple wrap-checked reads from descriptor memory while also
+  maintaining small scalar state at `ctx[2] + 0x18`.
+
+Working interpretation:
+
+`ctx[2] + offset` is small per-instance scalar state. `ctx[3]` is now the best
+candidate for the stock host-managed large delay/reverb/modulation buffer.
+
+## 2026-05-13: Probe 8 - `DescComb`
+
+Added `src/airwindows/desccomb/`, a staged hardware probe for the stock
+`ctx[3]` descriptor candidate.
+
+Purpose:
+
+* Test whether custom ZDLs receive a valid `ctx[3]` descriptor.
+* First read and validate the descriptor without writing descriptor memory.
+* Then use descriptor base memory as a tiny comb ring if the read-only stage
+  looks safe.
+
+Behavior:
+
+* `Arm=0`: pass-through, no `ctx[3]` dereference.
+* `Arm=1`, `UseBuf=0`: read `ctx[3][0..2]`. If the descriptor looks plausible
+  (`base < end`, aligned, at least 96 bytes, sane span), report that with
+  stereo wobble using the already proven `ctx[2] + 0x18` counter.
+* `Arm=1`, `UseBuf=1`: use descriptor base memory as a 16-sample mono comb
+  ring, with ring index at descriptor word 16.
+
+Testing guidance:
+
+1. Flash only `DescComb.ZDL` for this test.
+2. Load one instance with `Arm=0`, `UseBuf=0`; confirm pass-through.
+3. Set `Arm=1`, keep `UseBuf=0`.
+4. If this produces stereo wobble, `ctx[3]` read succeeded and the descriptor
+   looks plausible.
+5. Only if step 4 is stable, set `UseBuf=1`.
+6. If `UseBuf=1` produces slight comb/filter coloration, descriptor base memory
+   is writable DSP history and is our first proven large-buffer hook.
+7. If step 3 crashes/freezes, `ctx[3]` itself is unsafe for custom ZDLs or needs
+   setup we have not reproduced.
+8. If step 3 passes through with no wobble, custom ZDLs may get a null/invalid
+   descriptor unless metadata asks the host for one.
+
+Build result:
+
+* Command: `python3 -B build_all.py desccomb`
+* Output: `dist/DescComb.ZDL`
+* `.audio`: 1248 bytes.
+* `.text`: 0 bytes.
+* `.fardata`: 0 bytes.
+* Applied object relocations: 0.
+* ZDL size: 5666 bytes.

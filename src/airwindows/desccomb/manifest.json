@@ -1,0 +1,44 @@
+{
+  "effect_name": "DescComb",
+  "comment": "Hardware ABI probe. Tests whether ctx[3] is the stock large-buffer descriptor: word 0 base pointer, word 1 end pointer, word 2 wrap/span. Arm first with UseBuf=0, then enable UseBuf to try a tiny comb in descriptor memory.",
+
+  "audio_func_name": "Fx_FLT_DescComb",
+
+  "gid": 2,
+  "gid_comment": "0x02 = Filter category. Diagnostic only.",
+
+  "fxid": 416,
+  "fxid_comment": "0x01a0, follows StateComb probe ID.",
+
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "descriptor": "ctx[3]",
+  "base_word": 0,
+  "end_word": 1,
+  "span_word": 2,
+
+  "params": [
+    {
+      "name": "Arm",
+      "type": "switch",
+      "max": 1,
+      "default": 0,
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.0,
+      "comment": "0=safe pass-through, 1=read ctx[3] descriptor."
+    },
+    {
+      "name": "UseBuf",
+      "type": "switch",
+      "max": 1,
+      "default": 0,
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.0,
+      "comment": "0=only report plausible descriptor as stereo wobble, 1=write a tiny comb into descriptor base memory."
+    }
+  ],
+
+  "audio_nop": false
+}

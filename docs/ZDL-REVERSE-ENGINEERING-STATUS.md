@@ -138,6 +138,12 @@ Diagnostic probes that ignore `params[0]` can still contribute audio while the
 pedal UI reports bypass. Production ports must explicitly honor OnOff/bypass
 state or reproduce stock bypass behavior.
 
+The strongest current large-buffer candidate is `ctx[3]`. Stock `DELAY`,
+`ANLGDLY`, `TAPEECHO`, and `STCHO` read fields 0, 1, and 2 from `ctx[3]`, then
+use the values as a base pointer, end pointer, and wrap/span while reading or
+writing sample history. `DescComb.ZDL` is the first hardware probe for whether
+custom ZDLs receive the same descriptor.
+
 Parameter table:
 
 | Slot | Meaning |
