@@ -128,8 +128,15 @@ Hardware probes now show that custom ZDLs can write persistent words through
 stock-style derived state blocks at `ctx[2] + 0x10` and `ctx[2] + 0x18`.
 Words 0, 12, 18, and 19 wobble successfully at both bases. A duplicate-instance
 probe did not show cross-instance stamp leakage, so `ctx[2] + 0x18` is currently
-treated as likely per-instance for the tested words. This is enough for small
-scalar DSP state, but not enough for large Airwindows delay/reverb history.
+treated as likely per-instance for the tested words. `StateComb` then used
+words 0..15 plus word 18 at `ctx[2] + 0x18` as a tiny 16-sample comb history,
+and hardware produced audible comb filtering. This is enough for small scalar
+or very small audio-history DSP state, but not enough for large Airwindows
+delay/reverb history.
+
+Diagnostic probes that ignore `params[0]` can still contribute audio while the
+pedal UI reports bypass. Production ports must explicitly honor OnOff/bypass
+state or reproduce stock bypass behavior.
 
 Parameter table:
 

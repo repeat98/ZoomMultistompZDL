@@ -1104,3 +1104,33 @@ Build result:
 * `.fardata`: 0 bytes.
 * Applied object relocations: 0.
 * ZDL size: 5062 bytes.
+
+Hardware/operator result:
+
+* With `Arm=1` and `Mix` turned up, slight comb filtering is audible.
+* The comb filtering is audible whether the pedal reports the effect as active
+  or bypassed.
+
+Interpretation:
+
+This confirms the proven `ctx[2] + 0x18` words can hold real DSP sample
+history across audio callbacks, not just integer counters or magic stamps. The
+audible result is small because the ring is only 16 mono samples, but it is the
+first direct hardware proof that custom ZDLs can use this host block as
+per-instance audio history.
+
+The bypass observation is also important: `StateComb` intentionally does not
+honor `params[0]`/OnOff, so it continues contributing audio while the pedal UI
+shows bypass. Do not use diagnostic-probe bypass behavior as evidence of stock
+effect bypass semantics. Production ports must explicitly respect the OnOff
+state or otherwise match stock bypass behavior.
+
+Current conclusion:
+
+* `ctx[2] + 0x18` is persistent.
+* Tested words through 19 are writable.
+* The block appears per-instance for duplicate effect slots.
+* The block can hold real audio-history floats.
+* The remaining blocker for 1:1 `StereoChorus` is not whether host state works
+  at all; it is finding a safe large-buffer mechanism for the two 65536-sample
+  delay lines.
