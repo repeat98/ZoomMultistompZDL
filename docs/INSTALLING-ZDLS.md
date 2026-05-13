@@ -11,13 +11,13 @@ newer and point it at that folder.
 3. Choose `Read Effects from folder`.
 4. Select this repo's `dist/` folder.
 
-![Read effects from folder](images/zem-read-effects-from-folder.svg)
+![Read effects from folder](images/read-effects.png)
 
 5. In the effect source/filter area, enable `Effects from devices`.
 6. Enable `From Folder`.
 7. Add the desired custom effects and write them to the pedal.
 
-![Enable From Folder](images/zem-enable-from-folder.svg)
+![Enable From Folder](images/from-folder.png)
 
 ## Notes
 

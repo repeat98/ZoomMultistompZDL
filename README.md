@@ -21,6 +21,18 @@ Current release artifacts:
 Tested hardware so far: Zoom MS-70CDR firmware 2.10. Other ZDL-based
 MultiStomp models may work, but are not yet confirmed.
 
+## Documentation
+
+Start here if you want more than the download folder:
+
+| Doc | What it covers |
+|---|---|
+| [docs/INSTALLING-ZDLS.md](docs/INSTALLING-ZDLS.md) | Step-by-step Zoom Effect Manager folder install. |
+| [docs/ZDL-REVERSE-ENGINEERING-STATUS.md](docs/ZDL-REVERSE-ENGINEERING-STATUS.md) | Current map of the ZDL wrapper, runtime ABI, and known state fields. |
+| [docs/STATE-ABI-PROGRESS.md](docs/STATE-ABI-PROGRESS.md) | Hardware probe log and findings we do not want to lose. |
+| [docs/AIRWINDOWS-1TO1-PORT-ROADMAP.md](docs/AIRWINDOWS-1TO1-PORT-ROADMAP.md) | Roadmap for making honest source-equivalent Airwindows ports. |
+| [build/ABI.md](build/ABI.md) | Low-level linker/runtime ABI reference for developers. |
+
 ## Install With Zoom Effect Manager
 
 Use [Zoom Effect Manager](https://zoomeffectmanager.com/en/download/) 2.3.3 or
@@ -32,13 +44,13 @@ official release notes say unknown effects should be added through `Settings`
 2. Choose `Read Effects from folder` and select this repo's [dist/](dist/)
    folder.
 
-![Zoom Effect Manager setting for reading effects from a folder](docs/images/zem-read-effects-from-folder.svg)
+![Zoom Effect Manager setting for reading effects from a folder](docs/images/read-effects.png)
 
 3. In the effect browser, enable `Effects from devices` and `From Folder`.
 4. Add the desired effects to the device and write them with Zoom Effect
    Manager.
 
-![Zoom Effect Manager source toggles for Effects from devices and From Folder](docs/images/zem-enable-from-folder.svg)
+![Zoom Effect Manager source toggles for Effects from devices and From Folder](docs/images/from-folder.png)
 
 Back up your current effect list before writing. This project is still reverse
 engineering firmware behavior, and experimental builds can crash or freeze a
@@ -144,15 +156,6 @@ ZoomPedalFun-main/       optional independent Zoom firmware RE work
 ```
 
 If you clone those beside the repo, keep treating them as read-only references.
-
-## Related Work
-
-This project builds on the older MS-series ZDL community work and on current
-ZD2 research. In particular, [mungewell/zoom-zt2 issue #93](https://github.com/mungewell/zoom-zt2/issues/93)
-shows the same useful direction for newer effects: download the effect
-container, extract the embedded TI C6000 ELF, and inspect it with TI's `dis6x`.
-Zoom Effect Manager's download notes also document the folder-import workflow
-for effects missing from the program's built-in list.
 
 ## Contributing
 
