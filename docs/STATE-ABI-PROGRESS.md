@@ -2000,3 +2000,11 @@ Cleanup:
 * Changed the default `python3 -B build_all.py` path to clean `dist/` and build
   only release artifacts. Diagnostic probes remain buildable by name or with
   `--all`.
+
+Follow-up release polish:
+
+* Added dedicated `StereoChorus` screen art instead of reusing the ToTape-style
+  image.
+* Placed the two visible knob overlays explicitly at the Speed and Depth wells.
+* Removed the temporary `BitCrush` verification effect from source, `dist/`, and
+  the default release build list.

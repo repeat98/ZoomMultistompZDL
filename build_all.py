@@ -26,7 +26,6 @@ RELEASE_PLUGINS = [
     ("tapehack",    PLUGIN_DIR / "tapehack"    / "build.py"),
     ("totape9",     PLUGIN_DIR / "totape9"     / "build.py"),
     ("stereochorus", PLUGIN_DIR / "stereochorus" / "build.py"),
-    ("bitcrush",    PLUGIN_DIR / "bitcrush"    / "build.py"),
 ]
 
 DIAGNOSTIC_PLUGINS = [

@@ -11,9 +11,9 @@ also [AIRWINDOWS-EXACT-PORTS.md]
 For effects marketed as Airwindows ports, also read
 [../../docs/AIRWINDOWS-EXACT-PORTS.md](../../docs/AIRWINDOWS-EXACT-PORTS.md).
 If the DSP is an approximation or an ABI probe, say that plainly in the
-manifest and comments. `StChorus` is now the first `ctx[3]`-backed
-`StereoChorus` exact-kernel attempt, but it still needs hardware and numerical
-comparison before being called release-quality.
+manifest and comments. `StChorus` is now the first hardware-confirmed
+`ctx[3]`-backed `StereoChorus` port; keep documenting remaining numerical
+differences before calling it bit-for-bit equivalent.
 
 `CtxMap` is a dedicated hardware ABI probe, not an Airwindows effect. Its
 findings belong in

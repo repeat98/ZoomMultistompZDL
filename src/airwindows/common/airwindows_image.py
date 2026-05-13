@@ -22,6 +22,19 @@ def _draw_reel(c: Canvas, cx: int, cy: int, r: int) -> None:
             c.px(int(cx + rr * math.cos(a) + 0.5), int(cy - rr * math.sin(a) + 0.5))
 
 
+def _draw_wave(c: Canvas, x0: int, x1: int, cy: int, amp: float, periods: float, phase: float) -> None:
+    prev_y = None
+    for x in range(x0, x1 + 1):
+        t = (x - x0) / float(x1 - x0)
+        y = int(cy - (math.sin((t * periods * 2.0 * math.pi) + phase) * amp))
+        if prev_y is None:
+            c.px(x, y)
+        else:
+            y0, y1 = (prev_y, y) if prev_y <= y else (y, prev_y)
+            c.vline(x, y0, y1)
+        prev_y = y
+
+
 def make_airwindows_tape_screen(name: str, number: str = "9") -> bytes:
     """Tape-machine themed Airwindows bitmap, adapted from the old ToTape9 port."""
     c = Canvas()
@@ -55,4 +68,31 @@ def make_airwindows_tape_screen(name: str, number: str = "9") -> bytes:
         prev_y = y
 
     c.draw_text("AIRWINDOWS", 66, 55, scale=1, spacing=1)
+    return encode_zoom_rle(c)
+
+
+def make_airwindows_chorus_screen() -> bytes:
+    """Stereo chorus bitmap with clear Speed/Depth knob wells."""
+    c = Canvas()
+
+    c.rect(0, 0, 127, 63)
+    c.draw_text("ST", 6, 5, scale=2, spacing=1)
+    c.draw_text("CHORUS", 27, 5, scale=2, spacing=1)
+    c.draw_text("AIRWINDOWS", 84, 7, scale=1, spacing=1)
+
+    c.hline(5, 122, 21)
+    _draw_wave(c, 8, 119, 29, 5.0, 2.0, 0.0)
+    _draw_wave(c, 8, 119, 29, 5.0, 2.0, 1.57079632679)
+    c.draw_text("L", 5, 24, scale=1, spacing=1)
+    c.draw_text("R", 5, 31, scale=1, spacing=1)
+
+    c.draw_text("SPEED", 24, 35, scale=1, spacing=1)
+    c.draw_text("DEPTH", 81, 35, scale=1, spacing=1)
+
+    c.rect(20, 42, 53, 60)
+    c.rect(76, 42, 109, 60)
+    c.hline(23, 50, 39)
+    c.hline(79, 106, 39)
+    c.vline(64, 39, 60)
+
     return encode_zoom_rle(c)

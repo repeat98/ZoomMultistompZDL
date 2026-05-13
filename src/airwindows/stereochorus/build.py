@@ -13,7 +13,7 @@ ROOT = HERE.parent.parent.parent
 sys.path.insert(0, str(ROOT / "build"))
 sys.path.insert(0, str(HERE.parent / "common"))
 
-from airwindows_image import make_airwindows_tape_screen  # noqa: E402
+from airwindows_image import make_airwindows_chorus_screen  # noqa: E402
 from linker import LinkerConfig, link, params_from_manifest  # noqa: E402
 from manifest_params import write_param_header  # noqa: E402
 
@@ -41,7 +41,6 @@ def main() -> None:
     effect_name = manifest["effect_name"]
     audio_func_name = manifest["audio_func_name"]
     fixed_stage = int(manifest.get("fixed_stage", 5))
-    screen_label = manifest.get("screen_label", effect_name)
 
     obj = HERE / f"{effect_name.lower()}.obj"
     out_zdl = out_dir / f"{effect_name}.ZDL"
@@ -79,7 +78,8 @@ def main() -> None:
         output_path=out_zdl,
         fxid_version=manifest.get("fxid_version", "1.00").encode("ascii"),
         flags_byte=manifest.get("flags_byte", 0x01),
-        screen_image=make_airwindows_tape_screen(screen_label, ""),
+        screen_image=make_airwindows_chorus_screen(),
+        knob_positions=[(2, 26, 43), (3, 82, 43)],
         audio_nop=manifest.get("audio_nop", False),
     )
     link(cfg)

@@ -66,6 +66,10 @@ promoted back to `dist/StChorus.ZDL`, and `dist/` is now kept to release
 artifacts by default. Probe ZDLs are still buildable explicitly, but no longer
 ship in the default output directory.
 
+Release polish note: `StChorus` now has dedicated chorus screen art and explicit
+Speed/Depth knob placement. The temporary `BitCrush` verification effect has
+been removed completely so the release set stays focused on Airwindows ports.
+
 ## Source Anchors
 
 Airwindows upstream source:

@@ -36,7 +36,7 @@ ZoomMultistompZDL/
 │       ├── gain/              # 1-knob volume trim
 │       ├── purestdrive/       # Airwindows PurestDrive (1 knob)
 │       ├── tapehack/          # Airwindows TapeHack (3 knobs)
-│       └── bitcrush/          # bit/SR crusher (1 knob)
+│       └── stereochorus/      # Airwindows StereoChorus with ctx[3] state
 ├── docs/CONTRIBUTING.md       # open questions + workflow rules
 ├── working_zdls/              # ~830 stock ZDLs (templates / references)
 ├── firmware/                  # MS-70CDR firmware blobs (boot/Main/FS/Preset)
