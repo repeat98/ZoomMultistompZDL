@@ -1987,3 +1987,16 @@ Retest `dist/StChS5.ZDL`. Speed and Depth should now keep changing across the
 full 0..100 UI range. If that works, the remaining non-1:1 differences are the
 float32 port, the sine approximation, omitted dither, and any still-unknown Zoom
 buffer/parameter conventions.
+
+Hardware/operator result:
+
+* The control-law build sounds like Airwindows `StereoChorus`.
+
+Cleanup:
+
+* Promoted the working fixed-stage 5 build to the normal release artifact
+  `dist/StChorus.ZDL`.
+* Removed the fixed-stage `StChS0`..`StChS5` artifacts from `dist/`.
+* Changed the default `python3 -B build_all.py` path to clean `dist/` and build
+  only release artifacts. Diagnostic probes remain buildable by name or with
+  `--all`.

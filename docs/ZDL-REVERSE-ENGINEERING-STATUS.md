@@ -60,6 +60,12 @@ multiply-only reciprocal estimate for the Airwindows `depth = B / 60 / speed`
 law, avoiding `__c6xabi_divf` while bringing the control range much closer to
 the source plugin.
 
+Follow-up hardware note: after that parameter/depth fix, the chorus was reported
+to sound like Airwindows `StereoChorus`. The working Stage 5 probe has been
+promoted back to `dist/StChorus.ZDL`, and `dist/` is now kept to release
+artifacts by default. Probe ZDLs are still buildable explicitly, but no longer
+ship in the default output directory.
+
 ## Source Anchors
 
 Airwindows upstream source:
