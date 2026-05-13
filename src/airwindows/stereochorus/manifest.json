@@ -1,6 +1,6 @@
 {
   "effect_name": "StChorus",
-  "comment": "EXPERIMENTAL ABI probe for Airwindows StereoChorus. Source parameter metadata is present, but the DSP is not release-quality until the exact source delay-line algorithm can run safely.",
+  "comment": "First ctx[3]-backed Airwindows StereoChorus port attempt. Uses the source delay-line topology and control laws; still hardware-test before calling release-quality because sine is approximated and dither is omitted.",
 
   "audio_func_name": "Fx_MOD_StChorus",
 

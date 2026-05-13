@@ -1666,3 +1666,57 @@ needs the last kilobyte. The next useful step is to use `ctx[3]` as a bounded
 per-instance arena for the first real `StereoChorus` exact-port attempt, while
 continuing to keep scalar state in the small proven `ctx[2] + 0x18` area or in
 the front of the descriptor arena with explicit layout.
+
+## 2026-05-13: First `ctx[3]`-Backed `StereoChorus` Port Attempt
+
+Replaced the old 56-sample float-ring `StChorus` experiment with a first
+Airwindows-source-kernel attempt using the proven `ctx[3]` descriptor arena.
+
+Source anchor:
+
+* Local reference:
+  `airwindows-ref/plugins/LinuxVST/src/StereoChorus/StereoChorusProc.cpp`
+* Constructor/state reference:
+  `airwindows-ref/plugins/LinuxVST/src/StereoChorus/StereoChorus.cpp` and
+  `airwindows-ref/plugins/LinuxVST/src/StereoChorus/StereoChorus.h`
+
+Implemented in `src/airwindows/stereochorus/stereochorus.c`:
+
+* `ctx[3]` descriptor validation before touching large state.
+* A state header at descriptor base.
+* Two source-sized `int[65536]` delay arrays after the header.
+* Lazy descriptor-arena clearing in 512-sample chunks, passing audio through
+  until initialization completes.
+* Source Speed and Depth control laws:
+  `speed = pow(0.32 + (A / 6), 10)` and `depth = (B / 60) / speed`.
+* Source `sweepL`, `sweepR`, `gcount`, air-compensation, integer delay write,
+  three-point interpolation, and interpolation correction flow.
+
+Known substitutions / still not release-proven:
+
+* Source `double` math is implemented as float32 arithmetic on the C674x path.
+* `sin()` is an inline approximation to avoid pulling in unproven runtime math.
+* The source floating-point dither tail is not yet reproduced.
+* Startup differs slightly because the Zoom descriptor arena is cleared lazily
+  instead of in a desktop constructor.
+
+Build result:
+
+* Command: `python3 -B build_all.py stereochorus`
+* Output: `dist/StChorus.ZDL`
+* ZDL size: 6954 bytes.
+* `.audio`: 2528 bytes.
+* `.text`: 0 bytes.
+* `.fardata`: 0 bytes.
+* External symbols: `__c6xabi_divf` only; linker injects `divf_rts.bin`.
+* Applied object relocations: 3.
+
+Next hardware check:
+
+1. Flash `dist/StChorus.ZDL`.
+2. Load it alone in one FX slot.
+3. Expect initial pass-through for a short moment while the descriptor arena is
+   cleared.
+4. Confirm load, bypass, Speed/Depth edits, and preset switching do not crash.
+5. Then judge whether the chorus motion now resembles Airwindows
+   `StereoChorus`.

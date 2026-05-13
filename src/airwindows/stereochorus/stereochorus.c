@@ -1,15 +1,12 @@
 /*
- * StereoChorus by Chris Johnson (airwindows) - MIT licence
- * Zoom Multistomp ABI experiment.
+ * StereoChorus by Chris Johnson (airwindows) - MIT licence.
+ * Zoom Multistomp port attempt.
  *
- * The source plugin uses two 65536-sample int delay lines. That is far too
- * large for the current custom-ZDL state ABI, so this release uses a tiny
- * initialized ring buffer. It is not the full Airwindows algorithm yet, but it
- * is a real modulated delay instead of the earlier near-dry smoke test.
- *
- * This is NOT a release-quality Airwindows port: it does not run the exact
- * source DSP. Keep it as an ABI/state experiment until the real delay-line
- * state strategy is solved.
+ * This is the first ctx[3]-backed port attempt. It preserves the source
+ * algorithm's large integer delay lines, Speed/Depth control laws, air
+ * compensation, sweep phases, and interpolation core. The dither tail is not
+ * reproduced yet because the Zoom path already stays float32 and the original
+ * frexp/pow dither would pull in unproven runtime helpers.
  */
 
 #include <stdint.h>
@@ -20,19 +17,125 @@
 #pragma CODE_SECTION(Fx_MOD_StChorus, ".audio")
 
 #define ZDL_PTR(type, word) ((type)(uintptr_t)(word))
-#define CHORUS_BUF 56
 
-#pragma DATA_SECTION(delayL, ".fardata")
-static float delayL[CHORUS_BUF] = { 0.0000001f };
+#define STCHORUS_MAGIC 0x53434831u
+#define STCHORUS_VERSION 1u
+#define STCHORUS_DELAY_SAMPLES 65536u
+#define STCHORUS_CLEAR_STEP 512u
+typedef struct StChorusState {
+    uint32_t magic;
+    uint32_t version;
+    uint32_t clearIndex;
+    uint32_t initialized;
 
-#pragma DATA_SECTION(delayR, ".fardata")
-static float delayR[CHORUS_BUF] = { -0.0000001f };
+    float sweepL;
+    float sweepR;
+    int gcount;
 
-#pragma DATA_SECTION(writePos, ".fardata")
-static int writePos = 0;
+    float airPrevL;
+    float airEvenL;
+    float airOddL;
+    float airFactorL;
+    float airPrevR;
+    float airEvenR;
+    float airOddR;
+    float airFactorR;
+    int flip;
 
-#pragma DATA_SECTION(lfoPhase, ".fardata")
-static int lfoPhase = 0;
+    float lastRefL[7];
+    float lastRefR[7];
+    int cycle;
+
+    uint32_t fpdL;
+    uint32_t fpdR;
+} StChorusState;
+
+static inline uintptr_t align4(uintptr_t x)
+{
+    return (x + 3u) & ~(uintptr_t)3u;
+}
+
+static inline float absf_local(float x)
+{
+    return x < 0.0f ? -x : x;
+}
+
+static inline float sin_approx(float x)
+{
+    const float twoPi = 6.28318530718f;
+    const float pi = 3.14159265359f;
+    const float invTwoPi = 0.15915494309f;
+
+    x = x - twoPi * (float)((int)(x * invTwoPi));
+    if (x < 0.0f) x += twoPi;
+
+    float sign = 1.0f;
+    if (x > pi) {
+        x -= pi;
+        sign = -1.0f;
+    }
+
+    float pmx = pi - x;
+    float xpmx = x * pmx;
+    return sign * ((16.0f * xpmx) / (49.348022f - (4.0f * xpmx)));
+}
+
+static inline float pow10_source(float x)
+{
+    float x2 = x * x;
+    float x4 = x2 * x2;
+    float x8 = x4 * x4;
+    return x8 * x2;
+}
+
+static inline void reset_state_header(StChorusState *st)
+{
+    int i;
+    st->magic = STCHORUS_MAGIC;
+    st->version = STCHORUS_VERSION;
+    st->clearIndex = 0u;
+    st->initialized = 0u;
+
+    st->sweepL = 1.16355283466f; /* pi / 2.7 */
+    st->sweepR = 3.14159265359f;
+    st->gcount = 0;
+
+    st->airPrevL = 0.0f;
+    st->airEvenL = 0.0f;
+    st->airOddL = 0.0f;
+    st->airFactorL = 0.0f;
+    st->airPrevR = 0.0f;
+    st->airEvenR = 0.0f;
+    st->airOddR = 0.0f;
+    st->airFactorR = 0.0f;
+    st->flip = 0;
+
+    for (i = 0; i < 7; i++) {
+        st->lastRefL[i] = 0.0f;
+        st->lastRefR[i] = 0.0f;
+    }
+    st->cycle = 0;
+
+    st->fpdL = 0x1234567u;
+    st->fpdR = 0x89ABCDFu;
+}
+
+static inline void clear_delay_chunk(StChorusState *st, int *pL, int *pR)
+{
+    uint32_t end = st->clearIndex + STCHORUS_CLEAR_STEP;
+    if (end > STCHORUS_DELAY_SAMPLES) end = STCHORUS_DELAY_SAMPLES;
+
+    uint32_t i;
+    for (i = st->clearIndex; i < end; i++) {
+        pL[i] = 0;
+        pR[i] = 0;
+    }
+
+    st->clearIndex = end;
+    if (end >= STCHORUS_DELAY_SAMPLES) {
+        st->initialized = 1u;
+    }
+}
 
 void Fx_MOD_StChorus(unsigned int *ctx)
 {
@@ -45,57 +148,138 @@ void Fx_MOD_StChorus(unsigned int *ctx)
 
     if (params[0] < 0.5f) return;
 
-    float pSpeed = zoom_param_norm(params[STCHORUS_SPEED_SLOT], STCHORUS_SPEED_DEFAULT_NORM);
-    float pDepth = zoom_param_norm(params[STCHORUS_DEPTH_SLOT], STCHORUS_DEPTH_DEFAULT_NORM);
+    unsigned int *desc = ZDL_PTR(unsigned int *, ctx[3]);
+    if (!desc) return;
 
-    if (pDepth <= 0.0001f) return;
+    uintptr_t base = (uintptr_t)desc[0];
+    uintptr_t end = (uintptr_t)desc[1];
+    if (end <= base) return;
 
-    /* Hardware-safe beta core:
-     * - tiny initialized .fardata only
-     * - no stack arrays
-     * - no division / runtime helper calls
-     * - no sin/log/pow
-     *
-     * The real Airwindows code uses a huge int delay line plus sine LFO. This
-     * keeps the same Speed/Depth controls but compresses the delay span into
-     * 56 samples so it is safe to probe on hardware. */
-    int phaseStep = 1 + (int)(pSpeed * 7.0f);
-    int depthSpan = 1 + (int)(pDepth * 46.0f);
-    float wet = 0.18f + pDepth * 0.72f;
-    float dry = 1.0f - wet * 0.42f;
-    float cross = pDepth * 0.18f;
+    uintptr_t stateBase = align4(base);
+    uintptr_t pLBase = align4(stateBase + sizeof(StChorusState));
+    uintptr_t pRBase = pLBase + (STCHORUS_DELAY_SAMPLES * sizeof(int));
+    uintptr_t requiredEnd = pRBase + (STCHORUS_DELAY_SAMPLES * sizeof(int));
+    if (requiredEnd > end) return;
+
+    StChorusState *st = (StChorusState *)stateBase;
+    int *pL = (int *)pLBase;
+    int *pR = (int *)pRBase;
+
+    if (st->magic != STCHORUS_MAGIC || st->version != STCHORUS_VERSION) {
+        reset_state_header(st);
+    }
+    if (!st->initialized) {
+        clear_delay_chunk(st, pL, pR);
+        return;
+    }
+
+    float A = zoom_param_norm(params[STCHORUS_SPEED_SLOT], STCHORUS_SPEED_DEFAULT_NORM);
+    float B = zoom_param_norm(params[STCHORUS_DEPTH_SLOT], STCHORUS_DEPTH_DEFAULT_NORM);
+
+    float speedBase = 0.32f + (A * 0.16666666667f);
+    float speed = pow10_source(speedBase);
+    float depth = (B * 0.01666666667f) / speed;
+    const float twoPi = 6.28318530718f;
 
     int i;
     for (i = 0; i < 8; i++) {
-        float curL = fxBuf[i];
-        float curR = fxBuf[i + 8];
+        float inputSampleL = fxBuf[i];
+        float inputSampleR = fxBuf[i + 8];
 
-        int triL = lfoPhase & 63;
-        int triR = (lfoPhase + 21) & 63;
-        if (triL > 31) triL = 63 - triL;
-        if (triR > 31) triR = 63 - triR;
+        if (absf_local(inputSampleL) < 1.18e-23f) {
+            inputSampleL = (float)st->fpdL * 1.18e-17f;
+        }
+        if (absf_local(inputSampleR) < 1.18e-23f) {
+            inputSampleR = (float)st->fpdR * 1.18e-17f;
+        }
 
-        int dL = 2 + ((triL * depthSpan) >> 5);
-        int dR = 2 + ((triR * depthSpan) >> 5);
+        st->cycle++;
+        if (st->cycle >= 1) {
+            st->airFactorL = st->airPrevL - inputSampleL;
+            if (st->flip) {
+                st->airEvenL += st->airFactorL;
+                st->airOddL -= st->airFactorL;
+                st->airFactorL = st->airEvenL;
+            } else {
+                st->airOddL += st->airFactorL;
+                st->airEvenL -= st->airFactorL;
+                st->airFactorL = st->airOddL;
+            }
+            st->airOddL = (st->airOddL - ((st->airOddL - st->airEvenL) * 0.00390625f)) * 0.99990001f;
+            st->airEvenL = (st->airEvenL - ((st->airEvenL - st->airOddL) * 0.00390625f)) * 0.99990001f;
+            st->airPrevL = inputSampleL;
+            inputSampleL += st->airFactorL;
 
-        int readL = writePos - dL;
-        int readR = writePos - dR;
-        if (readL < 0) readL += CHORUS_BUF;
-        if (readR < 0) readR += CHORUS_BUF;
+            st->airFactorR = st->airPrevR - inputSampleR;
+            if (st->flip) {
+                st->airEvenR += st->airFactorR;
+                st->airOddR -= st->airFactorR;
+                st->airFactorR = st->airEvenR;
+            } else {
+                st->airOddR += st->airFactorR;
+                st->airEvenR -= st->airFactorR;
+                st->airFactorR = st->airOddR;
+            }
+            st->airOddR = (st->airOddR - ((st->airOddR - st->airEvenR) * 0.00390625f)) * 0.99990001f;
+            st->airEvenR = (st->airEvenR - ((st->airEvenR - st->airOddR) * 0.00390625f)) * 0.99990001f;
+            st->airPrevR = inputSampleR;
+            inputSampleR += st->airFactorR;
 
-        float tapL = delayL[readL];
-        float tapR = delayR[readR];
+            st->flip = !st->flip;
 
-        delayL[writePos] = curL;
-        delayR[writePos] = curR;
+            int tempL = 0;
+            int tempR = 0;
+            if (st->gcount < 1 || st->gcount > 32760) st->gcount = 32760;
 
-        fxBuf[i] = curL * dry + tapL * wet + tapR * cross;
-        fxBuf[i + 8] = curR * dry + tapR * wet + tapL * cross;
+            int count = st->gcount;
+            pL[count + 32760] = pL[count] = (int)(inputSampleL * 8388352.0f);
+            float offset = depth + (depth * sin_approx(st->sweepL));
+            int whole = (int)offset;
+            float frac = offset - (float)whole;
+            count += whole;
+            tempL += (int)((float)pL[count] * (1.0f - frac));
+            tempL += pL[count + 1];
+            tempL += (int)((float)pL[count + 2] * frac);
+            tempL -= (int)((float)((pL[count] - pL[count + 1]) - (pL[count + 1] - pL[count + 2])) * 0.02f);
 
-        writePos++;
-        if (writePos >= CHORUS_BUF) writePos = 0;
+            count = st->gcount;
+            pR[count + 32760] = pR[count] = (int)(inputSampleR * 8388352.0f);
+            offset = depth + (depth * sin_approx(st->sweepR));
+            whole = (int)offset;
+            frac = offset - (float)whole;
+            count += whole;
+            tempR += (int)((float)pR[count] * (1.0f - frac));
+            tempR += pR[count + 1];
+            tempR += (int)((float)pR[count + 2] * frac);
+            tempR -= (int)((float)((pR[count] - pR[count + 1]) - (pR[count + 1] - pR[count + 2])) * 0.02f);
 
-        lfoPhase += phaseStep;
-        lfoPhase &= 63;
+            st->sweepL += speed;
+            st->sweepR += speed;
+            if (st->sweepL > twoPi) st->sweepL -= twoPi;
+            if (st->sweepR > twoPi) st->sweepR -= twoPi;
+            st->gcount--;
+
+            inputSampleL = (float)tempL * 0.000000059606746f;
+            inputSampleR = (float)tempR * 0.000000059606746f;
+
+            st->lastRefL[0] = inputSampleL;
+            st->lastRefR[0] = inputSampleR;
+            st->cycle = 0;
+            inputSampleL = st->lastRefL[0];
+            inputSampleR = st->lastRefR[0];
+        } else {
+            inputSampleL = st->lastRefL[st->cycle];
+            inputSampleR = st->lastRefR[st->cycle];
+        }
+
+        st->fpdL ^= st->fpdL << 13;
+        st->fpdL ^= st->fpdL >> 17;
+        st->fpdL ^= st->fpdL << 5;
+        st->fpdR ^= st->fpdR << 13;
+        st->fpdR ^= st->fpdR >> 17;
+        st->fpdR ^= st->fpdR << 5;
+
+        fxBuf[i] = inputSampleL;
+        fxBuf[i + 8] = inputSampleR;
     }
 }

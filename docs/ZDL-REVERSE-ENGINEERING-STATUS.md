@@ -7,9 +7,9 @@ still blocks true 1:1 Airwindows ports on Zoom MS-series pedals.
 
 ## Current Conclusion
 
-`StChorus.ZDL` is not supposed to sound 1:1 with Airwindows
-`StereoChorus` yet. The current build is a small-state ABI experiment. The
-Airwindows source uses a fixed-point stereo delay core with:
+`StChorus.ZDL` has moved from the old small-state ABI experiment to the first
+`ctx[3]`-backed Airwindows `StereoChorus` exact-kernel attempt. The Airwindows
+source uses a fixed-point stereo delay core with:
 
 * `int pL[65536]`
 * `int pR[65536]`
@@ -18,10 +18,12 @@ Airwindows source uses a fixed-point stereo delay core with:
 * `lastRefL[7]`, `lastRefR[7]`, `cycle`
 * dither PRNG state
 
-The two delay lines alone are 524,288 bytes on a 32-bit `int` target. The
-largest writable `.fardata` observed in the stock corpus pass was 220 bytes.
-Large custom writable state has already frozen real hardware. So the missing
-piece is not chorus tuning; it is the pedal's safe per-effect state strategy.
+The two delay lines alone are 524,288 bytes on a 32-bit `int` target. That
+state now lives in the proven per-instance `ctx[3]` descriptor arena, not in
+`.fardata`. The current build preserves the source delay topology and control
+laws, but still needs hardware validation and numerical comparison because the
+Zoom C path uses float32 math, an inline sine approximation, and currently
+omits the source dither tail.
 
 ## Source Anchors
 
@@ -180,6 +182,29 @@ Parameter table:
 | `params[5]` | user knob 1 raw value |
 | `params[6]` | user knob 2 raw value |
 | `params[7]..params[13]` | user knobs 3..9 |
+
+## `ctx[]` Field Status
+
+Known enough for production experiments:
+
+| Field | Status |
+|---:|---|
+| `ctx[1]` | parameter float table |
+| `ctx[4]` | dry/guitar input buffer |
+| `ctx[5]` | current effect/wet buffer, 8 L samples then 8 R samples |
+| `ctx[6]` | output accumulator on effects that add instead of process in place |
+| `ctx[11]` / `ctx[12]` | magic shuttle; preserve every audio call |
+| `ctx[2] + 0x10` | small writable persistent per-instance state block, stock `DELAY` pattern |
+| `ctx[2] + 0x18` | small writable persistent per-instance state block, stock `STCHO` / `TAPEECHO` pattern |
+| `ctx[3][0..2]` | large per-instance descriptor: base, end, span/length |
+
+Still unresolved:
+
+| Field | Current evidence |
+|---:|---|
+| `ctx[13]` | pointer-like in stock modulation/reverb disassembly; not needed for current `StChorus` port |
+| `ctx[14]` | pointer-like in stock modulation disassembly; not needed for current `StChorus` port |
+| other `ctx[]` slots | either unmapped or only observed as stable/position-dependent words in early bit probes |
 
 ## Why 1:1 Airwindows Ports Need More RE
 

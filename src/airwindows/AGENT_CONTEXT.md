@@ -45,12 +45,13 @@ For first hardware tests:
 
 Many Airwindows plugins are state-heavy. `StereoChorus` has two
 `int[65536]` delay buffers; reverbs and tape effects often have similar
-state. Do not port those buffers into `.fardata` until the repo has a proven
-per-effect state ABI. Record the exact source parameter laws in the manifest,
-then implement a small safe beta core.
+state. Do not port those buffers into `.fardata`. For `StereoChorus`, hardware
+probes have now proven enough per-instance space in `ctx[3]`; use that arena
+for large state and keep `.fardata` tiny. Record the exact source parameter laws
+in the manifest and document any math substitutions.
 
-That beta core is only for ABI probing. It must not be described as a finished
-Airwindows port unless it runs the source algorithm.
+Any beta core that is not source DSP is only for ABI probing. It must not be
+described as a finished Airwindows port unless it runs the source algorithm.
 
 See `docs/SAFE-DSP-RULES.md` and `build/ABI.md` before making a port more
 ambitious. See `docs/TI-PDF-NOTES.md` for the underlying TI manual notes.
