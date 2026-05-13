@@ -1720,3 +1720,43 @@ Next hardware check:
 4. Confirm load, bypass, Speed/Depth edits, and preset switching do not crash.
 5. Then judge whether the chorus motion now resembles Airwindows
    `StereoChorus`.
+
+Hardware/operator result:
+
+* The ZDL loaded, but unbypassing the effect froze/crashed the pedal.
+* The output became a high-pitched sine/square-like tone.
+
+Interpretation:
+
+The crash is gated by `params[0]`, so it happens only when the audio path starts
+touching the new state code. The first suspect is not the Airwindows math yet:
+all successful `ctx[3]` probes were built as `gid=2` / `Fx_FLT_*`, while this
+first `StChorus` attempt was the first custom `gid=6` / `Fx_MOD_*` effect to
+dereference and write `ctx[3]`. It may not receive the same descriptor contract
+even though stock modulation effects do.
+
+Follow-up safety build:
+
+Moved `StChorus` temporarily onto the proven FLT host path:
+
+* Manifest `gid`: `6` / MOD -> `2` / FLT.
+* Audio symbol: `Fx_MOD_StChorus` -> `Fx_FLT_StChorus`.
+* SONAME: `ZDL_MOD_StChorus.out` -> `ZDL_FLT_StChorus.out`.
+* Added the same base/end/span plausibility checks used by `DescSize` before
+  trusting the descriptor layout.
+
+Build result:
+
+* Command: `python3 -B build_all.py stereochorus`
+* Output: `dist/StChorus.ZDL`
+* ZDL size: 7018 bytes.
+* `.audio`: 2592 bytes.
+* `.fardata`: 0 bytes.
+* External symbols: `__c6xabi_divf` only.
+
+Next hardware check:
+
+Retest this FLT-path `StChorus.ZDL`. If it no longer crashes on unbypass, the
+next problem is learning how to request or safely access the stock MOD
+descriptor contract. If it still crashes, the culprit is probably descriptor
+base writes or the chorus state layout itself, not the category.

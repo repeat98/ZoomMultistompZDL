@@ -14,7 +14,7 @@
 #include "../common/zoom_params.h"
 #include "stereochorus_params.h"
 
-#pragma CODE_SECTION(Fx_MOD_StChorus, ".audio")
+#pragma CODE_SECTION(Fx_FLT_StChorus, ".audio")
 
 #define ZDL_PTR(type, word) ((type)(uintptr_t)(word))
 
@@ -137,7 +137,7 @@ static inline void clear_delay_chunk(StChorusState *st, int *pL, int *pR)
     }
 }
 
-void Fx_MOD_StChorus(unsigned int *ctx)
+void Fx_FLT_StChorus(unsigned int *ctx)
 {
     float *params = ZDL_PTR(float *, ctx[1]);
     float *fxBuf = ZDL_PTR(float *, ctx[5]);
@@ -153,7 +153,13 @@ void Fx_MOD_StChorus(unsigned int *ctx)
 
     uintptr_t base = (uintptr_t)desc[0];
     uintptr_t end = (uintptr_t)desc[1];
-    if (end <= base) return;
+    unsigned int span = desc[2];
+    uintptr_t bytes = end - base;
+
+    if (base == 0u || end <= base) return;
+    if ((base & 3u) != 0u || (end & 3u) != 0u || (span & 3u) != 0u) return;
+    if (bytes < 524288u || span < bytes) return;
+    if (bytes > 0x00800000u || span > 0x00800000u) return;
 
     uintptr_t stateBase = align4(base);
     uintptr_t pLBase = align4(stateBase + sizeof(StChorusState));

@@ -1,11 +1,11 @@
 {
   "effect_name": "StChorus",
-  "comment": "First ctx[3]-backed Airwindows StereoChorus port attempt. Uses the source delay-line topology and control laws; still hardware-test before calling release-quality because sine is approximated and dither is omitted.",
+  "comment": "First ctx[3]-backed Airwindows StereoChorus port attempt. Uses the source delay-line topology and control laws; temporarily uses the FLT host category because all successful ctx[3] probes used that path.",
 
-  "audio_func_name": "Fx_MOD_StChorus",
+  "audio_func_name": "Fx_FLT_StChorus",
 
-  "gid": 6,
-  "gid_comment": "0x06 = Modulation category. 0x03 is Drive.",
+  "gid": 2,
+  "gid_comment": "0x02 = Filter category. Temporary safety choice: ctx[3] descriptor probes were proven under FLT; MOD ctx[3] dereference crashed on unbypass.",
 
   "fxid": 404,
   "fxid_comment": "0x0194, after ToTape9 in the custom Airwindows id range.",

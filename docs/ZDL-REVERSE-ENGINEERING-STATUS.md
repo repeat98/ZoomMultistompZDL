@@ -25,6 +25,11 @@ laws, but still needs hardware validation and numerical comparison because the
 Zoom C path uses float32 math, an inline sine approximation, and currently
 omits the source dither tail.
 
+Hardware note: the first MOD-category `Fx_MOD_StChorus` build loaded but froze
+the pedal on unbypass with a high-pitched tone. The current follow-up build is
+temporarily emitted as `gid=2` / `Fx_FLT_StChorus`, because every successful
+custom `ctx[3]` probe so far used that host path.
+
 ## Source Anchors
 
 Airwindows upstream source:
