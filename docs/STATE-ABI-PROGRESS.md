@@ -566,11 +566,11 @@ Command used:
 
 ```bash
 python3 -B build/disassemble_zdl.py \
-  working_zdls/MS-70CDR_STCHO.ZDL \
-  working_zdls/MS-70CDR_DELAY.ZDL \
-  working_zdls/MS-70CDR_HALL.ZDL \
-  working_zdls/MS-70CDR_MODREV.ZDL \
-  working_zdls/MS-70CDR_TAPEECHO.ZDL \
+  stock_zdls/MS-70CDR_STCHO.ZDL \
+  stock_zdls/MS-70CDR_DELAY.ZDL \
+  stock_zdls/MS-70CDR_HALL.ZDL \
+  stock_zdls/MS-70CDR_MODREV.ZDL \
+  stock_zdls/MS-70CDR_TAPEECHO.ZDL \
   --out-dir /tmp/zoom-stock-state-trace
 
 python3 -B build/trace_ctx_audio.py \
@@ -1145,12 +1145,12 @@ Command used:
 
 ```bash
 python3 -B build/disassemble_zdl.py \
-  working_zdls/MS-70CDR_STCHO.ZDL \
-  working_zdls/MS-70CDR_DELAY.ZDL \
-  working_zdls/MS-70CDR_TAPEECHO.ZDL \
-  working_zdls/MS-70CDR_MODREV.ZDL \
-  working_zdls/MS-70CDR_STDELAY.ZDL \
-  working_zdls/MS-70CDR_ANLGDLY.ZDL \
+  stock_zdls/MS-70CDR_STCHO.ZDL \
+  stock_zdls/MS-70CDR_DELAY.ZDL \
+  stock_zdls/MS-70CDR_TAPEECHO.ZDL \
+  stock_zdls/MS-70CDR_MODREV.ZDL \
+  stock_zdls/MS-70CDR_STDELAY.ZDL \
+  stock_zdls/MS-70CDR_ANLGDLY.ZDL \
   --out-dir /tmp/zoom-large-buffer-trace
 ```
 
@@ -2058,3 +2058,54 @@ is:
 3. Reduced 2- or 3-parameter ToTape9 shell to isolate page 2/3 handlers.
 4. Full DSP with divide/helper use removed or gated, if the UI/load shape
    survives.
+
+## 2026-05-14: "Open-Source Coding Platform" Boundary
+
+Community feedback correctly challenged the phrase "open-source coding
+platform" as too broad for the current state of the project. The honest claim
+today is narrower:
+
+* We have a custom `.ZDL` build/link pipeline.
+* The ZDL container structure and many descriptor conventions are documented.
+* We have enough of the embedded ELF/runtime ABI to run simple custom effects.
+* `StereoChorus` proves `ctx[3]` can host real per-instance large state.
+* We do not yet have a stable SDK-style contract for arbitrary effects.
+
+What is still missing before the pedals can be described as an open-source
+coding platform:
+
+1. Runtime lifecycle map: load, init, bypass, preset switch, duplicate
+   instances, reload, and when state is cleared.
+2. Stereo declaration/routing control. Stock pedals already ship stereo
+   effects, but the ZDL/ELF mechanism that marks or toggles "stereo" behavior
+   for custom effects is still unknown.
+3. Clean edit-handler ABI for all parameter pages. The current `ToTape9`
+   failure may involve the 9-parameter synthesized-handler shape.
+4. Load-time limits: safe `.audio` size, descriptor count, relocation shape,
+   helper symbols, category/SONAME combinations, and page 2/3 parameter limits.
+5. Known supported runtime subset: math helpers, divide, `double`, stack use,
+   static storage, heap, and which `__c6xabi_*` routines are safe.
+6. Developer workflow: a boring template that lets someone define a manifest,
+   write DSP against documented buffers/state, build one command, and know the
+   expected failure modes.
+7. Hardware matrix beyond the current serious target, MS-70CDR firmware 2.10.
+
+Concrete reverse-engineering targets:
+
+* Build the `ToTape9` load-crash ladder: same 9-param UI with `audio_nop`,
+  same UI with pass-through DSP, reduced parameter shells, then helper-free DSP
+  increments.
+* Compare stock mono/stereo effects for header, descriptor, image info,
+  category, and any ELF symbols/relocations that might declare stereo routing.
+* Compare stock 6-9 parameter effects, especially LO-FI Dly style handlers, to
+  replace or validate the current synthesized page 2/3 edit handlers.
+* Probe `ctx[13]` and `ctx[14]` more carefully because stock modulation effects
+  use them and they may matter for stereo/modulation routing.
+* Add lifecycle probes for bypass, preset switching, duplicate instances, and
+  reload behavior.
+
+Repository cleanup:
+
+* Renamed `working_zdls/` to `stock_zdls/`. The directory is not a working
+  scratch area; it is the tracked stock ZDL corpus used for comparison,
+  templates, and disassembly.

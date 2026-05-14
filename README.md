@@ -131,7 +131,7 @@ The core pieces are:
 | [build/linker.py](build/linker.py) | Static linker: TI C6000 `.obj` -> complete Zoom `.ZDL`. |
 | [src/airwindows/](src/airwindows/) | Effect sources, manifests, images, and per-effect build scripts. |
 | [dist/](dist/) | Release `.ZDL` files for users. |
-| [working_zdls/](working_zdls/) | Tracked stock ZDL corpus used for comparison. |
+| [stock_zdls/](stock_zdls/) | Tracked 830-file stock ZDL corpus used for comparison. |
 
 The important recent finding is that custom effects can use the host-managed
 large state descriptor at `ctx[3]`. That is what made the stateful
@@ -166,7 +166,7 @@ ZoomMultistompZDL/
 ├── docs/                  install notes, ABI status, hardware probe logs
 ├── dist/                  release ZDLs to load in Zoom Effect Manager
 ├── src/airwindows/        effect sources, manifests, and build scripts
-├── working_zdls/          tracked stock ZDL corpus used for comparison
+├── stock_zdls/            tracked 830-file stock ZDL corpus used for comparison
 └── build_all.py           release/probe build entrypoint
 ```
 

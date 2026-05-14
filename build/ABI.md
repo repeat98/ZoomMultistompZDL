@@ -5,9 +5,9 @@ instead of mystery-flashing. Everything below is derived from:
 
 * `ofd_zdl.txt` — `ofd6x` dump of `MS-70CDR_EXCITER.ZDL` (full symbol
   table, relocation table, section addresses).
-* `working_zdls/MS-70CDR_EXCITER.ZDL` — the on-disk bytes, cross-checked
+* `stock_zdls/MS-70CDR_EXCITER.ZDL` — the on-disk bytes, cross-checked
   against the relocations.
-* `working_zdls/MS-70CDR_LINESEL.ZDL` — second data point.
+* `stock_zdls/MS-70CDR_LINESEL.ZDL` — second data point.
 * **The v1 project at `~/coding/airwindowsZoom/`** — most importantly
   `ZDL_Findings.md` (descriptor format reverse-engineered from all 128
   stock MS-70CDR ZDLs) and `build/link_zdl.py` (the linker that

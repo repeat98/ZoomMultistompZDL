@@ -51,7 +51,7 @@ CFLAGS = [
     f"--include_path={TI_ROOT}/include",
 ]
 
-TEMPLATE_PATH = ROOT / "working_zdls" / "MS-70CDR_OPTCOMP.ZDL"
+TEMPLATE_PATH = ROOT / "stock_zdls" / "MS-70CDR_OPTCOMP.ZDL"
 ZDL_HDR_SIZE  = 76                  # ZDL wrapper before ELF
 AUDIO_SLOT_SZ = 0x0d60              # Fx_DYN_OptComp size in stock OptComp
 

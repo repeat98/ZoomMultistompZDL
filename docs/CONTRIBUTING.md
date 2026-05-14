@@ -43,8 +43,8 @@
   remaining issues are in the DSP.
 * **Diff against stock.** Before believing a load-bearing constant
   is right, find one stock ZDL that uses it. The
-  [working_zdls/](../working_zdls/) directory has all 128 factory
-  effects.
+  [stock_zdls/](../stock_zdls/) directory has the tracked 830-file stock
+  corpus used for comparison.
 * **Don't touch `Dll_<Name>`.** It's a verbatim 200-byte copy of
   NoiseGate's entry function with 4 reloc points repatched. Earlier
   attempts at a smaller `Dll` body caused inconsistent freezes. The

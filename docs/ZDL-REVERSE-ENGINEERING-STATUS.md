@@ -115,7 +115,7 @@ Local reverse-engineering sources:
 
 ## Stock ZDL Corpus Pass
 
-Corpus: 830 files in `working_zdls/`.
+Corpus: 830 files in `stock_zdls/`.
 
 Header payload sizes:
 

@@ -20,7 +20,7 @@ DSP code from Airwindows.
 python3 hello/build.py
 ```
 
-This loads [working_zdls/MS-70CDR_LINESEL.ZDL](../../../working_zdls/MS-70CDR_LINESEL.ZDL),
+This loads [stock_zdls/MS-70CDR_LINESEL.ZDL](../../../stock_zdls/MS-70CDR_LINESEL.ZDL),
 patches the on-screen label slot from `LineSel` to `HELLO`, rewrites the
 INFO block (`sort_index = 250` so the unit shows it as a *new* effect rather
 than overwriting LineSel), and writes `HELLO.ZDL`.
@@ -28,7 +28,7 @@ than overwriting LineSel), and writes `HELLO.ZDL`.
 Identical input + manifest produces a byte-identical output. Verify with:
 
 ```bash
-cmp -l working_zdls/MS-70CDR_LINESEL.ZDL hello/HELLO.ZDL
+cmp -l stock_zdls/MS-70CDR_LINESEL.ZDL hello/HELLO.ZDL
 ```
 
 You should see exactly **8 byte differences**: one in the INFO `sort_index`,
