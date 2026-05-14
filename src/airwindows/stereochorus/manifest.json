@@ -2,10 +2,10 @@
   "effect_name": "StChorus",
   "comment": "Release ctx[3]-backed Airwindows StereoChorus port.",
 
-  "audio_func_name": "Fx_FLT_StChorus",
+  "audio_func_name": "Fx_MOD_StChorus",
 
-  "gid": 2,
-  "gid_comment": "0x02 = Filter category. Temporary safety choice: ctx[3] descriptor probes were proven under FLT; MOD ctx[3] dereference crashed on unbypass.",
+  "gid": 6,
+  "gid_comment": "0x06 = Modulation category. StereoChorus belongs in MOD now that the ctx[3] state path and no-divide chorus core are hardware-proven under the release build.",
 
   "fxid": 404,
   "fxid_comment": "0x0194 in the custom Airwindows range.",

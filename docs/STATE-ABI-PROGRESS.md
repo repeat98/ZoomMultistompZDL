@@ -2109,3 +2109,33 @@ Repository cleanup:
 * Renamed `working_zdls/` to `stock_zdls/`. The directory is not a working
   scratch area; it is the tracked stock ZDL corpus used for comparison,
   templates, and disassembly.
+
+## 2026-05-14: Rebuild `StereoChorus` in MOD Category
+
+`StereoChorus` belongs in the modulation category, so the release build has
+been moved back from the temporary FLT safety bucket to MOD now that the
+release chorus core avoids the earlier runtime divide crash and has working
+parameter scaling.
+
+Changes:
+
+* Manifest `gid`: `2` / FLT -> `6` / MOD.
+* Audio symbol: `Fx_FLT_StChorus` -> `Fx_MOD_StChorus`.
+* SONAME: `ZDL_FLT_StChorus.out` -> `ZDL_MOD_StChorus.out`.
+* Output rebuilt: `dist/StChorus.ZDL`.
+
+Build verification:
+
+* Command: `python3 -B build_all.py stereochorus`.
+* ZDL size: 6,994 bytes.
+* Header category bytes: `0x3c = 6`, `0x43 = 6`.
+* Strings present: `Fx_MOD_StChorus`, `Fx_MOD_StChorus_init`,
+  `Fx_MOD_StChorus_onf`, `ZDL_MOD_StChorus.out`.
+* Strings absent: `Fx_FLT_StChorus`, `ZDL_FLT_StChorus.out`.
+
+Hardware note:
+
+An early MOD-category `StChorus` build froze on unbypass, but that was before
+the fixed-stage split, no-divide chorus core, and parameter-scaling fix. This
+new MOD release needs a clean hardware retest: load, bypass/unbypass,
+Speed/Depth edits, preset switch, and duplicate-instance behavior.

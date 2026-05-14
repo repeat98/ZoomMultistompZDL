@@ -15,7 +15,7 @@
 #include "stereochorus_params.h"
 
 #ifndef STCHORUS_AUDIO_FUNC
-#define STCHORUS_AUDIO_FUNC Fx_FLT_StChorus
+#define STCHORUS_AUDIO_FUNC Fx_MOD_StChorus
 #endif
 
 #ifndef STCHORUS_FIXED_STAGE
