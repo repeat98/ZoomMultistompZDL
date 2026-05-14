@@ -43,15 +43,19 @@ as unverified until someone reports a clean load and audio test.
 | Other ZDL-based Zoom MultiStomp pedals | Unconfirmed. They may load compatible ZDLs, but need hardware reports. |
 | Newer Zoom ZD2-based pedals | Not supported by these ZDL builds. |
 
-## Effect Status
+## Build Your Own Effects
 
-| File | Status |
-|---|---|
-| [StChorus.ZDL](dist/StChorus.ZDL) | Airwindows `StereoChorus`; hardware-tested and currently the best reference port in this repo. |
-| [ToTape9.ZDL](dist/ToTape9.ZDL) | Airwindows `ToTape9`; current full-kernel probe crashes on load on the test MS-70CDR, so do not install it unless debugging. |
-| [TapeHack.ZDL](dist/TapeHack.ZDL) | Airwindows `TapeHack`; early port, needs broader listening and hardware reports. |
-| [PurestDr.ZDL](dist/PurestDr.ZDL) | Airwindows `PurestDrive`; early port, needs broader listening and hardware reports. |
-| [GAIN.ZDL](dist/GAIN.ZDL) | Small utility/reference effect used to validate the build path. |
+Start from [src/airwindows/gain/](src/airwindows/gain/) if you want the
+smallest working custom effect. Copy that directory, give the effect a new
+name and unused `fxid` in `manifest.json`, then update the C audio function and
+`build.py` to use the new names. Add the new build script to
+[build_all.py](build_all.py) once it builds on its own.
+
+Keep the first hardware test boring: `audio_nop: true` or tiny pass-through
+DSP, no large static state, no heap, and no new runtime helper calls. The safe
+path is documented in [docs/SAFE-DSP-RULES.md](docs/SAFE-DSP-RULES.md) and the
+effect directory conventions are summarized in
+[src/airwindows/README.md](src/airwindows/README.md).
 
 ## Known Issues
 
