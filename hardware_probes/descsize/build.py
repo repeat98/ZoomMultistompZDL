@@ -9,9 +9,9 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent.parent.parent
+ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / "build"))
-sys.path.insert(0, str(HERE.parent / "common"))
+sys.path.insert(0, str(ROOT / "src" / "airwindows" / "common"))
 
 from airwindows_image import make_airwindows_tape_screen  # noqa: E402
 from linker import LinkerConfig, link, params_from_manifest  # noqa: E402

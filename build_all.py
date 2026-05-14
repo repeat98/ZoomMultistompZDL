@@ -4,7 +4,7 @@ into ./dist/. Point the Zoom Effect Manager at that directory.
 
 Usage:
     python3 build_all.py             # release plugins, clean dist first
-    python3 build_all.py --all       # release + diagnostic plugins
+    python3 build_all.py --all       # release + diagnostic/hardware-probe plugins
     python3 build_all.py gain        # single plugin
     python3 build_all.py gain hello  # subset
 """
@@ -17,9 +17,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist"
 
+PLUGIN_DIR = ROOT / "src" / "airwindows"
+PROBE_DIR = ROOT / "hardware_probes"
+
 # Each entry: (display name, path to its build.py). Keep release builds clean by
 # default; diagnostic/probe builds remain available by name or with --all.
-PLUGIN_DIR = ROOT / "src" / "airwindows"
 RELEASE_PLUGINS = [
     ("gain",        PLUGIN_DIR / "gain"        / "build.py"),
     ("purestdrive", PLUGIN_DIR / "purestdrive" / "build.py"),
@@ -30,16 +32,16 @@ RELEASE_PLUGINS = [
 
 DIAGNOSTIC_PLUGINS = [
     ("hello",       PLUGIN_DIR / "hello"       / "build.py"),
-    ("ctxmap",      PLUGIN_DIR / "ctxmap"      / "build.py"),
-    ("paramtap",    PLUGIN_DIR / "paramtap"    / "build.py"),
-    ("ctxgate",     PLUGIN_DIR / "ctxgate"     / "build.py"),
-    ("ctxnib",      PLUGIN_DIR / "ctxnib"      / "build.py"),
-    ("stateping",   PLUGIN_DIR / "stateping"   / "build.py"),
-    ("stateiso",    PLUGIN_DIR / "stateiso"    / "build.py"),
-    ("statecomb",   PLUGIN_DIR / "statecomb"   / "build.py"),
-    ("desccomb",    PLUGIN_DIR / "desccomb"    / "build.py"),
-    ("descsize",    PLUGIN_DIR / "descsize"    / "build.py"),
-    ("desciso",     PLUGIN_DIR / "desciso"     / "build.py"),
+    ("ctxmap",      PROBE_DIR / "ctxmap"      / "build.py"),
+    ("paramtap",    PROBE_DIR / "paramtap"    / "build.py"),
+    ("ctxgate",     PROBE_DIR / "ctxgate"     / "build.py"),
+    ("ctxnib",      PROBE_DIR / "ctxnib"      / "build.py"),
+    ("stateping",   PROBE_DIR / "stateping"   / "build.py"),
+    ("stateiso",    PROBE_DIR / "stateiso"    / "build.py"),
+    ("statecomb",   PROBE_DIR / "statecomb"   / "build.py"),
+    ("desccomb",    PROBE_DIR / "desccomb"    / "build.py"),
+    ("descsize",    PROBE_DIR / "descsize"    / "build.py"),
+    ("desciso",     PROBE_DIR / "desciso"     / "build.py"),
 ]
 
 PLUGINS = RELEASE_PLUGINS + DIAGNOSTIC_PLUGINS
