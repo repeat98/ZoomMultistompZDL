@@ -42,7 +42,7 @@
 
 #include <stdint.h>
 
-#include "../../src/airwindows/common/zoom_params.h"
+#include "../../airwindows/common/zoom_params.h"
 #include "ctxmap_params.h"
 
 #pragma CODE_SECTION(Fx_FLT_CtxMap, ".audio")

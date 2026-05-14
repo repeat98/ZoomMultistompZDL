@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist"
 
 PLUGIN_DIR = ROOT / "src" / "airwindows"
-PROBE_DIR = ROOT / "hardware_probes"
+PROBE_DIR = ROOT / "src" / "hardware_probes"
 
 # Each entry: (display name, path to its build.py). Keep release builds clean by
 # default; diagnostic/probe builds remain available by name or with --all.

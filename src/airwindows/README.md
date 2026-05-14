@@ -15,7 +15,7 @@ manifest and comments. `StChorus` is now the first hardware-confirmed
 `ctx[3]`-backed `StereoChorus` port; keep documenting remaining numerical
 differences before calling it bit-for-bit equivalent.
 
-Hardware-only ABI probes live in [../../hardware_probes/](../../hardware_probes/),
+Hardware-only ABI probes live in [../hardware_probes/](../hardware_probes/),
 not in this Airwindows source tree. Their findings belong in
 [../../docs/STATE-ABI-PROGRESS.md](../../docs/STATE-ABI-PROGRESS.md) before
 they are used to justify a stateful port.

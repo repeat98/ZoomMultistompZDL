@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build DescComb.ZDL from desccomb.c + manifest.json."""
+"""Build ParamTap.ZDL from paramtap.c + manifest.json."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent.parent
+ROOT = HERE.parent.parent.parent
 sys.path.insert(0, str(ROOT / "build"))
 sys.path.insert(0, str(ROOT / "src" / "airwindows" / "common"))
 
@@ -32,14 +32,14 @@ CFLAGS = [
 
 def main() -> None:
     manifest = json.loads((HERE / "manifest.json").read_text())
-    write_param_header(manifest, HERE / "desccomb_params.h", "DESCCOMB")
+    write_param_header(manifest, HERE / "paramtap_params.h", "PARAMTAP")
 
-    src_c = HERE / "desccomb.c"
-    obj = HERE / "desccomb.obj"
+    src_c = HERE / "paramtap.c"
+    obj = HERE / "paramtap.obj"
     out_zdl = ROOT / "dist" / f"{manifest['effect_name']}.ZDL"
     out_zdl.parent.mkdir(exist_ok=True)
 
-    print(f"[desccomb] compiling {src_c.name} -> {obj.name}")
+    print(f"[paramtap] compiling {src_c.name} -> {obj.name}")
     subprocess.run(
         [str(CL6X), *CFLAGS, "-c", str(src_c), f"--output_file={obj}"],
         check=True,
@@ -61,12 +61,12 @@ def main() -> None:
         output_path=out_zdl,
         fxid_version=manifest.get("fxid_version", "1.00").encode("ascii"),
         flags_byte=manifest.get("flags_byte", 0x01),
-        screen_image=make_airwindows_tape_screen("DescComb", ""),
+        screen_image=make_airwindows_tape_screen("ParamTap", ""),
         audio_nop=manifest.get("audio_nop", False),
     )
     link(cfg)
 
-    print(f"\n[desccomb] done -> {out_zdl}")
+    print(f"\n[paramtap] done -> {out_zdl}")
 
 
 if __name__ == "__main__":

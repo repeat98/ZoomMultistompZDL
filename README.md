@@ -134,7 +134,7 @@ The core pieces are:
 |---|---|
 | [build/linker.py](build/linker.py) | Static linker: TI C6000 `.obj` -> complete Zoom `.ZDL`. |
 | [src/airwindows/](src/airwindows/) | Effect sources, manifests, images, and per-effect build scripts. |
-| [hardware_probes/](hardware_probes/) | Diagnostic ZDLs used to map the pedal runtime ABI. |
+| [src/hardware_probes/](src/hardware_probes/) | Diagnostic ZDLs used to map the pedal runtime ABI. |
 | [dist/](dist/) | Release `.ZDL` files for users. |
 | [stock_zdls/](stock_zdls/) | Tracked 830-file stock ZDL corpus used for comparison. |
 
@@ -170,7 +170,7 @@ ZoomMultistompZDL/
 ├── build/                 linker, ELF/ZDL helpers, stock-derived handler blobs
 ├── docs/                  install notes, ABI status, hardware probe logs
 ├── dist/                  release ZDLs to load in Zoom Effect Manager
-├── hardware_probes/       diagnostic ZDLs for runtime ABI experiments
+├── src/hardware_probes/       diagnostic ZDLs for runtime ABI experiments
 ├── src/airwindows/        effect sources, manifests, and build scripts
 ├── stock_zdls/            tracked 830-file stock ZDL corpus used for comparison
 └── build_all.py           release/probe build entrypoint

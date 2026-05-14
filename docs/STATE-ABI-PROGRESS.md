@@ -53,7 +53,7 @@ Airwindows delay, chorus, tape, or reverb ports.
 
 ## 2026-05-12: Probe 1 - `CtxMap` v1
 
-Added `hardware_probes/ctxmap/`, a hardware-only ABI mapper.
+Added `src/hardware_probes/ctxmap/`, a hardware-only ABI mapper.
 
 Purpose:
 
@@ -107,7 +107,7 @@ Build result:
 * `.fardata`: 4 bytes (`gPhase` tone counter only)
 * ZDL size: 5382 bytes
 * Python syntax check: `python3 -B -m py_compile build/zdl.py
-  build/disassemble_zdl.py hardware_probes/ctxmap/build.py build_all.py`
+  build/disassemble_zdl.py src/hardware_probes/ctxmap/build.py build_all.py`
 
 Hardware result:
 
@@ -229,7 +229,7 @@ Hardware result:
 * The likely differences from the previous hardware-surviving build were:
   generated two-tone audio, different optimized `.audio` shape, and total
   `.text` layout reaching `0x800` bytes instead of `0x780`.
-* Rolled `hardware_probes/ctxmap/` back to the previous baseline-tone behavior
+* Rolled `src/hardware_probes/ctxmap/` back to the previous baseline-tone behavior
   so `dist/CtxMap.ZDL` is again a recovery/survival build, not the crashing
   param-audibility variant.
 
@@ -244,7 +244,7 @@ Recovery build result:
 
 ## 2026-05-12: Probe 2 - `ParamTap`
 
-Added `hardware_probes/paramtap/` as a separate effect ID so `CtxMap` can stay
+Added `src/hardware_probes/paramtap/` as a separate effect ID so `CtxMap` can stay
 on its last hardware-surviving build.
 
 Purpose:
@@ -290,7 +290,7 @@ Hardware result:
 
 ## 2026-05-12: Probe 3 - `CtxGate`
 
-Added `hardware_probes/ctxgate/`, a separate input-based `ctx[]` bit mapper.
+Added `src/hardware_probes/ctxgate/`, a separate input-based `ctx[]` bit mapper.
 
 Purpose:
 
@@ -496,7 +496,7 @@ Interpretation so far:
 
 ## 2026-05-12: Probe 4 - `CtxNib`
 
-Added `hardware_probes/ctxnib/`, a nibble mapper to reduce manual sweep errors.
+Added `src/hardware_probes/ctxnib/`, a nibble mapper to reduce manual sweep errors.
 
 Purpose:
 
@@ -734,7 +734,7 @@ block is proven on custom ZDLs.
 
 ## 2026-05-12: Probe 5 - `StatePing`
 
-Added `hardware_probes/stateping/`, a default-safe persistence probe for the
+Added `src/hardware_probes/stateping/`, a default-safe persistence probe for the
 stock `ctx[2]` derived-block pattern.
 
 Purpose:
@@ -924,7 +924,7 @@ and for building safer follow-up probes.
 
 ## 2026-05-12: Probe 5 - `StateIso`
 
-Added `hardware_probes/stateiso/`, a hardware-only instance-isolation probe.
+Added `src/hardware_probes/stateiso/`, a hardware-only instance-isolation probe.
 
 Purpose:
 
@@ -1070,7 +1070,7 @@ magic stamps.
 
 ## 2026-05-13: Probe 7 - `StateComb`
 
-Added `hardware_probes/statecomb/`, a tiny audio-history probe.
+Added `src/hardware_probes/statecomb/`, a tiny audio-history probe.
 
 Purpose:
 
@@ -1182,7 +1182,7 @@ candidate for the stock host-managed large delay/reverb/modulation buffer.
 
 ## 2026-05-13: Probe 8 - `DescComb`
 
-Added `hardware_probes/desccomb/`, a staged hardware probe for the stock
+Added `src/hardware_probes/desccomb/`, a staged hardware probe for the stock
 `ctx[3]` descriptor candidate.
 
 Purpose:
@@ -1302,7 +1302,7 @@ Remaining questions before a real Airwindows `StereoChorus` port:
 
 ## 2026-05-13: Probe 9 - `DescSize`
 
-Added `hardware_probes/descsize/`, fixed-threshold descriptor size probes.
+Added `src/hardware_probes/descsize/`, fixed-threshold descriptor size probes.
 
 Purpose:
 
@@ -1429,7 +1429,7 @@ safe stereo lane partitioning.
 
 ## 2026-05-13: Probe 10 - `DescIso`
 
-Added `hardware_probes/desciso/`, a duplicate-instance isolation probe for
+Added `src/hardware_probes/desciso/`, a duplicate-instance isolation probe for
 descriptor base memory.
 
 Purpose:
@@ -2143,7 +2143,7 @@ Speed/Depth edits, preset switch, and duplicate-instance behavior.
 ## 2026-05-14: Move Hardware Probes Out of Airwindows Tree
 
 The hardware ABI probes have been moved out of `src/airwindows/` and into a
-top-level `hardware_probes/` directory. This keeps the Airwindows tree focused
+`src/hardware_probes/` directory. This keeps the Airwindows tree focused
 on real effect ports and makes it clearer that `CtxMap`, `ParamTap`,
 `StatePing`, `DescSize`, and related builds are diagnostic tools, not
 Airwindows DSP.

@@ -37,7 +37,7 @@ ZoomMultistompZDL/
 │       ├── purestdrive/       # Airwindows PurestDrive (1 knob)
 │       ├── tapehack/          # Airwindows TapeHack (3 knobs)
 │       └── stereochorus/      # Airwindows StereoChorus with ctx[3] state
-├── hardware_probes/           # diagnostic ZDLs for runtime ABI experiments
+├── src/hardware_probes/           # diagnostic ZDLs for runtime ABI experiments
 ├── docs/CONTRIBUTING.md       # open questions + workflow rules
 ├── stock_zdls/                # ~830 stock ZDLs (templates / references)
 ├── firmware/                  # MS-70CDR firmware blobs (boot/Main/FS/Preset)

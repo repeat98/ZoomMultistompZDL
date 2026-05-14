@@ -336,7 +336,7 @@ Useful experiments:
 
 * Build a probe that writes a visible/audio signature from selected `ctx`
   fields to map additional runtime pointers. First pass added as
-  `hardware_probes/ctxmap/`; see `docs/STATE-ABI-PROGRESS.md`.
+  `src/hardware_probes/ctxmap/`; see `docs/STATE-ABI-PROGRESS.md`.
 * Diff stock delay/mod/reverb effects with `.fardata` > 24 bytes to identify
   whether their state is real DSP history or only small UI/control state.
 * Decode the preserved `BCAB`/`CABI` payload fields across all 76

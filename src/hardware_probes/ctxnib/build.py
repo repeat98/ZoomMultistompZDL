@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build CtxMap.ZDL from ctxmap.c + manifest.json."""
+"""Build CtxNib.ZDL from ctxnib.c + manifest.json."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent.parent
+ROOT = HERE.parent.parent.parent
 sys.path.insert(0, str(ROOT / "build"))
 sys.path.insert(0, str(ROOT / "src" / "airwindows" / "common"))
 
@@ -32,14 +32,14 @@ CFLAGS = [
 
 def main() -> None:
     manifest = json.loads((HERE / "manifest.json").read_text())
-    write_param_header(manifest, HERE / "ctxmap_params.h", "CTXMAP")
+    write_param_header(manifest, HERE / "ctxnib_params.h", "CTXNIB")
 
-    src_c = HERE / "ctxmap.c"
-    obj = HERE / "ctxmap.obj"
+    src_c = HERE / "ctxnib.c"
+    obj = HERE / "ctxnib.obj"
     out_zdl = ROOT / "dist" / f"{manifest['effect_name']}.ZDL"
     out_zdl.parent.mkdir(exist_ok=True)
 
-    print(f"[ctxmap] compiling {src_c.name} -> {obj.name}")
+    print(f"[ctxnib] compiling {src_c.name} -> {obj.name}")
     subprocess.run(
         [str(CL6X), *CFLAGS, "-c", str(src_c), f"--output_file={obj}"],
         check=True,
@@ -61,12 +61,12 @@ def main() -> None:
         output_path=out_zdl,
         fxid_version=manifest.get("fxid_version", "1.00").encode("ascii"),
         flags_byte=manifest.get("flags_byte", 0x01),
-        screen_image=make_airwindows_tape_screen("CtxMap", ""),
+        screen_image=make_airwindows_tape_screen("CtxNib", ""),
         audio_nop=manifest.get("audio_nop", False),
     )
     link(cfg)
 
-    print(f"\n[ctxmap] done -> {out_zdl}")
+    print(f"\n[ctxnib] done -> {out_zdl}")
 
 
 if __name__ == "__main__":

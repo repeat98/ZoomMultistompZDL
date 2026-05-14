@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build StateIso.ZDL from stateiso.c + manifest.json."""
+"""Build DescIso.ZDL from desciso.c + manifest.json."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent.parent
+ROOT = HERE.parent.parent.parent
 sys.path.insert(0, str(ROOT / "build"))
 sys.path.insert(0, str(ROOT / "src" / "airwindows" / "common"))
 
@@ -32,15 +32,14 @@ CFLAGS = [
 
 def main() -> None:
     manifest = json.loads((HERE / "manifest.json").read_text())
-    write_param_header(manifest, HERE / "stateiso_params.h", "STATEISO")
+    write_param_header(manifest, HERE / "desciso_params.h", "DESCISO")
 
-    src_c = HERE / "stateiso.c"
-    obj = HERE / "stateiso.obj"
-    out_dir = ROOT / "dist"
-    out_dir.mkdir(exist_ok=True)
-    out_zdl = out_dir / f"{manifest['effect_name']}.ZDL"
+    src_c = HERE / "desciso.c"
+    obj = HERE / "desciso.obj"
+    out_zdl = ROOT / "dist" / f"{manifest['effect_name']}.ZDL"
+    out_zdl.parent.mkdir(exist_ok=True)
 
-    print(f"[stateiso] compiling {src_c.name} -> {obj.name}")
+    print(f"[desciso] compiling {src_c.name} -> {obj.name}")
     subprocess.run(
         [str(CL6X), *CFLAGS, "-c", str(src_c), f"--output_file={obj}"],
         check=True,
@@ -62,12 +61,12 @@ def main() -> None:
         output_path=out_zdl,
         fxid_version=manifest.get("fxid_version", "1.00").encode("ascii"),
         flags_byte=manifest.get("flags_byte", 0x01),
-        screen_image=make_airwindows_tape_screen("StateIso", ""),
+        screen_image=make_airwindows_tape_screen("DescIso", ""),
         audio_nop=manifest.get("audio_nop", False),
     )
     link(cfg)
 
-    print(f"\n[stateiso] done -> {out_zdl}")
+    print(f"\n[desciso] done -> {out_zdl}")
 
 
 if __name__ == "__main__":
