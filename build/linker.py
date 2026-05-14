@@ -595,7 +595,8 @@ def _build_descriptor(
             #      use the simple 0x04 sentinel)
             #
             # Matches Exciter/OptComp/ZNR: 3-param plugins use flags=0x14
-            # (sentinel | pedal) and pedal_max=max on the final parameter.
+            # (sentinel | pedal/expression assignable) and pedal_max=max on
+            # the final parameter.
             # Earlier tests (2026-05-10) marked this as "no fix" in isolation,
             # but it is the correct on-disk ABI for 3-param effects.
             if p.flags is not None:
@@ -603,7 +604,7 @@ def _build_descriptor(
             elif n_user == 3:
                 if p.pedal_max is None:
                     _p32(entry, 0x14, p.max_val)   # pedal_max = max
-                _p32(entry, 0x2C, 0x14)            # flags = sentinel | stereo | pedal
+                _p32(entry, 0x2C, 0x14)            # flags = sentinel | pedal assign
             else:
                 _p32(entry, 0x2C, 0x04)            # flags = sentinel only
         elif p.flags is not None:

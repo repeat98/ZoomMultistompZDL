@@ -121,19 +121,25 @@ struct SonicStompEntry {                  // 48 bytes
 };
 ```
 
-`pedal_flags` bitmask (`+0x2C`) — verified by reading
-`ZoomPedalFun-main`'s `ProcessFirmware1.py`:
+`pedal_flags` bitmask (`+0x2C`) — cross-checked against the stock corpus:
 
 | Mask   | Bit | Meaning                                                   |
 |--------|-----|-----------------------------------------------------------|
 | `0x04` | 2   | **End-of-table sentinel** — last parameter entry          |
-| `0x10` | 4   | Stereo parameter (affects width/balance)                  |
+| `0x10` | 4   | Pedal/expression-assignable parameter marker              |
 | `0x28` | 3+5 | Tempo-synced (both bits required)                         |
-| any ≠0 | —   | Pedal-assignable (any non-zero value enables expression)  |
 
 Common observed values: `0x00` (regular knob), `0x04` (last-param,
-not pedal), `0x10` (pedal-assignable, stereo), `0x14` (last + pedal +
-stereo), `0x38` (tempo-synced delay time).
+not pedal), `0x10` (pedal/expression assignable), `0x14` (last +
+pedal/expression assignable), `0x28` (tempo), `0x38` (tempo +
+pedal/expression assignable).
+
+Important correction: `0x10` is not the missing "make this effect stereo"
+switch. It appears on mono stock effects such as `CHORUS`, `DELAY`, and many
+amp/drive parameters whenever those parameters are expression-assignable, and
+stock effects with explicit Mono/Stereo mode parameters use ordinary descriptor
+entries plus `GetString_MonoStereo` display helpers. Treat stereo routing as
+still unmapped.
 
 **The Exciter values, observed on disk** (note +0x14 = 1 on the name
 entry — that's `pedal_max = 1`, common but its purpose is unclear):

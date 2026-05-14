@@ -138,10 +138,14 @@ inactive unless the host rate is ever proven different.
    * same UI shape with tiny pass-through DSP;
    * reduced 2- or 3-parameter shell to isolate page 2/3 handlers;
    * full DSP with divide/helper use removed or gated.
-2. Add a desktop equivalence harness before calling ToTape9 1:1.
-3. Continue mapping `ctx[2]`, `ctx[13]`, and `ctx[14]` from stock delay,
+2. Focus the first ToTape9 split on synthesized/edit-handler behavior. The
+   stock corpus contains many 9-parameter effects, and ToTape9's current
+   executable load size is within stock bounds, so parameter count and raw size
+   are less suspicious than handler shape or runtime helper use.
+3. Add a desktop equivalence harness before calling ToTape9 1:1.
+4. Continue mapping `ctx[2]`, `ctx[13]`, and `ctx[14]` from stock delay,
    modulation, and tape effects.
-4. Record every hardware result in `docs/STATE-ABI-PROGRESS.md` before moving
+5. Record every hardware result in `docs/STATE-ABI-PROGRESS.md` before moving
    the claim into release docs.
 
 ## Stop Conditions

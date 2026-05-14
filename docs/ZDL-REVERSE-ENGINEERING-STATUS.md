@@ -239,6 +239,24 @@ of only `Dsz696K` being silent, the confirmed lower bound is now 705,536 bytes.
 That is enough to stop size probing for `StereoChorus` and start the exact-port
 layout work.
 
+Offline stock-corpus follow-up, with no pedal connected: a descriptor scan
+parsed 818 of 830 stock ZDLs and found 114 stock effects with 9 user
+parameters. `STDELAY` uses the same 11-entry descriptor size that ToTape9 uses
+(`OnOff` + effect name + 9 params). A program-header pass shows current
+`ToTape9.ZDL` has a 13,440-byte executable load segment, below the largest
+stock executable load segment observed in the corpus (18,016 bytes). This
+makes "9 parameters" and raw executable size less likely as the load-crash
+root cause than synthesized edit handlers, helper/runtime shape, or a subtler
+descriptor/dynamic-symbol mismatch.
+
+Stereo-routing follow-up: stock mono/stereo pairs such as `CHORUS`/`STCHO`,
+`DELAY`/`STDELAY`, and `GEQ`/`ST_G_GEQ` do not expose an obvious stereo flag in
+the ZDL `INFO` wrapper. The descriptor `0x10` flag is not the missing stereo
+effect switch; it appears on expression-assignable parameters in mono effects
+too. Some stock chorus effects expose a Mono/Stereo mode using ordinary
+parameter descriptors plus `GetString_MonoStereo` / `disp_prm_MonoStereo`
+helpers, so effect-level stereo routing remains unmapped.
+
 Parameter table:
 
 | Slot | Meaning |

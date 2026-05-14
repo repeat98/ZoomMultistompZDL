@@ -2168,3 +2168,97 @@ Build behavior:
 * Individual probe names still work, for example `python3 -B build_all.py
   ctxmap`.
 * Probe build scripts now import shared helpers from `src/airwindows/common/`.
+
+## 2026-05-14: Offline ABI Research Pass, No Pedal Connected
+
+Since no hardware was available, this pass only uses local stock ZDLs,
+firmware strings/disassembly, and the current linker output. Treat these as
+static-analysis findings until a later hardware test confirms behavior.
+
+Commands used:
+
+```bash
+python3 -B build/disassemble_zdl.py \
+  stock_zdls/CHORUS.ZDL \
+  stock_zdls/STCHO.ZDL \
+  stock_zdls/DELAY.ZDL \
+  stock_zdls/STDELAY.ZDL \
+  stock_zdls/GEQ.ZDL \
+  stock_zdls/ST_G_GEQ.ZDL \
+  --out-dir /tmp/zoom-stereo-compare
+```
+
+Additional inline Python scans compared ZDL `INFO` fields, descriptor entries,
+program-header load sizes, and stock parameter counts across the 830-file
+`stock_zdls/` corpus.
+
+### Stereo-routing clues
+
+Compared stock mono/stereo pairs:
+
+| Pair | Static result |
+|---|---|
+| `CHORUS.ZDL` / `STCHO.ZDL` | Same wrapper category fields: `real_type=6`, `unknown1=1`, `knob_type=0`, `sort_fx_type=6`; different names, sort indices, defaults, symbols, and code. |
+| `DELAY.ZDL` / `STDELAY.ZDL` | Same wrapper category fields: `real_type=8`, `unknown1=1`, `knob_type=0`, `sort_fx_type=8`; `STDELAY` is a normal 9-parameter descriptor. |
+| `GEQ.ZDL` / `ST_G_GEQ.ZDL` | Same wrapper category fields except sort index; `ST_G_GEQ` puts its audio pointer in `.text` instead of a separate `.audio` section. |
+
+Interpretation:
+
+* The ZDL `INFO` wrapper does not show an obvious mono/stereo declaration bit
+  in these pairs.
+* The descriptor flag `0x10` is not the missing effect-level stereo switch.
+  It appears on expression-assignable parameters in mono effects too, including
+  `CHORUS` and `DELAY`.
+* Several stock chorus effects (`CE_CHO5`, `SUPERCHO`, `ANA234CH`) expose a
+  Mono/Stereo mode through an ordinary parameter entry plus
+  `GetString_MonoStereo` / `disp_prm_MonoStereo`. That explains value display
+  for a stock mode parameter, but it does not yet explain how a custom ZDL asks
+  the host for stereo routing.
+
+Next offline target:
+
+* Disassemble `Fx_MOD_CE_Cho5_mode_edit`, `Fx_MOD_SuperCho_mode_edit`, and
+  `Fx_MOD_ANA234Cho_mode_edit`, then compare what they write against their
+  audio entry's `ctx[13]`/`ctx[14]` use.
+
+### ToTape9 load-crash clues
+
+Descriptor scan result:
+
+* Parsed descriptors in 818 of 830 stock ZDLs.
+* Stock user-parameter count distribution:
+  * 2 params: 25 files
+  * 3 params: 109 files
+  * 4 params: 88 files
+  * 5 params: 158 files
+  * 6 params: 187 files
+  * 7 params: 80 files
+  * 8 params: 57 files
+  * 9 params: 114 files
+* `STDELAY.ZDL` uses 9 user parameters, so its descriptor is the same
+  11-entry shape as current ToTape9: `OnOff` + effect-name entry + 9 params.
+
+Program-header size scan:
+
+| Build | Executable PT_LOAD bytes | ELF bytes |
+|---|---:|---:|
+| Largest stock observed (`MS-50G_CMN_DRV.ZDL`) | 18,016 | 22,857 |
+| Large stock 9-param examples (`TREM_REV`, `MNGLD_SP`, `DUAL_REV`) | 16,640-17,952 | 42,263-45,472 |
+| Current `dist/ToTape9.ZDL` | 13,440 | 17,182 |
+
+Interpretation:
+
+* ToTape9's load crash is unlikely to be caused by the mere fact that it has 9
+  parameters.
+* ToTape9's executable load segment is large for this repo but not beyond stock
+  precedent.
+* The highest-value non-hardware split is now the edit-handler path: compare a
+  9-parameter ToTape9 shell using stock/NOP handlers, synthesized cloned
+  handlers, and object-defined handlers before blaming `ctx[3]` or the tape
+  DSP.
+
+Documentation correction:
+
+* `build/ABI.md` now treats descriptor flag `0x10` as a
+  pedal/expression-assignable parameter marker, not an effect-level stereo
+  flag.
