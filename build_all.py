@@ -136,6 +136,8 @@ def main(argv: list[str]) -> int:
     name_check_rc = 0
     if selected is None:
         name_check_rc = check_dist_filenames()
+        name_check_rc |= subprocess.run(
+            [sys.executable, "-B", str(ROOT / "build" / "fxid_check.py")]).returncode
     if failures:
         print(f"\nFAILED: {failures}")
         return 1
