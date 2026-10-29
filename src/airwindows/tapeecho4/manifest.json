@@ -8,8 +8,8 @@
   "gid": 8,
   "gid_comment": "0x08 = Delay category.",
 
-  "fxid": 409,
-  "fxid_comment": "0x0199 in the custom Airwindows range.",
+  "fxid": 946,
+  "fxid_comment": "0x03B2 (header 0x080003B2). Was 409 (0x0199) until 2026-10-29, the same Delay ID as Spool.ZDL from themanro/ZoomMultistompZDL (issue #8). 946 is unused by every collection listed in docs/FXID-REGISTRY.md.",
 
   "fxid_version": "1.00",
   "flags_byte": 1,

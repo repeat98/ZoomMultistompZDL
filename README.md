@@ -30,6 +30,18 @@ Back up your current effect list before writing. This project is still reverse
 engineering firmware behavior, and experimental builds can crash or freeze a
 pedal until power-cycled.
 
+> **Never install two effects with the same effect ID.** Effects from
+> different collections can share an ID by accident. If Zoom Effect Manager
+> reports `repeating index effect - 0x...`, do not write to the pedal until
+> one of the two files is gone from the folder. `TEcho4.ZDL` from before
+> 2026-10-29 used `0x08000199`, the same ID as `Spool.ZDL` from
+> themanro/ZoomMultistompZDL, and a swap between the two left one MS-70CDR
+> unbootable ([issue #8](https://github.com/repeat98/ZoomMultistompZDL/issues/8)).
+> If your pedal has or had `Spool.ZDL`, remove the old `TEcho4.ZDL` from the
+> pedal and write first, then add the new one. A pedal that stops booting
+> after a write may need its ROM reflashed with a programmer (such as a
+> CH341A) to recover. Details: [docs/INSTALLING-ZDLS.md](docs/INSTALLING-ZDLS.md#never-install-two-effects-with-the-same-id).
+
 More detailed install notes live in [docs/INSTALLING-ZDLS.md](docs/INSTALLING-ZDLS.md).
 
 ## Compatibility
@@ -47,9 +59,10 @@ as unverified until someone reports a clean load and audio test.
 
 Start from [src/airwindows/gain/](src/airwindows/gain/) if you want the
 smallest working custom effect. Copy that directory, give the effect a new
-name and unused `fxid` in `manifest.json`, then update the C audio function and
-`build.py` to use the new names. Add the new build script to
-[build_all.py](build_all.py) once it builds on its own.
+name and an `fxid` that is unused here and in other collections (check
+[docs/FXID-REGISTRY.md](docs/FXID-REGISTRY.md)) in `manifest.json`, then
+update the C audio function and `build.py` to use the new names. Add the
+new build script to [build_all.py](build_all.py) once it builds on its own.
 
 Keep the first hardware test boring: `audio_nop: true` or tiny pass-through
 DSP, no large static state, no heap, and no new runtime helper calls. The safe
@@ -81,6 +94,9 @@ effect directory conventions are summarized in
   an eight-line FDN tail. Porting that longer spring model into the bounded
   pedal runtime remains pending. Hardware result is pending; true host tap
   tempo for custom ZDLs is still unproven.
+  Since 2026-10-29 it uses effect ID 946 (`0x080003B2`); the earlier
+  409 clashed with `Spool.ZDL` (issue #8). Patches saved with the old file
+  refer to the old ID, so pick TapeEcho4 again in them.
 - ZDL filenames should have unique basenames of 8 characters or less. Zoom
   tooling/device code can truncate longer basenames, so collisions like
   `TapeEcho4.ZDL` -> `TapeEcho.ZDL` can create duplicate effect identities and
