@@ -32,7 +32,7 @@ def stock_windows(stock_dir: Path) -> dict[bytes, str]:
     for label, data in sources.items():
         for i in range(len(data) - WINDOW + 1):
             chunk = data[i:i + WINDOW]
-            if any(chunk) and chunk != chunk[:4] * 4:   # skip zero padding and repeated NOP words
+            if sum(1 for b in chunk if b) >= 6:   # NOP padding has at most one non-zero byte per word: not code
                 windows.setdefault(chunk, f"{label}+0x{i:X}")
     return windows
 
