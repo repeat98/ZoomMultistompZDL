@@ -86,7 +86,7 @@ section "IDs used by other collections" was added.
 | 410 | 1 | OTT | `src/custom/ott` | Hardware unverified |
 
 Retired: **409 / gid 8** (TapeEcho4 until 2026-10-29) and **469 / gid 1**
-(Pump It's previous ID). Old patches and pedals may still refer to these IDs;
+(Pump It, old build). Old patches and pedals may still refer to these IDs;
 never reuse them.
 
 ### Hardware probe effects (not in dist/)
