@@ -1,0 +1,43 @@
+Scope of the repository-level MIT grant
+
+Except where a file or component provides its own license or scope limitation,
+the MIT License below applies to original software and associated original
+documentation in this repository, only to the extent their copyrights are
+controlled by Leemuzhko and the portions can be licensed independently.
+
+Third-party and vendor material, imported/reference components, firmware,
+drivers, toolchains, IRs, model weights, recordings, graphics and other datasets
+or assets are outside this default grant, including when unmarked. They retain
+their own terms. Modifications and mixed or derived files remain subject to all
+applicable component terms; this notice does not relicense third-party portions.
+
+Existing license grants, copyright notices and component-specific scope
+statements remain in force. The exclusions above do not withdraw permissions
+already granted under those licenses. ZOOM-CORE/ is outside this licensing change.
+
+See LICENSING.md, THIRD_PARTY_NOTICES.md and license_map.json for the scope and
+reviewed evidence. The inventory is not exhaustive.
+
+---------------------------------------------------------------------------
+
+MIT License
+
+Copyright (c) 2026 Leemuzhko
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
