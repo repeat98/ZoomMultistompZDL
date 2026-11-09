@@ -325,6 +325,13 @@ class LinkerConfig:
     # see docs/INIT-MATERIALIZATION.md and _init_materialize_body above.
     materialize_init: bool = False
 
+    # Build with the effect's own runtime (build/own_runtime.py): Leemuzhko's zui OnOff and knob handlers and his
+    # Dll_, generated ABI attributes, and no divf unless the effect divides floats. Nothing from Zoom's effects goes
+    # into the ZDL (docs/STOCK-FILES.md). zui gives every knob a handler, so the LineSel clones and the AIR knob-3
+    # blob are off; a knob whose handler the effect's own code defines keeps it. ZDL_OWN_RUNTIME=1 sets it for
+    # every effect in one build.
+    own_runtime: bool = False
+
     # Descriptor self-entry +0x28: the DSP cost the firmware adds up per patch;
     # the community-measured MS-70CDR budget is ~230 ("DSP Full" above it;
     # github.com/Leemuzhko/ZOOM_development NAM/sdk/docs/DSP_COST_230_HYPOTHESIS).
@@ -338,8 +345,12 @@ class LinkerConfig:
         # candidate _init can be run through the emulator (matcheck) across the
         # whole pack without editing 22 build.py files. Off by default: this is an
         # unproven _init and two earlier versions froze the pedal on boot.
-        if os.environ.get("ZDL_MATERIALIZE_INIT") == "1":
-            self.materialize_init = True
+        if os.environ.get("ZDL_MATERIALIZE_INIT") in ("0", "1"):
+            self.materialize_init = os.environ["ZDL_MATERIALIZE_INIT"] == "1"   # 0: off, to bisect a boot freeze
+        if os.environ.get("ZDL_OWN_RUNTIME") == "1":
+            self.own_runtime = True
+        if self.own_runtime:
+            self.synthesize_linesel_edit_handlers = False
         if self.audio_func_name is None:
             self.audio_func_name = f"Fx_FLT_{self.effect_name}"
         if self.gid not in GID_PREFIX:
@@ -970,14 +981,33 @@ def link(cfg: LinkerConfig) -> None:
     object_symbol_names = {sym['name'] for sym in obj.symbols if sym['name']}
 
     # ----- Load divf RTS -----
-    divf_code = _local_stock_file(cfg.divf_rts_path).read_bytes()
+    if cfg.own_runtime:
+        import own_runtime
+        if '__c6xabi_divf' in externals:
+            raise RuntimeError("this effect divides floats (__c6xabi_divf): own_runtime has no divf yet; it is to be "
+                               "built from TI's RTS source, not taken from a stock effect")
+        divf_code = b""
+    else:
+        divf_code = _local_stock_file(cfg.divf_rts_path).read_bytes()
 
     # ----- Load handler blob (or fall back to NOP_RETURN handlers) -----
     handler_blob = b""
     handler_va: dict[str, int] = {}                              # filled below
     handler_path = Path(cfg.handler_blob_path) if cfg.handler_blob_path else None
     use_real_handlers = handler_path is not None and handler_path.exists()
-    if use_real_handlers:
+    handler_funcs = dict(cfg.handler_funcs)
+    zui_offsets: dict[str, int] = {}
+    if cfg.own_runtime:
+        def object_edit(i: int) -> bool:
+            return (cfg.use_object_edit_handlers and i >= cfg.object_edit_start_index
+                    and f"{cfg.audio_func_name}_{cfg.params[i].name.replace(' ', '')}_edit" in object_symbol_names)
+        zui_indices = [i for i in range(len(cfg.params)) if not object_edit(i)]
+        handler_blob, zui_offsets = own_runtime.handlers(zui_indices)
+        handler_funcs = {"onf": zui_offsets["onf"], "call_stub": zui_offsets["stub"],
+                         "push_rts": zui_offsets["push_rts"], "pop_rts": zui_offsets["pop_rts"]}
+        use_real_handlers = True
+        print(f"  handlers: own runtime, zui.asm ({len(handler_blob)} bytes; {len(zui_indices)} knob entries)")
+    elif use_real_handlers:
         handler_blob = _local_stock_file(handler_path).read_bytes()
         print(f"  handlers: {handler_path.name} ({len(handler_blob)} bytes)")
 
@@ -1008,7 +1038,7 @@ def link(cfg: LinkerConfig) -> None:
     knob3_blob = b""
     knob3_path = Path(cfg.knob3_blob_path) if cfg.knob3_blob_path else None
     use_knob3 = (knob3_path is not None and knob3_path.exists()
-                 and len(cfg.params) >= 3)
+                 and len(cfg.params) >= 3 and not cfg.own_runtime)
     if use_knob3:
         knob3_blob = _local_stock_file(knob3_path).read_bytes()
         print(f"  knob3:    {knob3_path.name} ({len(knob3_blob)} bytes)")
@@ -1064,11 +1094,12 @@ def link(cfg: LinkerConfig) -> None:
     #
     # Pre-count NOP roles: init (always NOP), plus one per knob that
     # falls back to NOP_RETURN.
-    use_real_knob1    = use_real_handlers and "knob1_edit" in cfg.handler_funcs and len(cfg.params) >= 1
-    use_real_knob2    = use_real_handlers and "knob2_edit" in cfg.handler_funcs and len(cfg.params) >= 2
+    use_real_knob1    = use_real_handlers and "knob1_edit" in handler_funcs and len(cfg.params) >= 1
+    use_real_knob2    = use_real_handlers and "knob2_edit" in handler_funcs and len(cfg.params) >= 2
     use_real_knob3    = use_knob3       and len(cfg.params) >= 3
     nop_knob_count    = sum(1 for i in range(len(cfg.params))
                             if not (
+                                f"k{i}" in zui_offsets or
                                 (
                                     cfg.synthesize_linesel_edit_handlers
                                     and i >= cfg.synth_edit_start_index
@@ -1084,7 +1115,7 @@ def link(cfg: LinkerConfig) -> None:
                                 (i == 2 and use_real_knob3)
                             ))
 
-    nop_onf_needed    = 1 if (not use_real_handlers or "onf" not in cfg.handler_funcs) else 0
+    nop_onf_needed    = 1 if (not use_real_handlers or "onf" not in handler_funcs) else 0
     object_init_name  = f"{cfg.audio_func_name}_init"
     use_object_init   = cfg.use_object_init_handler and object_init_name in object_symbol_names
     NOP_RETURN_COUNT  = (0 if use_object_init else 1) + nop_knob_count + nop_onf_needed
@@ -1141,12 +1172,25 @@ def link(cfg: LinkerConfig) -> None:
     for k in range(NOP_RETURN_COUNT):
         stub_off = NOP_RET_OFF + k * NOP_RET_STUB_SIZE
         out_text[stub_off:stub_off + NOP_RET_STUB_SIZE] = _NOP_RETURN
-    out_text[DLL_OFF:DLL_OFF + DLL_SIZE] = _build_dll(2 + len(cfg.params))
+    dll_relocs = _DLL_RELA_OFFSETS
+    if cfg.own_runtime:
+        if DLL_OFF % 32:
+            raise RuntimeError("the own Dll_ must start on a 32-byte fetch packet")
+        dll_body, dll_relocs = own_runtime.dll(2 + len(cfg.params), DLL_SIZE)
+        if any(rtype not in (RT_ABS_L16, RT_ABS_H16) for _, rtype, _ in dll_relocs):
+            raise RuntimeError(f"dll.asm: unexpected relocation types {dll_relocs}")
+        out_text[DLL_OFF:DLL_OFF + DLL_SIZE] = dll_body
+        print(f"  Dll:      own runtime, dll.asm ({2 + len(cfg.params)} rows)")
+    else:
+        out_text[DLL_OFF:DLL_OFF + DLL_SIZE] = _build_dll(2 + len(cfg.params))
 
     # Resolve handler VAs (one per logical name)
     if use_real_handlers:
-        for name, off in cfg.handler_funcs.items():
+        for name, off in handler_funcs.items():
             handler_va[name] = TEXT_VA + HANDLER_OFF + off
+    for i in range(len(cfg.params)):
+        if f"k{i}" in zui_offsets:
+            synth_handler_vas_by_param[i] = TEXT_VA + HANDLER_OFF + zui_offsets[f"k{i}"]
     if synth_specs:
         for clone_idx, (param_idx, _knob_id, _param_off) in enumerate(synth_specs):
             synth_handler_vas_by_param[param_idx] = (
@@ -1536,7 +1580,7 @@ def link(cfg: LinkerConfig) -> None:
         coe_relocs.append((TEXT_VA + coe_reloc_off + 0x0C, RT_ABS_H16, COE_VA))
 
     DESC_TABLE_VA = DESC_VA
-    for off_in_dll, rtype, purpose in _DLL_RELA_OFFSETS:
+    for off_in_dll, rtype, purpose in dll_relocs:
         file_off = DLL_OFF + off_in_dll
         target = DESC_TABLE_VA if purpose == 'desc' else INFO_VA
         if rtype == RT_ABS_L16:
@@ -1686,7 +1730,7 @@ def link(cfg: LinkerConfig) -> None:
     # Exciter's 62-byte blob verbatim (Tag_ISA=C6740, ABI_DSBT/PID/PIC
     # all matching the bare-metal-non-DSBT model we actually produce).
     c6xabi_path = Path(__file__).resolve().parent / "c6xabi_attributes.bin"
-    c6xabi_attrs = _local_stock_file(c6xabi_path).read_bytes()
+    c6xabi_attrs = own_runtime.abi_attributes() if cfg.own_runtime else _local_stock_file(c6xabi_path).read_bytes()
 
     # Stock ZDL ELFs place .text at file offset 0x40 and put the program
     # header table near EOF, immediately before the section headers. Keep
