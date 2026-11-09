@@ -1,0 +1,63 @@
+{
+  "effect_name": "Spiral",
+  "comment": "PEDAL BUILD manifest for Spiral (7-knob). Spiral \u2014 a delay whose repeats climb or sink. A grain-re-triggered tap is read at `ratio` inside the FEEDBACK loop, so the shift compounds: repeat 1 is one step away, repeat 2 two steps, an endless staircase fading with the feedback. Rise sets a constant ratio (bipolar, unity at centre) for the discrete per-repeat staircase; Glide+Span are an onset-triggered ramp on that same ratio: a note resets the ramp to ZERO and it then climbs toward Glide's depth over Span, so the repeats begin at pitch and drift away over a while. That is the 'slowly rises for a while' behaviour; it is deliberately not a decay back to unity. Glide 0 = pure staircase; Rise centred + Glide up = pure glide with no net transposition. Ratio mapping is piecewise LINEAR, not 2^(semis/12), because the pedal cannot call exp2 without a helper call.",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_.",
+  "fxid": 449,
+  "fxid_comment": "0x01C1. Free: no stock effect uses it, not a retired custom alias (checked against tools/effects_db.json). Sits just below the 450-459 custom block.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Div",
+      "max": 100,
+      "default": 30,
+      "comment": "Musical division of the tempo below: 1/32, 1/16T, 1/16, 1/8T, 1/8, dotted 1/8, 1/4, dotted 1/4. Default 30 lands on 1/16, which at 120 BPM is the 125 ms that the old Time=17 produced."
+    },
+    {
+      "name": "Tempo",
+      "max": 240,
+      "default": 120,
+      "comment": "BPM, read straight off the knob so the pedal's own number IS the tempo. Clamped to 40..240 in the DSP."
+    },
+    {
+      "name": "Feedbk",
+      "max": 100,
+      "default": 60,
+      "comment": "Repeats, scaled to 0.965 and soft-clipped in the loop."
+    },
+    {
+      "name": "Rise",
+      "max": 100,
+      "default": 62,
+      "comment": "Per-repeat ratio: 0 = octave down, 50 = unity, 100 = octave up."
+    },
+    {
+      "name": "Glide",
+      "max": 100,
+      "default": 45,
+      "comment": "Depth of the onset-triggered ramp on that ratio."
+    },
+    {
+      "name": "Span",
+      "max": 100,
+      "default": 45,
+      "comment": "How long the rise takes, ~0.19 s .. ~8 s."
+    },
+    {
+      "name": "Tone",
+      "max": 100,
+      "default": 50,
+      "comment": "Low-pass inside the feedback loop."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet."
+    }
+  ],
+  "audio_func_name": "Fx_DLY_Spiral",
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

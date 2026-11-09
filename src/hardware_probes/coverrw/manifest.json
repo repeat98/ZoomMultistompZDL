@@ -1,0 +1,15 @@
+{
+  "effect_name": "CoverRW",
+  "comment": "Test C of docs/pedal-research/animated-covers.md: does the pedal re-read an effect's cover on each redraw? On every on/off flip the audio code inverts a striped block of literal bytes in its own cover (RLE length unchanged). Knob 1's value text reads one of those bytes back. Audio passes through.",
+  "audio_func_name": "Fx_DLY_CoverRW",
+  "gid": 8,
+  "fxid": 412,
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {"name": "Byte", "type": "knob", "max": 100, "default": 50, "comment": "Value text: the first striped cover byte in hex (FE before a flip, 01 after one)."},
+    {"name": "Plain", "type": "knob", "max": 100, "default": 50},
+    {"name": "Plain2", "type": "knob", "max": 100, "default": 50}
+  ],
+  "audio_nop": false
+}

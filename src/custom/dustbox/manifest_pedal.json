@@ -1,0 +1,39 @@
+{
+  "effect_name": "Dustbox",
+  "comment": "Folded in from github.com/marcfuentes/dustbox-zdl (MIT, (c) 2026 Marcelo Fuentes). DOD FX33 Buzz Box-style distortion plus a flip-flop sub-octave. PEDAL BUILD manifest for Dustbox (4-knob). build.py reads THIS file; manifest.json is the desktop-preview manifest. Blue Box octave is a zero-crossing flip-flop divider (relocation-free: no arrays, no math lib, no runtime divide). Renamed off the original DOD/FX33/Buzz branding to a vacuum-cleaner theme.",
+  "audio_func_name": "Fx_DLY_Dustbox",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_ / Fx_DLY_.",
+  "fxid": 463,
+  "fxid_comment": "0x01CF. Verify uniqueness before flashing.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Dust",
+      "max": 100,
+      "default": 50,
+      "comment": "params[5]. (was Heavy) Blend distortion (0) <-> sub-octave fuzz (100, 2 octaves down). The ONLY knob that adds the octave; at 0 no octave is present. Knob 1, matching the real FX33's Heavy/Buzz/Saw/Thrust layout order."
+    },
+    {
+      "name": "Motor",
+      "max": 100,
+      "default": 60,
+      "comment": "params[6]. (was Buzz) Gain / distortion amount only -- never adds the octave."
+    },
+    {
+      "name": "Filter",
+      "max": 100,
+      "default": 50,
+      "comment": "params[7]. (was Saw) Tone: single high-shelf. 0 = dark, 50 = flat, 100 = bright."
+    },
+    {
+      "name": "Power",
+      "max": 100,
+      "default": 50,
+      "comment": "Output level. Raised from the original's default of 1 so the effect is audible when selected, matching the rest of this pack. Note this is a LEVEL, not a dry/wet crossfade -- Dustbox's blend is Dust, which fades between the distortion and the octave branch rather than against dry."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

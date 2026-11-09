@@ -1,0 +1,48 @@
+{
+  "effect_name": "Hydra",
+  "comment": "Hydra \u2014 two extra playback heads on one delay ring. The dry goes into the ring; a 2x head and a 0.5x head are re-triggered every Window from one window behind the write head. The 2x head closes the gap at 1 sample/sample, so it consumes TWO windows of history per window and lands flush on the write head (double-time ghost, octave up); the 0.5x head falls behind, covering half a window per window with a max lag of 1.5 windows (half-time drag, octave down). Window is what makes this one effect rather than two: at a few ms the re-trigger rate IS the pitch, so you get time-aligned octave-up/octave-down layers; at 100 ms..1 s the re-trigger lands at rhythmic rates and the layers become double-time hits and a half-time drag. Aimed at drums.",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY with the rest of the pack; the mechanism is genuinely a multi-tap delay.",
+  "fxid": 459,
+  "fxid_comment": "0x01CB. Free: no stock effect uses it and it is not a retired custom alias (checked against tools/effects_db.json). Sits with the 450-458 custom block.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Div",
+      "max": 100,
+      "default": 42,
+      "comment": "Re-trigger length as a division of Tempo. Position 0 is Grain: a fixed 256-sample window, free-running, which is the granular octave-shifter mode the tempo ladder cannot reach. Above that: 1/32, 1/16T, 1/16, 1/8T, 1/8, dotted 1/8, 1/4. Default 42 = 1/16 (DSP range 32-43); 1/8T starts at 44."
+    },
+    {
+      "name": "Tempo",
+      "max": 240,
+      "default": 120,
+      "comment": "BPM, read straight off the knob. Clamped to 40..240 in the DSP. Ignored when Div is at Grain."
+    },
+    {
+      "name": "Fast",
+      "max": 100,
+      "default": 70,
+      "comment": "Level of the 2x head: double-time ghost, octave up."
+    },
+    {
+      "name": "Slow",
+      "max": 100,
+      "default": 55,
+      "comment": "Level of the 0.5x head: half-time drag, octave down."
+    },
+    {
+      "name": "Tone",
+      "max": 100,
+      "default": 45,
+      "comment": "Low-pass on the two layers only; the dry stays open."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet."
+    }
+  ]
+}

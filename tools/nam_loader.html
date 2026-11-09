@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NAM + Cab Loader · MultiStomp</title>
+<style>
+:root{color-scheme:light;--ink:#102d3c;--paper:#c4e6f6;--panel:#a9d1e6}*{box-sizing:border-box}body{margin:0;background:#182c34;color:var(--ink);font:17px/1.55 system-ui,sans-serif}main{max-width:760px;margin:40px auto;background:var(--paper);border:5px solid #071923;padding:32px;box-shadow:9px 9px 0 #091920}h1{font:700 32px monospace;letter-spacing:1px;margin:0}h2{font-size:20px}a{color:inherit}header{border-bottom:3px solid;padding-bottom:18px;margin-bottom:25px}label{font-weight:700;display:block;margin-bottom:12px}input{max-width:100%}.pick{background:var(--panel);padding:24px;border:2px dashed;margin:22px 0}button,.download{display:inline-block;background:var(--ink);color:#d0f1ff;border:0;padding:12px 20px;font:700 16px system-ui;text-decoration:none;cursor:pointer}button:disabled{opacity:.45;cursor:default}.hint{font-size:14px}#status{min-height:2em;font-weight:600}#status[data-error="true"]{color:#842329}#result{border-top:2px solid;padding-top:20px}#downloads{display:flex;gap:12px;flex-wrap:wrap}.steps{padding-left:23px}.steps li{margin:10px 0}summary{cursor:pointer}details{margin-top:22px}footer{margin-top:28px;font-size:14px}.cabs{border-top:3px solid;margin-top:34px;padding-top:6px}#bank{list-style:none;padding:0;margin:18px 0;display:grid;gap:14px}.card{background:var(--panel);border:2px solid;padding:16px 18px}.card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.card-head .knob{font:700 14px monospace}.tools{display:flex;gap:6px}.tools button{padding:6px 12px;font-size:15px}.fit{display:flex;gap:14px;align-items:center;margin-top:14px;font-size:14px}.fit canvas{width:180px;height:72px;background:var(--paper);border:1px solid;flex:none}.knob{font:700 13px monospace}#cabStatus{min-height:1.6em;font-weight:600}#cabStatus[data-error="true"]{color:#842329}#cabDownloads{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}@media(max-width:600px){.fit{flex-direction:column;align-items:stretch}.fit canvas{width:100%}}@media(max-width:600px){main{margin:12px;padding:20px;box-shadow:none}h1{font-size:27px}}
+.ident{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 22px;align-items:start;margin:4px 0 18px}.card .ident{margin:0}
+.ident label,.ident .field-label{font-weight:700;display:block;margin:0 0 6px}.ident .field-label{margin-top:14px}
+.ident input{font:600 18px monospace;width:12ch;padding:6px 8px;border:2px solid var(--ink);background:#e9f6fc}
+.ident .hint{margin:6px 0 0}
+.ident select{font:600 15px system-ui;padding:6px 8px;border:2px solid var(--ink);background:#e9f6fc;max-width:100%}.eco{font-weight:400;margin:4px 0 16px}#namCard{margin:18px 0}
+.icon-toggle{display:inline-flex;align-items:center;gap:10px;padding:6px 12px 6px 6px;font-size:15px}.icon-toggle canvas{border:0}
+.ident-preview{width:256px}
+.icons{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px}.icons[hidden]{display:none}
+.icons button{padding:4px;background:#0b1d26;border:3px solid transparent;line-height:0}.icons button[aria-checked=true]{border-color:#e0a03a}
+.icons button:focus-visible,.icon-toggle:focus-visible{outline:3px solid #e0a03a;outline-offset:2px}
+canvas.lcd{image-rendering:pixelated;display:block;border:3px solid #071923;background:#cfe9f5;max-width:100%}
+@media(max-width:600px){.ident{grid-template-columns:1fr}.ident-preview{width:100%}}
+fieldset.rate{border:0;padding:0;margin:14px 0}fieldset.rate label{font-weight:400;margin-bottom:8px}fieldset.rate legend{margin-bottom:6px}.resp{border-top:3px solid;margin-top:34px;padding-top:6px}#respPlot{display:block;width:100%;height:260px;background:var(--panel);border:2px solid}.resp-row{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:12px 0}.resp-row label{display:inline;margin:0}.resp-row [hidden]{display:none}.resp-legend{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}.resp-legend i{display:inline-block;width:22px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}.resp-legend i.dash{border-top-style:dashed}
+</style></head><body><main>
+<header><a href="patch_editor.html">← Patch Editor</a><h1>NAM + CAB LOADER</h1><p>Turn a compatible NAM capture, or a set of cabinet IRs, into an effect for your MultiStomp.</p></header>
+<p>Your file stays in this browser. Conversion does not connect to or write to the pedal.</p>
+<div class="pick"><label for="capture">Choose a .nam capture</label><input id="capture" type="file" accept=".nam,application/json"><p id="chosen" class="hint">Supports the same A2 Lite model layout tested with NAMLite.</p></div>
+<div id="namCard" class="card" hidden><div class="card-head"><span id="namTitle" class="knob"></span></div><div id="namIdent"></div><fieldset class="rate"><legend><strong>DSP</strong></legend>
+<label><input type="radio" name="rate" value="full" checked> <strong>Full rate</strong> — the capture as trained. Uses most of the pedal's DSP (194).</label>
+<label><input type="radio" name="rate" value="eco"> <strong>Eco</strong> — the model runs on 6 of every 8 samples (181, 7% less). Within 0.3 dB of full rate below 3 kHz, a little less treble above.</label>
+<label><input type="radio" name="rate" value="ecoplus"> <strong>Eco+</strong> — half rate (152, 22% less) with a correction EQ fitted to this capture in this browser. Sounds noticeably worse than full rate; use it when you need the DSP for other effects, with amp-only captures going into a cab.</label></fieldset>
+<fieldset class="rate"><legend><strong>Outputs</strong></legend>
+<label><input type="radio" name="outs" value="0" checked> <strong>Stereo</strong> — the amp on both outputs.</label>
+<label><input type="radio" name="outs" value="1"> <strong>Split: amp left, dry right</strong> — the clean guitar on the right output, for a second amp or a DI. Knob 3 becomes <strong>Dry</strong>, the dry side's level (−24 to +24 dB, 50 = unchanged). Full rate only.</label>
+<label><input type="radio" name="outs" value="2"> <strong>Split: dry left, amp right</strong> — the same, the other way round.</label></fieldset>
+<button id="build" disabled>Create pedal file</button></div><template id="identTpl"><div class="ident"><div><label>Name</label><input class="ident-name" maxlength="8" autocomplete="off" spellcheck="false"><p class="hint ident-pedal"></p><span class="field-label">Icon</span><button type="button" class="icon-toggle" aria-expanded="false"><canvas class="lcd"></canvas><span class="icon-label"></span><span aria-hidden="true">▾</span></button><label class="field-label ident-slot-label">Slot</label><select class="ident-slot"></select><p class="hint ident-slot-hint"></p></div><canvas class="lcd ident-preview" role="img" aria-label="Pedal screen and Effect Manager thumbnail preview"></canvas><div class="icons" role="radiogroup" aria-label="Icon" hidden></div></div></template><p id="status" role="status" aria-live="polite">Loading the NAMLite engine…</p>
+<section id="result" hidden><h2 id="resultTitle">Your effect is ready</h2><div id="downloads"></div>
+<ol class="steps"><li>Download the named ZDL and keep its capture notes. Your icon and name are on its pedal screen. For the Effect Manager thumbnail, download the PNG beside the ZDL, keeping their matching names.</li><li>Add it in <strong>Zoom Effect Manager</strong> and install it. Different capture slots can remain installed together.</li><li>Close Effect Manager, reconnect Patch Editor and select your named capture in the Custom list. On the pedal, find <strong>NAM-shortname under Delay</strong>, version <strong id="namVersion">0.23</strong>.</li><li>Test one capture at a time: <strong>Input 50 · Output 25 · Mix 100</strong>. Compare with bypass or Mix 0.</li></ol>
+<p>216 independent capture slots; original NAMLite is unchanged. Reusing a slot replaces that capture in every patch using it. Installing several does not guarantee enough DSP to run them simultaneously.</p>
+<p class="hint">Slot names are remembered in this browser. Keep using the same browser and address. If you clear browser storage or use another computer, use your saved capture notes to identify occupied slots before exporting. Patch Editor still recognizes every slot's ID as a generic capture slot.</p></section>
+<section id="resp" class="resp" aria-labelledby="respTitle" hidden><h2 id="respTitle">Frequency response</h2>
+<p id="respNote" class="hint" role="status" aria-live="polite"></p>
+<canvas id="respPlot" role="img" aria-label="Frequency response"></canvas>
+<div class="resp-row"><label for="respCab"><strong>Through cab</strong></label><select id="respCab"><option value="">No cab</option></select><label id="respTrainedRow" hidden><input type="checkbox" id="respTrained"> Also show it as trained (48 kHz)</label></div>
+<ul id="respLegend" class="resp-legend"></ul>
+<p class="hint">An amp's tone depends on how hard you play it, so the capture is measured with pink noise at three input levels; each curve is the part of the output that follows the input, levelled in the mids so the shapes compare. Through a cab, it is the chain as the pedal plays it: the capture, then the cab's pedal filter.</p></section>
+<section class="cabs" aria-labelledby="cabTitle"><h2 id="cabTitle">Cabinets — CabIR</h2>
+<p>Each cab IR becomes its own <strong>CabIR</strong> effect, the same way each capture becomes its own NAM effect: pick it from the slot's effect list, no Cab knob. Up to 216 cabs (slots 1–16 are IDs 930–945, 17–216 are 700–899). One cab costs about 5% of NAM's load, so it fits after a capture. Each IR is fitted as a short FIR plus six filters, in this browser.</p>
+<div class="pick"><label for="irs">Add cab IRs (.wav)</label><input id="irs" type="file" accept=".wav,audio/wav,audio/x-wav" multiple><p class="hint">44.1 or 48 kHz, mono or stereo, up to 2 s. Fitting takes a few seconds per IR. Use amp-only NAM captures in front of a cab.</p></div>
+<ol id="bank" aria-label="Your cabs"></ol>
+<button id="buildCab" disabled>Download all cab files</button><p id="cabStatus" role="status" aria-live="polite">Loading the cab engine…</p><div id="cabDownloads"></div>
+<p class="hint">Each cab keeps its slot, so patches never switch cab under you. Removing a cab frees its slot for the next one you add; remove its file in Effect Manager too. Cabs are remembered in this browser.</p></section>
+<details><summary>Which captures work?</summary><p>This experimental loader accepts the specific 3-channel A2 Lite WaveNet layout used by our tested captures, including compatible Lite models inside a SlimmableContainer. Other NAM architectures and larger models are rejected.</p><p>The pedal processes at 44.1 kHz. A 48 kHz capture currently runs without sample-rate conversion, so its tone and timing can differ from the original. Successful conversion does not establish faithful playback or enough processing power to combine it with other effects.</p><p>Use a computer with Effect Manager for installation. Patch Editor edits an installed effect; it does not install the NAM file.</p></details>
+<footer>Local conversion · NAMLite block engine</footer>
+</main><script src="slot_identity.js"></script><script src="cover_art.js"></script><script src="nam_loader.js"></script><script src="nam_response.js"></script><script>
+'use strict';
+// Paint cover pixels (cover_art.js) as the pedal's LCD shows them: pixels ~1.4x tall.
+function paintLcd(cv,px,{x0=0,y0=0,w=128,h=64,scale=2}={}){
+ const img=new ImageData(w,h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const o=4*(y*w+x),ink=px[(y0+y)*128+x0+x];img.data[o]=ink?11:207;img.data[o+1]=ink?29:233;img.data[o+2]=ink?38:245;img.data[o+3]=255;}
+ const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;tmp.getContext('2d').putImageData(img,0,0);
+ cv.width=w*scale;cv.height=Math.round(h*scale*1.4);const g=cv.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(tmp,0,0,cv.width,cv.height);
+}
+// One name + icon + pedal-screen preview editor, used the same way for the
+// capture and for every cab. makeIdent clones the template; paintIdent draws it
+// for a cover (from the template manifest) once that has loaded.
+let identCount=0;
+function makeIdent(container,{inputId,slotId,slotHintId,prefix,placeholder,onName,onNameCommit,onIcon,onSlot}){
+ const root=document.getElementById('identTpl').content.firstElementChild.cloneNode(true),n=++identCount;
+ const r={root,prefix,name:root.querySelector('.ident-name'),pedal:root.querySelector('.ident-pedal'),toggle:root.querySelector('.icon-toggle'),
+  toggleIcon:root.querySelector('.icon-toggle canvas'),iconLabel:root.querySelector('.icon-label'),preview:root.querySelector('.ident-preview'),grid:root.querySelector('.icons'),cover:null,icon:null};
+ r.name.id=inputId||'identName'+n;root.querySelector('label').htmlFor=r.name.id;if(placeholder)r.name.placeholder=placeholder;
+ r.slot=root.querySelector('.ident-slot');r.slotHint=root.querySelector('.ident-slot-hint');r.slot.id=slotId||'identSlot'+n;r.slotHint.id=slotHintId||'identSlotHint'+n;
+ root.querySelector('.ident-slot-label').htmlFor=r.slot.id;r.slot.setAttribute('aria-describedby',r.slotHint.id);
+ if(onSlot)r.slot.addEventListener('change',()=>onSlot(Number(r.slot.value)));
+ r.grid.id='icons'+n;r.toggle.setAttribute('aria-controls',r.grid.id);
+ r.toggle.addEventListener('click',()=>{const open=r.grid.hidden;r.grid.hidden=!open;r.toggle.setAttribute('aria-expanded',String(open));});
+ r.name.addEventListener('input',()=>{if(onName)onName(r.name.value);paintIdent(r);});
+ if(onNameCommit)r.name.addEventListener('change',()=>onNameCommit(r.name.value));
+ r.onIcon=id=>{r.icon=id;r.grid.hidden=true;r.toggle.setAttribute('aria-expanded','false');if(onIcon)onIcon(id);paintIdent(r);r.toggle.focus();};
+ container.replaceChildren(root);return r;
+}
+function paintIdent(r,cover,icon){
+ if(cover&&cover!==r.cover){r.cover=cover;r.grid.replaceChildren();
+  for(const {id,label} of CoverArt.icons(cover)){const b=document.createElement('button'),cv=document.createElement('canvas');b.type='button';b.dataset.icon=id;b.setAttribute('role','radio');b.setAttribute('aria-label',label);b.title=label;
+   cv.className='lcd';cv.style.border='0';paintLcd(cv,CoverArt.draw(cover,'',id),{x0:5,y0:3,w:42,h:30,scale:1});b.append(cv);b.addEventListener('click',()=>r.onIcon(id));r.grid.append(b);}}
+ if(icon)r.icon=icon;if(!r.cover)return;r.icon=r.icon||r.cover.default_icon;
+ const name=r.name.value,label=(CoverArt.icons(r.cover).find(i=>i.id===r.icon)||{}).label||r.icon;
+ for(const b of r.grid.children)b.setAttribute('aria-checked',String(b.dataset.icon===r.icon));
+ paintLcd(r.toggleIcon,CoverArt.draw(r.cover,'',r.icon),{x0:5,y0:3,w:42,h:30,scale:1});r.iconLabel.textContent=label;
+ paintLcd(r.preview,CoverArt.draw(r.cover,name,r.icon));
+ const shown=name.trim()?r.prefix+name.trim().slice(0,5):r.prefix+'…';
+ r.pedal.textContent='';r.pedal.append('Up to 8 letters or numbers, starting with a letter. The pedal shows ');const b=document.createElement('strong');b.textContent=shown;r.pedal.append(b,'.');
+}
+const $=id=>document.getElementById(id);let manifest,current=null,generation=0,urls=[],icon=null;
+const namIdent=makeIdent($('namIdent'),{inputId:'shortname',slotId:'slot',slotHintId:'slotHint',prefix:'NAM-',placeholder:'smokey',onName:()=>changed(),onIcon:id=>{icon=id;changed();}});const rate=()=>document.querySelector('input[name=rate]:checked').value,outs=()=>Number(document.querySelector('input[name=outs]:checked').value),
+ tplDir=()=>outs()?'nam_template_split/':({full:'nam_template/',eco:'nam_template_eco/',ecoplus:'nam_template_ecoplus/'})[rate()];
+// Split files exist at full rate only: picking split selects Full rate and locks the Eco choices.
+function syncRate(){const split=outs()>0;for(const r of document.querySelectorAll('input[name=rate]')){if(split&&r.value==='full')r.checked=true;r.disabled=split&&r.value!=='full';}}
+function status(text,error=false){$('status').textContent=text;$('status').dataset.error=String(error);}
+function clearResult(){for(const u of urls)URL.revokeObjectURL(u);urls=[];$('result').hidden=true;$('downloads').replaceChildren();}
+function download(bytes,name,label,type){const url=URL.createObjectURL(new Blob([bytes],{type}));urls.push(url);const a=document.createElement('a');a.href=url;a.download=name;a.className='download';a.textContent=label;$('downloads').append(a);}
+function slots(prefer){const entries=NAMLoader.readRegistry(localStorage);const previous=prefer||Number($('slot').value)||1;$('slot').replaceChildren();for(let slot=1;slot<=(manifest?SlotIdentity.slotCount(manifest):NAMLoader.NAM_SLOTS);slot++){const e=entries.find(e=>e.slot===slot),o=document.createElement('option');o.value=slot;o.textContent=slot+' — '+(e?e.shortName+' (replace)':'free');$('slot').append(o);}$('slot').value=previous;slotHint();}
+function slotHint(){const e=NAMLoader.readRegistry(localStorage).find(e=>e.slot===Number($('slot').value));$('slotHint').textContent=e?'Exporting here replaces '+e.name+' when installed.':'Free in this browser. Patches remember a capture by its slot.';}
+function changed(){generation++;clearResult();$('build').disabled=!current||!manifest;slotHint();preview();}
+function preview(){const slot=Number($('slot').value)||1,name=$('shortname').value;let file='';try{file=NAMLoader.fileName(slot,name);}catch{}
+ $('namTitle').textContent='Capture slot '+slot+(file?' · '+file:'');if(!manifest?.cover)return;icon=icon||manifest.cover.default_icon;paintIdent(namIdent,manifest.cover,icon);}
+$('slot').addEventListener('change',()=>{const e=NAMLoader.readRegistry(localStorage).find(e=>e.slot===Number($('slot').value));if(e?.icon)icon=e.icon;changed();});for(const r of document.querySelectorAll('input[name=rate]'))r.addEventListener('change',()=>{changed();loadEngine();});
+for(const r of document.querySelectorAll('input[name=outs]'))r.addEventListener('change',()=>{syncRate();changed();loadEngine();});
+async function loadEngine(){try{const r=await fetch(tplDir()+'multi.json',{cache:'no-store'});if(!r.ok)throw Error('Engine files are unavailable.');manifest=await r.json();$('namVersion').textContent=manifest.output_version;slots();preview();status('Ready. Choose a NAM capture.');$('build').disabled=!current;}catch(e){manifest=null;status(e.message+' Open this page through the local Patch Editor server.',true);}}
+$('capture').addEventListener('change',async()=>{const token=++generation;current=null;$('namCard').hidden=true;window.dispatchEvent(new CustomEvent('nam-capture',{detail:null}));$('build').disabled=true;clearResult();const file=$('capture').files[0];if(!file)return;try{if(file.size>20*1024*1024)throw Error('This file exceeds the 20 MB limit.');const text=await file.text();if(token!==generation)return;let model;try{model=JSON.parse(text);}catch{throw Error('This is not a valid NAM JSON file.');}const s=NAMLoader.selectModel(model);current={model,text,name:file.name};const entries=NAMLoader.readRegistry(localStorage),sourceHash=await NAMLoader.sha256(new TextEncoder().encode(text));if(token!==generation)return;const existing=entries.find(e=>e.sourceSha256===sourceHash);const free=Array.from({length:manifest?SlotIdentity.slotCount(manifest):NAMLoader.NAM_SLOTS},(_,i)=>i+1).find(slot=>!entries.some(e=>e.slot===slot));slots(existing?.slot||free||Number($('slot').value));$('shortname').value=existing?.shortName||file.name.replace(/\.nam$/i,'').replace(/[^a-z0-9]/gi,'').replace(/^[0-9]+/,'').slice(0,8).toLowerCase();if(existing?.icon)icon=existing.icon;preview();$('chosen').textContent=file.name+' · '+s.sampleRate/1000+' kHz · compatible A2 Lite';$('namCard').hidden=false;window.dispatchEvent(new CustomEvent('nam-capture',{detail:{weights:s.model.weights,sampleRate:s.sampleRate,name:file.name}}));status(s.sampleRate===48000?'Compatible. This capture will run at 44.1 kHz on the pedal.':'Compatible. Choose a name and capture slot.');$('build').disabled=!manifest;}catch(e){current=null;status(e.message,true);}});
+$('build').addEventListener('click',async()=>{const token=generation,picked=current,slot=Number($('slot').value),name=$('shortname').value;if(!picked||!manifest)return;$('build').disabled=true;clearResult();status('Creating your named capture…');try{NAMLoader.shortName(name);const other=NAMLoader.readRegistry(localStorage).find(e=>e.slot!==slot&&e.shortName.toLowerCase()===name.toLowerCase());if(other)throw Error('That short name already belongs to slot '+other.slot+'. Choose another name.');const clash=NAMLoader.readRegistry(localStorage).find(e=>e.slot!==slot&&NAMLoader.samePedalName(e.shortName,name));if(clash)throw Error('Slot '+clash.slot+' already shows as '+NAMLoader.pedalName(name)+' on the pedal. Change the first '+NAMLoader.PEDAL_NAME_CHARS+' letters.');const meta=SlotIdentity.slotMeta(manifest,slot);const r=await fetch(tplDir()+meta.file,{cache:'no-store'});if(!r.ok)throw Error('Capture engine is unavailable.');let ecoEq=null,ecoFit=null;if(manifest.eco_plus){status('Fitting the Eco+ correction to this capture…');const sel=NAMLoader.selectModel(picked.model);ecoFit=await NAMResponse.fitEcoEq(sel.model.weights,{steps:manifest.eco_steps,onProgress:p=>{if(token===generation)status(`Fitting the Eco+ correction to this capture… ${Math.round(p*100)}%`);}});ecoEq=ecoFit.coefficients;if(token!==generation)return;status('Creating your named capture…');}
+const result=await NAMLoader.convertNamed(picked.model,await r.arrayBuffer(),manifest,slot,name,icon,{ecoEq,split:outs()||undefined});if(outs())result.report.split=outs();result.report.sourceFile=picked.name;result.report.eco=rate()!=='full';result.report.rate=rate();if(ecoFit)result.report.ecoPlus=ecoFit.params;result.report.cost=manifest.dsp_cost;result.report.sourceSha256=await NAMLoader.sha256(new TextEncoder().encode(picked.text));if(token!==generation)return;NAMLoader.remember(localStorage,result.report);download(result.bytes,result.report.filename,'Download '+result.report.filename,'application/octet-stream');download(await CoverArt.thumbnailPng(CoverArt.draw(manifest.cover,name,icon)),result.report.filename.replace(/\.ZDL$/i,'.png'),'Effect Manager thumbnail','image/png');download(JSON.stringify(result.report,null,2)+'\n',result.report.name+'.json','Capture notes','application/json');$('resultTitle').textContent=result.report.name+' — ready';$('result').hidden=false;slots(slot);status('Created '+result.report.filename+' (capture slot '+slot+'). Install with Effect Manager.');}catch(e){if(token===generation)status(e.message,true);}finally{if(token===generation)$('build').disabled=!current||!manifest;}});
+loadEngine();
+</script><script src="cab_loader.js"></script><script>
+'use strict';
+(()=>{
+const $=id=>document.getElementById(id);let cabManifest=null,cabs=CabLoader.readCabs(localStorage),busy=0,cabUrls=[],worker=null,nextId=1;const waiting=new Map();
+// One-time move from the 0.20 bank (a Cab knob over 8 positions) to slots.
+try{const old=JSON.parse(localStorage.getItem('cabir-bank-v1')||'[]');if(localStorage.getItem(CabLoader.CABS_KEY)===null&&Array.isArray(old)&&old.length){cabs=old.slice(0,16).map((c,i)=>({...c,slot:i+1}));CabLoader.saveCabs(localStorage,cabs);}}catch{}
+// Cab names now start with a letter (slot 100+ filenames need it); fix older ones once.
+if(cabs.some(c=>/^[0-9]/.test(c.name))){cabs=cabs.map(c=>/^[0-9]/.test(c.name)?{...c,name:('c'+c.name).slice(0,8)}:c);try{CabLoader.saveCabs(localStorage,cabs);}catch{}}
+const maxSlots=()=>cabManifest?SlotIdentity.slotCount(cabManifest):16;
+function cabStatus(text,error=false){$('cabStatus').textContent=text;$('cabStatus').dataset.error=String(error);}
+function clearCabDownloads(){for(const u of cabUrls)URL.revokeObjectURL(u);cabUrls=[];$('cabDownloads').replaceChildren();}
+function persist(){try{CabLoader.saveCabs(localStorage,cabs);}catch{}window.dispatchEvent(new CustomEvent('cab-bank',{detail:cabs}));}
+function fitInBackground(buffer){
+ if(!worker){try{worker=new Worker('cab_worker.js');worker.onmessage=({data})=>{const w=waiting.get(data.id);waiting.delete(data.id);data.ok?w.resolve(data.cab):w.reject(Error(data.error));};}catch{worker=false;}}
+ if(worker===false){const f=CabLoader.fit(CabLoader.prepare(CabLoader.parseWav(buffer)));return Promise.resolve({...f});}
+ const id=nextId++;return new Promise((resolve,reject)=>{waiting.set(id,{resolve,reject});worker.postMessage({id,buffer},[buffer]);});
+}
+function plot(canvas,p){const dpr=window.devicePixelRatio||1,W=canvas.clientWidth||180,H=canvas.clientHeight||72;canvas.width=W*dpr;canvas.height=H*dpr;const g=canvas.getContext('2d');g.scale(dpr,dpr);
+ const css=getComputedStyle(document.body).color,lx=f=>W*Math.log(f/40)/Math.log(18000/40),ly=d=>H*(-d/42);g.clearRect(0,0,W,H);g.globalAlpha=.25;g.strokeStyle=css;g.lineWidth=1;
+ for(const f of [100,1000,10000]){g.beginPath();g.moveTo(lx(f),0);g.lineTo(lx(f),H);g.stroke();}g.globalAlpha=1;
+ const line=(ys,width,dash)=>{g.setLineDash(dash);g.lineWidth=width;g.beginPath();p.freqs.forEach((f,i)=>{const x=lx(f),y=Math.min(H,Math.max(0,ly(ys[i])));i?g.lineTo(x,y):g.moveTo(x,y);});g.stroke();};
+ line(p.target,3,[]);g.strokeStyle='#b0532d';line(p.model,1.5,[4,3]);g.setLineDash([]);}
+async function makeFile(c){
+ const s=SlotIdentity.slotMeta(cabManifest,c.slot),r=await fetch('cab_template/'+s.file,{cache:'no-store'});if(!r.ok)throw Error('The cab engine is unavailable.');
+ return CabLoader.fillCab(await r.arrayBuffer(),cabManifest,c.slot,c,c.name,c.icon);
+}
+function link(href,name,label){const a=document.createElement('a');a.href=href;a.download=name;a.className='download';a.textContent=label;$('cabDownloads').append(a);return a;}
+async function download(list){clearCabDownloads();
+ try{for(const c of list){const {bytes,report}=await makeFile(c);
+   const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));cabUrls.push(url);
+   link(url,report.filename,report.filename).click();
+   const png=URL.createObjectURL(await CoverArt.thumbnailPng(CoverArt.draw(cabManifest.cover,c.name,c.icon)));cabUrls.push(png);
+   link(png,report.filename.replace(/\.ZDL$/,'.png'),report.filename.replace(/\.ZDL$/,'.png'));}
+  cabStatus(list.length===1?`Downloaded ${CabLoader.fileName(list[0].slot,list[0].name)} (CabIR-${list[0].name}, ID ${CabLoader.cabFxid(list[0].slot)}). Install it with Effect Manager.`:
+   `Downloaded ${list.length} cab files. Install them with Effect Manager; each is a separate CabIR effect under Delay.`);}
+ catch(e){cabStatus(e.message,true);}}
+function render(){const list=$('bank');list.replaceChildren();cabs.sort((a,b)=>a.slot-b.slot);
+ for(const c of cabs){
+  const li=document.createElement('li');li.className='card';
+  const head=document.createElement('div');head.className='card-head';
+  const title=document.createElement('span');title.className='knob';const setTitle=()=>{title.textContent=`Cab slot ${c.slot} · ${CabLoader.fileName(c.slot,c.name)}`;};setTitle();
+  const tools=document.createElement('div');tools.className='tools';
+  const mk=(label,tip,fn)=>{const b=document.createElement('button');b.textContent=label;b.title=tip;b.setAttribute('aria-label',tip);b.disabled=!cabManifest;b.addEventListener('click',fn);tools.append(b);};
+  mk('↓','Download this cab file',()=>download([c]));
+  mk('✕','Remove (frees the slot)',()=>{cabs=cabs.filter(x=>x!==c);persist();clearCabDownloads();render();cabStatus(`Removed ${c.name}. Slot ${c.slot} is free; also remove ${CabLoader.fileName(c.slot,c.name)} in Effect Manager.`);});
+  head.append(title,tools);
+  const identBox=document.createElement('div');
+  const ident=makeIdent(identBox,{prefix:'CAB-',
+   onNameCommit:v=>{try{c.name=CabLoader.cabName(v);persist();clearCabDownloads();setTitle();}catch(e){ident.name.value=c.name;paintIdent(ident);cabStatus(e.message,true);}},
+   onIcon:id=>{c.icon=id;persist();clearCabDownloads();},
+   onSlot:s=>{if(cabs.some(x=>x!==c&&x.slot===s)){ident.slot.value=c.slot;return;}
+    const from=c.slot;c.slot=s;persist();clearCabDownloads();render();
+    cabStatus(`Moved ${c.name} from slot ${from} to ${s}. It is now effect ID ${CabLoader.cabFxid(s)}: re-pick it in patches that used slot ${from}, and remove the old file in Effect Manager.`);}});
+  ident.name.value=c.name;
+  for(let s=1;s<=maxSlots();s++){const o=document.createElement('option'),other=cabs.find(x=>x!==c&&x.slot===s);
+   o.value=s;o.textContent=s+' — '+(s===c.slot?c.name+' (this cab)':other?other.name+' (in use)':'free');o.disabled=!!other;ident.slot.append(o);}
+  ident.slot.value=c.slot;ident.slotHint.textContent='Patches remember a cab by its slot. Moving it gives it a new effect ID.';
+  paintIdent(ident,cabManifest?.cover,c.icon);
+  const fit=document.createElement('div');fit.className='fit';
+  const cv=document.createElement('canvas');cv.setAttribute('role','img');cv.setAttribute('aria-label',`Response of ${c.name}: solid = IR, dashed = fit`);
+  const info=document.createElement('div');info.textContent=`${c.source||''} · ${c.sourceMs.toFixed(0)} ms · fit ${c.errorDb.toFixed(2)} dB (worst ${c.worstDb.toFixed(1)})`;
+  fit.append(cv,info);li.append(head,identBox,fit);list.append(li);plot(cv,c.plot);}
+ $('buildCab').disabled=!cabManifest||!cabs.length||busy>0;
+}
+$('irs').addEventListener('change',async()=>{const files=[...$('irs').files];$('irs').value='';clearCabDownloads();
+ for(const file of files){if(!CabLoader.freeSlot(cabs,maxSlots())){cabStatus(`All ${maxSlots()} cab slots are used. Remove one first.`,true);break;}
+  busy++;render();cabStatus(`Fitting ${file.name}…`);
+  try{if(file.size>20*1024*1024)throw Error(file.name+' exceeds 20 MB.');const cab=await fitInBackground(await file.arrayBuffer());
+   // Another import may have finished during the fit. Allocate and insert
+   // together, without an await between them, so concurrent imports stay unique.
+   const slot=CabLoader.freeSlot(cabs,maxSlots());
+   if(!slot)throw Error(`All ${maxSlots()} cab slots are used. Remove one first.`);
+   let name=file.name.replace(/\.wav$/i,'').replace(/[^a-z0-9]/gi,'').slice(0,8).toLowerCase()||('cab'+slot);
+   name=name.replace(/^[0-9]+/,'')||('cab'+slot);
+   cabs.push({...cab,slot,source:file.name,name});persist();
+   cabStatus(`${file.name}: fitted to ${cab.errorDb.toFixed(2)} dB, slot ${slot}. Rename it if you like, then download.`);}
+  catch(e){cabStatus(`${file.name}: ${e.message}`,true);}finally{busy--;render();}}});
+$('buildCab').addEventListener('click',()=>download(cabs));
+(async()=>{try{const r=await fetch('cab_template/cab.json',{cache:'no-store'});if(!r.ok)throw Error('The cab engine is unavailable.');cabManifest=await r.json();
+ cabStatus(cabs.length?`${cabs.length} cab${cabs.length>1?'s':''} in this browser. Add more or download.`:'Ready. Add cabinet IRs.');}
+ catch(e){cabStatus(e.message+' Open this page through the local Patch Editor server.',true);}render();window.dispatchEvent(new CustomEvent('cab-bank',{detail:cabs}));})();
+})();
+</script><script>
+'use strict';
+// Frequency response: the capture at three levels, optionally through a cab's pedal filter.
+(()=>{
+const $=id=>document.getElementById(id);let cap=null,meas=null,bank=[],token=0;
+const COLORS={Soft:'#5f8aa0',Medium:'#102d3c',Hard:'#b0532d'};
+const mids=(freqs,db)=>{let s=0,n=0;freqs.forEach((f,i)=>{if(f>=200&&f<=4000&&Number.isFinite(db[i])){s+=db[i];n++;}});return n?s/n:0;};
+function curves(){
+ const cab=bank.find(c=>String(c.slot)===$('respCab').value),out=[];
+ if(meas){
+  const cabDb=cab?CabLoader.responseDb(cab.sos,cab.fir,meas.freqs):null;
+  for(const c of meas.curves){const db=c.db.map((v,i)=>v+(cabDb?cabDb[i]:0)),m=mids(meas.freqs,db);
+   out.push({label:`${c.name} — ${c.inputDb} dB in, ${c.gainDb>=0?'+':''}${c.gainDb.toFixed(1)} dB gain`,freqs:meas.freqs,db:db.map(v=>v-m),color:COLORS[c.name],width:c.name==='Medium'?2.5:1.8});}
+  if(cap.sampleRate===48000&&$('respTrained').checked){const c=out[1];
+   out.push({label:'Medium, as trained at 48 kHz (the pedal plays it at 44.1 kHz)',freqs:c.freqs.map(f=>f*48000/44100),db:c.db,color:COLORS.Medium,width:1.5,dash:[5,4]});}
+ }else if(cab){const p=cab.plot;
+  out.push({label:`${cab.name}: the IR`,freqs:p.freqs,db:p.target.map(v=>v-mids(p.freqs,p.target)),color:COLORS.Medium,width:2.5});
+  out.push({label:`${cab.name}: the pedal's fit`,freqs:p.freqs,db:p.model.map(v=>v-mids(p.freqs,p.model)),color:COLORS.Hard,width:1.8,dash:[5,4]});}
+ return out;
+}
+function draw(){
+ const cv=$('respPlot'),list=curves(),dpr=window.devicePixelRatio||1,W=cv.clientWidth||600,H=cv.clientHeight||260;
+ cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,W,H);
+ const ink=getComputedStyle(document.body).color,L=34,R=W-8,T=8,B=H-22;
+ let top=-Infinity;for(const c of list)for(const v of c.db)if(Number.isFinite(v))top=Math.max(top,v);
+ top=Number.isFinite(top)?Math.ceil((top+1)/6)*6:12;const span=42,lx=f=>L+(R-L)*Math.log(f/40)/Math.log(18000/40),ly=d=>T+(B-T)*(top-d)/span;
+ g.font='12px system-ui,sans-serif';g.fillStyle=ink;g.strokeStyle=ink;g.lineWidth=1;
+ for(const [f,t] of [[50,'50'],[100,'100'],[200,'200'],[500,'500'],[1000,'1k'],[2000,'2k'],[5000,'5k'],[10000,'10k']]){
+  g.globalAlpha=f===100||f===1000||f===10000?.35:.15;g.beginPath();g.moveTo(lx(f),T);g.lineTo(lx(f),B);g.stroke();g.globalAlpha=1;g.textAlign='center';g.fillText(t,lx(f),H-6);}
+ for(let d=top;d>=top-span;d-=6){g.globalAlpha=.15;g.beginPath();g.moveTo(L,ly(d));g.lineTo(R,ly(d));g.stroke();g.globalAlpha=1;g.textAlign='right';g.fillText(String(d),L-5,ly(d)+4);}
+ g.save();g.beginPath();g.rect(L,T,R-L,B-T);g.clip();
+ for(const c of list){g.strokeStyle=c.color;g.lineWidth=c.width;g.setLineDash(c.dash||[]);g.beginPath();let on=false;
+  c.freqs.forEach((f,i)=>{const v=c.db[i];if(!Number.isFinite(v)||f<40||f>18000){on=false;return;}const x=lx(f),y=ly(v);on?g.lineTo(x,y):g.moveTo(x,y);on=true;});g.stroke();}
+ g.restore();g.setLineDash([]);
+ $('respLegend').replaceChildren(...list.map(c=>{const li=document.createElement('li'),i=document.createElement('i');i.style.borderTopColor=c.color;if(c.dash)i.className='dash';li.append(i,c.label);return li;}));
+ cv.setAttribute('aria-label','Frequency response, 40 Hz to 18 kHz: '+list.map(c=>c.label).join('; '));
+}
+function show(){
+ $('resp').hidden=!cap&&!bank.length;
+ $('respTrainedRow').hidden=!(cap&&cap.sampleRate===48000);
+ const cab=bank.find(c=>String(c.slot)===$('respCab').value);
+ if(cap&&!meas)return;
+ $('respNote').textContent=cap?`${cap.name}${cab?' through '+cab.name:''}.`:cab?`No capture loaded: ${cab.name} on its own, the IR against the filter the pedal runs.`:'Load a capture, or pick a cab, to see its response.';
+ if(!$('resp').hidden)draw();
+}
+window.addEventListener('nam-capture',async({detail})=>{const t=++token;cap=detail;meas=null;show();if(!cap)return;
+ $('respNote').textContent='Measuring the capture…';
+ try{const m=await NAMResponse.measure(cap.weights,{onProgress:p=>{if(t===token)$('respNote').textContent=`Measuring the capture… ${Math.round(p*100)}%`;}});if(t!==token)return;meas=m;show();}
+ catch(e){if(t===token)$('respNote').textContent='Could not measure this capture: '+e.message;}});
+window.addEventListener('cab-bank',({detail})=>{bank=[...detail].sort((a,b)=>a.slot-b.slot);const sel=$('respCab'),was=sel.value;
+ sel.replaceChildren(new Option('No cab',''),...bank.map(c=>new Option(`${c.name} (slot ${c.slot})`,String(c.slot))));
+ sel.value=bank.some(c=>String(c.slot)===was)?was:(!cap&&bank.length?String(bank[0].slot):'');show();});
+$('respCab').addEventListener('change',show);$('respTrained').addEventListener('change',show);
+window.addEventListener('resize',()=>{if(!$('resp').hidden)draw();});
+})();
+</script></body></html>

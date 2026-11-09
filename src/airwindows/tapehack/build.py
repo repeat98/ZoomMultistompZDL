@@ -11,12 +11,12 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent.parent      # src/airwindows/<name>/build.py → repo root
 sys.path.insert(0, str(ROOT / "build"))
+sys.path.insert(0, str(HERE.parent / "common"))
 
 from linker import LinkerConfig, link, params_from_manifest  # noqa: E402
+from custom_covers import make_cover  # noqa: E402
 
-TI_ROOT = Path(os.environ.get(
-    "TI_CGT_ROOT",
-    "/Applications/ti/ccs2050/ccs/tools/compiler/ti-cgt-c6000_8.5.0.LTS"))
+TI_ROOT = Path(os.environ.get("TI_CGT_ROOT", "/Applications/ti/ti-cgt-c6000_8.5.0.LTS"))
 CL6X    = TI_ROOT / "bin" / "cl6x"
 
 CFLAGS = [
@@ -51,6 +51,7 @@ def main() -> None:
 
     cfg = LinkerConfig(
         effect_name      = manifest["effect_name"],
+        screen_image     = make_cover(manifest["effect_name"], [p["name"] for p in manifest["params"]]),
         audio_func_name  = manifest.get("audio_func_name"),
         gid              = manifest["gid"],
         fxid             = manifest["fxid"],
@@ -60,15 +61,14 @@ def main() -> None:
         fxid_version     = manifest.get("fxid_version", "1.00").encode("ascii"),
         flags_byte       = manifest.get("flags_byte", 0x01),
         audio_nop        = manifest.get("audio_nop", False),
-        # AIR's mix_edit (76 bytes, 0 .rela.dyn entries but apparently
-        # internal hardcoded refs) crashes the pedal when invoked in
-        # our context — when flags=0x14 / pmax=max enables actual
-        # invocation of the entry [4] handler, the AIR blob freezes
-        # the unit. Force NOP_RETURN until we have a synthesized,
-        # truly self-contained knob3 edit handler. With NOP, knob 3
-        # is a placeholder — it doesn't write params[7], so the audio
-        # function reads stale memory there. (See docs/3-PARAM-LINKER-BUG.md.)
-        knob3_blob_path  = "/tmp/__nonexistent__",
+        # Use the linker's synthesized LineSel edit handlers (hardware-proven
+        # via OTT and the custom pack) for all 3 knobs. Replaces the old
+        # object/asm Output_edit handler that froze the pedal.
+        knob_positions   = [(2, 14, 46), (3, 55, 46), (4, 96, 46)],
+        use_object_edit_handlers          = False,
+        synthesize_linesel_edit_handlers  = True,
+        synth_edit_start_index            = 2,
+        knob3_blob_path                   = "/tmp/__nonexistent__",
     )
     link(cfg)
 

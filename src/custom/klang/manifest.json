@@ -1,0 +1,44 @@
+{
+  "effect_name": "Klang",
+  "comment": "Klang \u2014 ring modulator + frequency shifter. Mode sweeps Ring (in*carrier sidebands) / Shift-Up / Shift-Down (single-sideband Hilbert frequency shifting). Carrier frequency, an optional sweep LFO, and stereo spread. Metallic, clangy, inharmonic textures. Desktop preview implements the full DSP; pedal C port is staged.",
+  "gid": 6,
+  "gid_comment": "0x06 = Modulation category.",
+  "fxid": 455,
+  "fxid_comment": "0x01C7. Above the repo's used range; distinct from the other customs (450-454). Verify uniqueness before flashing.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Freq",
+      "max": 100,
+      "default": 40,
+      "comment": "Carrier / shift frequency, ~0.5..2000 Hz (log). Low = tremolo-ish, high = metallic."
+    },
+    {
+      "name": "Mode",
+      "max": 100,
+      "default": 0,
+      "comment": "0-33 Ring mod, 34-66 Shift Up, 67-100 Shift Down."
+    },
+    {
+      "name": "Sweep",
+      "max": 100,
+      "default": 0,
+      "comment": "LFO that moves the carrier frequency for siren/warble motion."
+    },
+    {
+      "name": "Spread",
+      "max": 100,
+      "default": 30,
+      "comment": "Stereo: detunes the carrier between L/R for width."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet blend."
+    }
+  ],
+  "audio_nop": true,
+  "audio_nop_comment": "Pedal C port starts as a UI-only smoke build; full DSP validated on desktop first."
+}

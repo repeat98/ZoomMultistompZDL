@@ -1,0 +1,90 @@
+{
+  "format": 2,
+  "engine": "Tested NAMLite 0.12 block DSP; separate capture identities",
+  "weights_count": 1871,
+  "version_offset": 68,
+  "output_version": "0.14",
+  "sample_rate": 44100,
+  "slots": [
+    {
+      "slot": 1,
+      "fxid": 900,
+      "id": 526096,
+      "file": "slot-1.bin",
+      "bytes": 18706,
+      "sha256": "e68caf6c7979124c7745b6547bb32c649413c7ce2c39bae7789980b8fc16bcd7",
+      "weights_offset": 8772,
+      "name_offset": 8300
+    },
+    {
+      "slot": 2,
+      "fxid": 901,
+      "id": 657168,
+      "file": "slot-2.bin",
+      "bytes": 18706,
+      "sha256": "db5a8eda9f42822fd3b456ef9d22d1b45b2ba783a2062978f4e2705941139c73",
+      "weights_offset": 8772,
+      "name_offset": 8300
+    },
+    {
+      "slot": 3,
+      "fxid": 902,
+      "id": 788240,
+      "file": "slot-3.bin",
+      "bytes": 18706,
+      "sha256": "0ce703339d67e11dce2b2974cc50a1b53aa761a22a21e501610fc7fc5263dff6",
+      "weights_offset": 8772,
+      "name_offset": 8300
+    },
+    {
+      "slot": 4,
+      "fxid": 903,
+      "id": 919312,
+      "file": "slot-4.bin",
+      "bytes": 18706,
+      "sha256": "ee4617625a3d7ea3266cce85f585ece950e033c3ee53f7aba7c789658103b962",
+      "weights_offset": 8772,
+      "name_offset": 8300
+    },
+    {
+      "slot": 5,
+      "fxid": 904,
+      "id": 1050384,
+      "file": "slot-5.bin",
+      "bytes": 18706,
+      "sha256": "7c6e7d82b151034c367ca07717ed33e4a8eadc16177bf730d5238d8365bf3e9f",
+      "weights_offset": 8772,
+      "name_offset": 8300
+    },
+    {
+      "slot": 6,
+      "fxid": 905,
+      "id": 1181456,
+      "file": "slot-6.bin",
+      "bytes": 18706,
+      "sha256": "5cbde90f6c4699e1d5fee04951fff019e4dc705b6610e510972ac9d1f22a7b0d",
+      "weights_offset": 8772,
+      "name_offset": 8300
+    },
+    {
+      "slot": 7,
+      "fxid": 906,
+      "id": 1312528,
+      "file": "slot-7.bin",
+      "bytes": 18706,
+      "sha256": "8009f98c249008d9b9233f7a83eab930cbdd89128eab98cab55f024aa6bd3d78",
+      "weights_offset": 8772,
+      "name_offset": 8300
+    },
+    {
+      "slot": 8,
+      "fxid": 907,
+      "id": 1443600,
+      "file": "slot-8.bin",
+      "bytes": 18706,
+      "sha256": "2d459fbead340d7015e51bd0722b160aa5feb0f4fdc91e40a9795d6787ba7573",
+      "weights_offset": 8772,
+      "name_offset": 8300
+    }
+  ]
+}

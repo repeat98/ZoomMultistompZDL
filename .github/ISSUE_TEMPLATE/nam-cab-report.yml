@@ -1,0 +1,89 @@
+name: NAM / Cab report — beta
+description: How a NAM capture or CabIR cab behaved on your pedal. "It works" reports are wanted too.
+title: "[nam] "
+labels: ["nam-beta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing. This has only been tried on one MS-70CDR, so every
+        pedal, every chain and every "it just works" helps.
+
+        **Please don't attach `.nam` files or the `.ZDL` files built from them**
+        unless the capture is yours to share. A link to the capture's public page
+        (e.g. TONE3000) is enough.
+
+        Pedal frozen? See [If the pedal freezes](https://github.com/themanro/ZoomMultistompZDL/blob/main/docs/NAM-LOADER.md#if-the-pedal-freezes) first.
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Works, sounds right
+        - Works, but sounds wrong (thin, dark, fizzy, quiet...)
+        - Crackles or clicks
+        - Pedal says DSP full
+        - Freezes at boot
+        - Freezes when the patch / effect is selected
+        - The loader page refused the file or failed
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got. If it froze, say which file you installed last.
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Pedal model and firmware
+      placeholder: "MS-70CDR, firmware 2.10"
+    validations:
+      required: true
+  - type: checkboxes
+    id: what-used
+    attributes:
+      label: What was in the chain
+      options:
+        - label: NAM capture, full rate
+        - label: NAM capture, Eco
+        - label: CabIR cab
+  - type: input
+    id: chain
+    attributes:
+      label: Full effect chain, in order
+      description: Names as the pedal or Patch Editor shows them, including stock effects.
+      placeholder: "GreatMuff → NAM-smoke44 → CAB-sm57"
+    validations:
+      required: true
+  - type: input
+    id: meter
+    attributes:
+      label: What did Patch Editor's DSP meter show?
+      description: The percentage in the toolbar for that patch. Leave blank if you didn't use Patch Editor.
+      placeholder: "98%"
+  - type: textarea
+    id: capture
+    attributes:
+      label: About the capture / IR
+      description: >
+        Where the .nam came from (link if public), and its sample rate if you know it
+        (48 kHz, or retrained at 44.1 kHz). For a cab: the IR's sample rate and length.
+        The capture notes file the loader gives you has most of this; paste it if you like.
+    validations:
+      required: false
+  - type: input
+    id: files
+    attributes:
+      label: Which of these effect files were installed on the pedal?
+      placeholder: "NAM1ampt.ZDL, NAM4smok.ZDL, C01sm57.ZDL"
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Worth ruling out first
+      options:
+        - label: I built the files with the current loader (older NAMLite-… files and engines before 0.25 behave differently)
+        - label: I reloaded the loader / editor with Ctrl+Shift+R / Cmd+Shift+R, so I am not on a cached older build

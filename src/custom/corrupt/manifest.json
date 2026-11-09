@@ -1,0 +1,50 @@
+{
+  "effect_name": "Corrupt",
+  "comment": "Corrupt \u2014 an EarthQuaker Devices Data Corrupter style monophonic harmonizing PLL synth-fuzz. Tracks the input pitch, regenerates it as a square-wave master oscillator, divides that into subharmonic octaves, and adds an FM-modulated (vibrato) harmony voice. Glitchy octave-jumping on ambiguous pitch is part of the character. Best on single-note lines. Desktop preview implements the full DSP; pedal C port is staged (audio_nop smoke build).",
+  "gid": 3,
+  "gid_comment": "0x03 = Drive category (synth-fuzz). NOTE: on MS-70CDR, custom Drive effects may need a stock Drive installed to appear in the on-device browser.",
+  "fxid": 454,
+  "fxid_comment": "0x01C6 = above the repo's used range, distinct from microloom(450)/flower(451)/shatter(452)/arrakis(453). Verify uniqueness before flashing.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Master",
+      "max": 100,
+      "default": 0,
+      "comment": "Master oscillator octave: 0 = unison, 50 = -1 oct, 100 = -2 oct (the Master Oscillator toggle)."
+    },
+    {
+      "name": "Sub",
+      "max": 100,
+      "default": 60,
+      "comment": "Subharmonic voice level (a square one octave below the master)."
+    },
+    {
+      "name": "Harm",
+      "max": 100,
+      "default": 50,
+      "comment": "Harmony interval select: unison / 5th / octave / 4th / -octave / +12th."
+    },
+    {
+      "name": "Rate",
+      "max": 100,
+      "default": 40,
+      "comment": "Frequency-modulation (vibrato) rate on the harmony voice (~0.5..12 Hz)."
+    },
+    {
+      "name": "Depth",
+      "max": 100,
+      "default": 35,
+      "comment": "FM vibrato depth (0..3 semitones). High = seasick warble."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/synth blend."
+    }
+  ],
+  "audio_nop": true,
+  "audio_nop_comment": "Pedal C port starts as a UI-only smoke build. Full DSP validated on desktop first; see tools/audio_preview/renderers/corrupt.py."
+}

@@ -1,0 +1,39 @@
+{
+  "effect_name": "Microlm",
+  "comment": "PEDAL BUILD manifest for Microloom (4-knob shimmer cloud). build.py reads THIS file. Grain size, base delay, shimmer amount baked.",
+  "audio_func_name": "Fx_DLY_Microlm",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY (fewest stock effects = easy to find).",
+  "fxid": 450,
+  "fxid_comment": "0x01C2. Reverted from 474 to the last known-working id + safe default. (The 474 bump collided with stock effect fxids and broke on hardware; the audible-on-load Mix hack is obsolete now the editor materialises patches via a full-patch send.)",
+  "fxid_version": "2.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Pitch",
+      "max": 100,
+      "default": 100,
+      "comment": "params[5]. Shimmer shift: 0=oct down, ~33=unison, 100=oct up."
+    },
+    {
+      "name": "Regen",
+      "max": 100,
+      "default": 72,
+      "comment": "params[6]. Feedback / cloud length."
+    },
+    {
+      "name": "Tone",
+      "max": 100,
+      "default": 55,
+      "comment": "params[7]. Output low-pass: dark .. bright."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Mix default 1 (quiet-safe). The editor materialises patches on load (full-patch send), so audible-on-load no longer needs a hot default."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

@@ -1,0 +1,60 @@
+<!doctype html><meta charset="utf-8"><title>PE mode controls</title><style>
+body{background:#b4e6ff;color:#0b1a27;font:14px monospace;padding:24px}main{display:flex;gap:20px;flex-wrap:wrap}.group{border:2px solid;padding:16px;min-width:100px}h2{font-size:16px}.knob{display:inline-flex;flex-direction:column;align-items:center;gap:8px;margin-right:10px}.kl{font-size:12px}select{background:transparent;border:1px solid;color:inherit;font:13px monospace;padding:4px}p{max-width:750px}  .knobs{display:flex; flex-wrap:wrap; gap:12px 6px; margin-top:8px;}
+  .knob{display:flex; flex-direction:column; align-items:center; width:72px; gap:3px;}
+  .knob .kl{font-size:10px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:1px;
+            text-align:center; max-width:72px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .knob canvas{cursor:ns-resize; touch-action:none;}
+  .mode-selector select{width:72px;max-width:100%;height:18px;min-height:0;margin:0;padding:0 12px 0 0;border:0;box-shadow:none;border-radius:0;background-color:transparent;color:var(--ink);font:inherit;font-size:14px;line-height:18px;letter-spacing:0;text-align:center;cursor:pointer;}
+  .mode-selector select:focus-visible{outline:1px solid var(--ink);outline-offset:2px;}
+  .mode-selector canvas{cursor:pointer;}
+  .knob .kv{font-size:14px;line-height:18px;min-height:18px; color:var(--ink);}
+
+:root{--ink:#0b1a27;--ink-soft:#345569}</style><h1>PE mode selectors</h1><p>Actual PE controls, offline preview. Choose a label or click the dial to advance one position. No MIDI connection.</p><main id="preview"></main><p id="status">Ready</p><script>let autoApplyT;function tok(k,f){return f}function editingBlocked(){return false}
+function selectorIndex(choices,raw){
+  return choices.findIndex(c=>raw>=c.from&&raw<=c.to);
+}
+function makeSelector(label,raw,max,onchange,onrelease,choices){
+  const wrap=document.createElement("div");wrap.className="knob mode-selector";
+  const kl=document.createElement("div");kl.className="kl";kl.textContent=label;
+  const cv=document.createElement("canvas");const S=54,dpr=window.devicePixelRatio||1;
+  cv.width=S*dpr;cv.height=S*dpr;cv.style.width=S+"px";cv.style.height=S+"px";
+  cv.setAttribute("aria-hidden","true");
+  const ctx=cv.getContext("2d");ctx.scale(dpr,dpr);
+  const select=document.createElement("select");select.setAttribute("aria-label",label);
+  select.title="Choose a mode; T = triplet, dot = dotted note";
+  choices.forEach((c,i)=>{const o=document.createElement("option");o.value=i;o.textContent=c.label;select.appendChild(o);});
+  function draw(){
+    const idx=selectorIndex(choices,raw);select.value=String(idx);
+    select.title=label+": "+(choices[idx]?.label??raw)+" (pedal value "+raw+")";
+    ctx.clearRect(0,0,S,S);
+    ctx.strokeStyle=tok("--knob-fg","#0b1a27");ctx.fillStyle=ctx.strokeStyle;ctx.lineWidth=2;
+    const angle=i=>(-140+i*280/(choices.length-1))*Math.PI/180;
+    for(let i=0;i<choices.length;i++){
+      const a=angle(i);ctx.save();ctx.translate(27,27);ctx.rotate(a);
+      ctx.fillStyle=i<=idx?tok("--knob-fg","#0b1a27"):tok("--knob-dim","rgba(11,26,39,0.22)");
+      ctx.fillRect(-1,-27,2,6);ctx.restore();
+    }
+    ctx.beginPath();ctx.arc(27,27,S*0.34,0,7);ctx.fillStyle=tok("--knob-bg","#a6d2f0");ctx.fill();ctx.stroke();
+    ctx.fillStyle=tok("--knob-fg","#0b1a27");
+    if(idx>=0){ctx.save();ctx.translate(27,27);ctx.rotate(angle(idx));
+      // A lever for binary switches, a pointer for multi-position selectors.
+      ctx.fillRect(choices.length===2?-4:-1.25,-S*0.31,choices.length===2?8:2.5,S*0.30);ctx.restore();}
+  }
+  function choose(i){
+    if(editingBlocked()) {draw();return;}
+    i=Math.max(0,Math.min(choices.length-1,i));
+    if(i===selectorIndex(choices,raw))return;
+    clearTimeout(autoApplyT);
+    raw=choices[i].value;draw();onchange(raw);if(onrelease)onrelease();
+  }
+  select.addEventListener("change",()=>choose(Number(select.value)));
+  select.addEventListener("wheel",e=>{e.preventDefault();choose(selectorIndex(choices,raw)+(e.deltaY<0?1:-1));},{passive:false});
+  // Clicking the drawing advances one detent; the dropdown offers direct access.
+  cv.addEventListener("click",()=>choose((selectorIndex(choices,raw)+1)%choices.length));
+  wrap._receive=value=>{raw=value;draw();};
+  wrap._setNorm=n=>{const i=selectorIndex(choices,Math.round(Math.max(0,Math.min(1,n))*max));if(i>=0)choose(i);};
+  // choose() commits immediately; the controller's subsequent release is a no-op.
+  wrap._release=()=>{};
+  wrap.append(kl,cv,select);draw();return wrap;
+}
+const entries=[{"name": "Hydra", "params": [{"name": "Div", "max": 100, "default": 42, "choices": [{"label": "Grain", "from": 0, "to": 6, "value": 3}, {"label": "1/32", "from": 7, "to": 18, "value": 12}, {"label": "1/16T", "from": 19, "to": 31, "value": 25}, {"label": "1/16", "from": 32, "to": 43, "value": 37}, {"label": "1/8T", "from": 44, "to": 56, "value": 50}, {"label": "1/8", "from": 57, "to": 68, "value": 62}, {"label": "1/8.", "from": 69, "to": 81, "value": 75}, {"label": "1/4", "from": 82, "to": 100, "value": 91}]}]}, {"name": "Rewire", "params": [{"name": "Route", "max": 100, "default": 10, "choices": [{"label": "BDRCS", "from": 0, "to": 20, "value": 10}, {"label": "SCRDB", "from": 21, "to": 40, "value": 30}, {"label": "DSBCR", "from": 41, "to": 60, "value": 50}, {"label": "RCSBD", "from": 61, "to": 80, "value": 70}, {"label": "SBRDC", "from": 81, "to": 100, "value": 90}]}]}, {"name": "Rooms", "params": [{"name": "Mode", "max": 100, "default": 0, "choices": [{"label": "Room", "from": 0, "to": 16, "value": 8}, {"label": "Digit", "from": 17, "to": 33, "value": 25}, {"label": "Peak", "from": 34, "to": 50, "value": 42}, {"label": "Gate", "from": 51, "to": 66, "value": 58}, {"label": "Wave", "from": 67, "to": 83, "value": 75}, {"label": "Gong", "from": 84, "to": 100, "value": 92}]}]}, {"name": "Spiral", "params": [{"name": "Div", "max": 100, "default": 30, "choices": [{"label": "1/32", "from": 0, "to": 12, "value": 6}, {"label": "1/16T", "from": 13, "to": 24, "value": 18}, {"label": "1/16", "from": 25, "to": 37, "value": 31}, {"label": "1/8T", "from": 38, "to": 49, "value": 43}, {"label": "1/8", "from": 50, "to": 62, "value": 56}, {"label": "1/8.", "from": 63, "to": 74, "value": 68}, {"label": "1/4", "from": 75, "to": 87, "value": 81}, {"label": "1/4.", "from": 88, "to": 100, "value": 94}]}]}, {"name": "Spool", "params": [{"name": "Div", "max": 100, "default": 67, "choices": [{"label": "1/16", "from": 0, "to": 16, "value": 8}, {"label": "1/8T", "from": 17, "to": 33, "value": 25}, {"label": "1/8", "from": 34, "to": 49, "value": 41}, {"label": "1/8.", "from": 50, "to": 66, "value": 58}, {"label": "1/4", "from": 67, "to": 83, "value": 75}, {"label": "1/4.", "from": 84, "to": 100, "value": 92}]}]}, {"name": "Stasis", "params": [{"name": "Capture", "max": 2, "default": 0, "choices": [{"label": "Stomp", "from": 0, "to": 0, "value": 0}, {"label": "Release", "from": 1, "to": 1, "value": 1}, {"label": "Hold", "from": 2, "to": 2, "value": 2}]}]}, {"name": "RndmFLTR", "params": [{"name": "Type", "max": 2, "default": 2, "choices": [{"label": "HPF", "from": 0, "to": 0, "value": 0}, {"label": "BPF", "from": 1, "to": 1, "value": 1}, {"label": "LPF", "from": 2, "to": 2, "value": 2}]}, {"name": "Chara", "max": 1, "default": 1, "choices": [{"label": "2Pole", "from": 0, "to": 0, "value": 0}, {"label": "4Pole", "from": 1, "to": 1, "value": 1}]}]}];for(const e of entries){const g=document.createElement('section');g.className='group';const h=document.createElement('h2');h.textContent=e.name;g.append(h);for(const p of e.params){g.append(makeSelector(p.name,p.default,p.max,v=>document.getElementById('status').textContent=e.name+' '+p.name+': raw '+v,()=>{},p.choices));}document.getElementById('preview').append(g);}</script>

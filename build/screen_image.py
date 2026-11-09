@@ -87,6 +87,7 @@ class Canvas:
         '6': ["011", "100", "110", "101", "010"], '7': ["111", "001", "010", "100", "100"],
         '8': ["010", "101", "010", "101", "010"], '9': ["111", "101", "111", "001", "110"],
         ' ': ["000"] * 5, '-': ["000", "000", "111", "000", "000"],
+        '+': ["000", "010", "111", "010", "000"], '/': ["001", "001", "010", "100", "100"],
         '.': ["000", "000", "000", "000", "010"], '!': ["010", "010", "010", "000", "010"],
     }
 
@@ -129,7 +130,10 @@ def encode_zoom_rle(canvas: Canvas) -> bytes:
             j = i + 2
             while j < len(raw) and raw[j] == raw[i]:
                 j += 1
-            # Doubled marker followed by run-length-2 byte
+            # Doubled marker followed by run-length-2 byte. The count byte
+            # maxes at 255 (run of 257) — longer runs (e.g. the big blank
+            # regions of sparse hand-drawn covers) split into multiple runs.
+            j = min(j, i + 257)
             compressed.extend([raw[i], raw[i], j - i - 2])
             i = j
         else:

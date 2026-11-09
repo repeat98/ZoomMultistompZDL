@@ -1,0 +1,44 @@
+{
+  "effect_name": "Howl",
+  "comment": "Howl \u2014 Death By Audio Total Sonic Annihilation-style self-oscillating feedback. A high-resonance bandpass in a feedback loop with a fuzz clipper; past unity loop gain it screams into sustained self-oscillation that the input whips up. NOT the literal external-loop router (a single ZDL has no access to the pedal's signal path) \u2014 it reproduces the sound, not the patch box. Desktop preview implements the full DSP; pedal C port is staged.",
+  "gid": 2,
+  "gid_comment": "0x02 = Filter category (resonant feedback filter). Avoids the Drive-browser-visibility quirk.",
+  "fxid": 458,
+  "fxid_comment": "0x01CA. Above the repo's used range; distinct from the other customs. Verify uniqueness before flashing.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Tune",
+      "max": 100,
+      "default": 45,
+      "comment": "Resonant / oscillation frequency (~80..2000 Hz, log)."
+    },
+    {
+      "name": "Annihil",
+      "max": 100,
+      "default": 60,
+      "comment": "Feedback loop gain. Low = resonant filter; high = self-oscillating howl; max = chaos."
+    },
+    {
+      "name": "Drive",
+      "max": 100,
+      "default": 55,
+      "comment": "Fuzz amount inside the loop \u2014 how torn/nasty the oscillation gets."
+    },
+    {
+      "name": "Tone",
+      "max": 100,
+      "default": 45,
+      "comment": "Output low-pass \u2014 tames the screech."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet blend."
+    }
+  ],
+  "audio_nop": true,
+  "audio_nop_comment": "Pedal C port starts as a UI-only smoke build; full DSP validated on desktop first."
+}

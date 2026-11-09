@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TONE3000 · back to the editor</title>
+<!--
+  Where TONE3000's sign-in window lands (the OAuth redirect_uri for "Choose from
+  TONE3000" in the Patch Editor's Effects drawer). It hands the result to the
+  editor that opened it and closes; the editor finishes the sign-in itself.
+-->
+<style>body{margin:0;padding:40px 24px;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#19191c;color:#f5f5f8}</style>
+</head>
+<body>
+<p>Back to the editor…</p>
+<script>
+"use strict";
+const p=new URLSearchParams(location.search);
+const msg={type:"t3k_oauth_callback",code:p.get("code"),state:p.get("state"),error:p.get("error"),tone_id:p.get("tone_id"),canceled:p.get("canceled")==="true"};
+// The opener is lost after some cross-site sign-ins: then reach the editor's tab by BroadcastChannel.
+if(window.opener)window.opener.postMessage(msg,location.origin);
+else{const bc=new BroadcastChannel("t3k_oauth");bc.postMessage(msg);bc.close();}
+setTimeout(()=>{window.close();document.querySelector("p").textContent="Done: you can close this window.";},100);
+</script>
+</body>
+</html>

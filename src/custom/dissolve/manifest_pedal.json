@@ -1,0 +1,39 @@
+{
+  "effect_name": "Dissolve",
+  "comment": "PEDAL BUILD manifest for Dissolve (4-knob). OBNE Parting-style glitch delay: chance-gated input, smeared/diffused feedback, reversed/octave-down chunk reads.",
+  "audio_func_name": "Fx_DLY_Dissolve",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY with the rest of the pack.",
+  "fxid": 461,
+  "fxid_comment": "0x01CD. Reverted from 481 to the last known-working id + safe default. (The 481 bump collided with stock effect fxids and broke on hardware; the audible-on-load Mix hack is obsolete now the editor materialises patches via a full-patch send.)",
+  "fxid_version": "2.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Chance",
+      "max": 100,
+      "default": 40,
+      "comment": "params[5]. Probability an input chunk is dropped before the delay line."
+    },
+    {
+      "name": "Smear",
+      "max": 100,
+      "default": 55,
+      "comment": "params[6]. Feedback + diffusion: slapback .. washy near-reverb dissolve."
+    },
+    {
+      "name": "Glitch",
+      "max": 100,
+      "default": 35,
+      "comment": "params[7]. Probability a read chunk plays reversed or an octave down."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Mix default 1 (quiet-safe). The editor materialises patches on load (full-patch send), so audible-on-load no longer needs a hot default."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

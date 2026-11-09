@@ -1,0 +1,275 @@
+{
+  "checks": "decodable, finite, non-silent, no full-scale samples; not a listening review",
+  "files": [
+    {
+      "file": "arrakis.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 6.0,
+      "peak": 0.95001220703125,
+      "rms": 0.3506390614870516,
+      "full_scale_samples": 0,
+      "sha256": "0cd0599a337e86f12bd8ee810fb9237ce22eaf78ee8071de555391523fa143f7"
+    },
+    {
+      "file": "corrupt.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 4.199863945578231,
+      "peak": 0.949981689453125,
+      "rms": 0.3889845629644254,
+      "full_scale_samples": 0,
+      "sha256": "054205ea0db094e3e40aa9eca1dc8ccab10b89caf29595ff00defb7177b48f53"
+    },
+    {
+      "file": "dissolve.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 9.500045351473922,
+      "peak": 0.1324523687362671,
+      "rms": 0.009837728366176008,
+      "full_scale_samples": 0,
+      "sha256": "46e7c97610ad7aefcb11f9767929b38e1c8a419afa06e0b1260cfa26c63932bd"
+    },
+    {
+      "file": "dry_chord.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 6.0,
+      "peak": 0.949981689453125,
+      "rms": 0.19731503254635735,
+      "full_scale_samples": 0,
+      "sha256": "7e1f4f7789ecb542e84d52a5a0206582af22b9a68b057dc5d7068822960d95bf"
+    },
+    {
+      "file": "dry_drone.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 6.0,
+      "peak": 0.949981689453125,
+      "rms": 0.36579369136340417,
+      "full_scale_samples": 0,
+      "sha256": "2e489f26cd2f95e06eaa42160d27155058cab437487d2e9b0ca97e5a094fecab"
+    },
+    {
+      "file": "dry_drums.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 4.5,
+      "peak": 0.949981689453125,
+      "rms": 0.0809560580126033,
+      "full_scale_samples": 0,
+      "sha256": "f6e4b3a7a3a86ee429e510ec6cdd1ad6c6459ec09afa562e8913e2f30ce24d9a"
+    },
+    {
+      "file": "dry_guitar.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 4.799863945578231,
+      "peak": 0.949981689453125,
+      "rms": 0.08851059272044791,
+      "full_scale_samples": 0,
+      "sha256": "c905bce1853791ec93a7e52e9b453a8d746703eff81dddd9e96ca909c57b9066"
+    },
+    {
+      "file": "dry_riff.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 4.0,
+      "peak": 0.95001220703125,
+      "rms": 0.17887645706302863,
+      "full_scale_samples": 0,
+      "sha256": "c5fe2170d8c6d5b427c3caa6f3c0c35796887954ddeea1deee9837df11449818"
+    },
+    {
+      "file": "dustbox.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 9.000090702947846,
+      "peak": 0.5,
+      "rms": 0.23561105250947215,
+      "full_scale_samples": 0,
+      "sha256": "26516fa3821a89ced48bb1e951882f3eab6ef3b0d7471ba05ff063cb8935558a"
+    },
+    {
+      "file": "flower.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 6.0,
+      "peak": 0.949981689453125,
+      "rms": 0.38575730086121784,
+      "full_scale_samples": 0,
+      "sha256": "da7947fc43593de86ab0162c60b9c201bf2fc2282d06dd6ccf8f9fe6c6559839"
+    },
+    {
+      "file": "galactic.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 11.000090702947846,
+      "peak": 0.17711889743804932,
+      "rms": 0.028159019761902843,
+      "full_scale_samples": 0,
+      "sha256": "0126adf1e3fa3c48bca6240666a348b5f43b6e2c993ee0d840e57888aa89ee28"
+    },
+    {
+      "file": "genloss.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 6.0,
+      "peak": 0.949981689453125,
+      "rms": 0.25317622779137194,
+      "full_scale_samples": 0,
+      "sha256": "5698f49638100599293a61ec5443c1ebce0a301ad3f1f38f7c42601a53802d12"
+    },
+    {
+      "file": "gyre.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 9.799909297052155,
+      "peak": 0.11928308010101318,
+      "rms": 0.008529698526147027,
+      "full_scale_samples": 0,
+      "sha256": "de01eb239aa3f4ce3019ba9d438def70b92aa05a12398077b63c4768f6a3d936"
+    },
+    {
+      "file": "howl.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 6.0,
+      "peak": 0.95001220703125,
+      "rms": 0.6236265385978225,
+      "full_scale_samples": 0,
+      "sha256": "204d3a7aeeb6bdbfc31e8f9b9dd36e8758e56048c008f35a9997e4975d15cc70"
+    },
+    {
+      "file": "hydra.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 9.5,
+      "peak": 0.9777785539627075,
+      "rms": 0.08370197585611,
+      "full_scale_samples": 0,
+      "sha256": "791c3f6f422ce429b1cc67c1a39c4771ff93f4008e29536ea19c7dcae7761137"
+    },
+    {
+      "file": "klang.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 6.0,
+      "peak": 0.949981689453125,
+      "rms": 0.125876784629426,
+      "full_scale_samples": 0,
+      "sha256": "1ef1250006e4f6d9607c7e417afe0f6d9c5175dea0a080e52eb95aaed62d9c1b"
+    },
+    {
+      "file": "mangle.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 9.500045351473922,
+      "peak": 0.11844909191131592,
+      "rms": 0.011363701386831005,
+      "full_scale_samples": 0,
+      "sha256": "0756421a515bd8c852e37d6d584e5dea2c5254caccd012abd6b816e6afa54723"
+    },
+    {
+      "file": "microloom.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 6.0,
+      "peak": 0.949981689453125,
+      "rms": 0.1671894354038472,
+      "full_scale_samples": 0,
+      "sha256": "125fc14f68ba03e746f947c3ec18a7c0ab0f3d11e0dc75a2812c493db1c9e0fc"
+    },
+    {
+      "file": "oxide.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 11.000090702947846,
+      "peak": 0.23310613632202148,
+      "rms": 0.0359293762579553,
+      "full_scale_samples": 0,
+      "sha256": "b0021bc41c27c0a762398d63eaa204790d7c9939b80bf0dcfcb6d9e2ef2e230e"
+    },
+    {
+      "file": "rewire.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 9.799909297052155,
+      "peak": 0.5652492046356201,
+      "rms": 0.06308338110868235,
+      "full_scale_samples": 0,
+      "sha256": "895ebf41d807c5c681d1b9afd930be05ef612bf44c9aa43151f9c9d0411e5631"
+    },
+    {
+      "file": "rooms.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 11.000090702947846,
+      "peak": 0.12637114524841309,
+      "rms": 0.0194826216766963,
+      "full_scale_samples": 0,
+      "sha256": "ab4303ae67b80b04e74e8740908dc719ca1f40c13e004d78a2457ed646218550"
+    },
+    {
+      "file": "scorch.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 4.0,
+      "peak": 0.949981689453125,
+      "rms": 0.7271633484921866,
+      "full_scale_samples": 0,
+      "sha256": "c7ee5b6a41b0b8e715c7e1368ae4fdd32af558f0a5af20a574d2b9bb950ec657"
+    },
+    {
+      "file": "shatter.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 4.5,
+      "peak": 0.949981689453125,
+      "rms": 0.11233563914711647,
+      "full_scale_samples": 0,
+      "sha256": "46f0b525d0a457531792654e047a3535342f03a99fc8dddbb3e535e1a8296499"
+    },
+    {
+      "file": "spiral.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 9.799863945578231,
+      "peak": 0.9828979969024658,
+      "rms": 0.10935741078240278,
+      "full_scale_samples": 0,
+      "sha256": "dbbca54bbb0b81d164acc7f8da0e3dd7b3b26f4e736fb5a873f27a77c0ed9571"
+    },
+    {
+      "file": "spool.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 9.799909297052155,
+      "peak": 0.154371976852417,
+      "rms": 0.01148204090190062,
+      "full_scale_samples": 0,
+      "sha256": "e206fbd946c55b2775fc67df26dd8c83d5db5f1086bb3a3d0978a049021d0046"
+    },
+    {
+      "file": "stasis.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 11.000090702947846,
+      "peak": 0.22516632080078125,
+      "rms": 0.030535238332295024,
+      "full_scale_samples": 0,
+      "sha256": "3d24a94c2854a115ed5c49edd17f406b1362f39bab9ffaf1ff2fe1827ca71baf"
+    },
+    {
+      "file": "taffy.wav",
+      "sample_rate": 44100,
+      "channels": 2,
+      "seconds": 9.799909297052155,
+      "peak": 0.12886285781860352,
+      "rms": 0.010934044266645774,
+      "full_scale_samples": 0,
+      "sha256": "402a845f23a2e0bd2f68a1a00081f0bf677118e2433ad55d201334eb86e953c1"
+    }
+  ]
+}

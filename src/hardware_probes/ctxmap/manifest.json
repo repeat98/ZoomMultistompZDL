@@ -1,18 +1,13 @@
 {
   "effect_name": "CtxMap",
   "comment": "Hardware-only ABI probe recovery build. Reads one raw ctx[] word and emits a baseline tone; v4 param-tone build crashed on startup and must not be used.",
-
   "audio_func_name": "Fx_FLT_CtxMap",
-
   "gid": 2,
   "gid_comment": "0x02 = Filter category. This is a diagnostic, not a musical effect.",
-
-  "fxid": 405,
-  "fxid_comment": "0x0195, after StChorus in the custom Airwindows/probe id range.",
-
+  "fxid": 444,
+  "fxid_comment": "0x1BC. Reassigned from 405 to clear an fxid collision (audit 2026-08-18); every fxid in the tree is now unique.",
   "fxid_version": "1.00",
   "flags_byte": 1,
-
   "params": [
     {
       "name": "Slot",
@@ -35,6 +30,5 @@
       "comment": "Bit index inside the selected 32-bit ctx word."
     }
   ],
-
   "audio_nop": false
 }

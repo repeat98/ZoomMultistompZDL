@@ -24,7 +24,10 @@ def discover_effects() -> dict[str, dict]:
             manifest = json.loads(manifest_path.read_text())
             key = manifest_path.parent.name.lower()
             basename = manifest.get("output_basename", manifest["effect_name"])
-            if not (ROOT / "dist" / f"{basename}.ZDL").exists():
+            # Ship-list effects must have a built ZDL, but effects that already
+            # have a desktop renderer can be previewed before they are built —
+            # that is the desktop-first ("hear it before you flash") workflow.
+            if not (ROOT / "dist" / f"{basename}.ZDL").exists() and key not in RENDERERS:
                 continue
             effects[key] = {
                 "key": key,

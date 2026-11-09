@@ -1,0 +1,26 @@
+{
+  "effect_name": "NAMLite",
+  "audio_func_name": "Fx_FLT_NAMLite",
+  "gid": 8,
+  "fxid": 498,
+  "fxid_version": "0.02",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Input",
+      "max": 100,
+      "default": 50
+    },
+    {
+      "name": "Output",
+      "max": 100,
+      "default": 25
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 0
+    }
+  ],
+  "comment": "Experimental fixed A2 Lite model. Mix 0 parks neural processing; raise to test. Mono wet from L/R average. Input/Output 50 = unity. Native 44.1kHz execution of a 48kHz model, no rate conversion."
+}

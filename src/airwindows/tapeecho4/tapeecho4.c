@@ -18,6 +18,8 @@
 #include <stdint.h>
 
 #include "tapeecho4_params.h"
+#include "../common/zoom_params.h"
+#include "../common/tape_controls.h"
 
 #ifndef TAPEECHO4_AUDIO_FUNC
 #define TAPEECHO4_AUDIO_FUNC Fx_DLY_TapeEcho4
@@ -47,29 +49,6 @@ TAPEECHO4_CODE_SECTION(TAPEECHO4_AUDIO_FUNC)
 #define TAPEECHO4_FIR_TAPS 64u
 #define TAPEECHO4_SPRING_SAMPLES 8192u
 #define TAPEECHO4_SPRING_MASK (TAPEECHO4_SPRING_SAMPLES - 1u)
-
-/* Short causal FIR derived from tools/measure/Tape/Tape_IR.wav. The source IR
- * was captured from UAD Galaxy Tape Echo at 48 kHz, resampled to the pedal's
- * 44.1 kHz rate, truncated to 64 taps, and normalized at 1 kHz. This retains
- * the measured head/tape fingerprint while keeping the callback cost bounded. */
-static const float te4_galaxy_ir[TAPEECHO4_FIR_TAPS] = {
-    -0.579352892f, -0.357666011f, -0.035518767f,  0.091870312f,
-     0.094054828f,  0.075074592f,  0.081397933f,  0.070719928f,
-     0.049016628f,  0.038551856f,  0.043788628f,  0.047632244f,
-     0.044524741f,  0.041661185f,  0.042265846f,  0.042692996f,
-     0.040974830f,  0.039087825f,  0.038385600f,  0.037973640f,
-     0.036995818f,  0.035863044f,  0.035069156f,  0.034404054f,
-     0.033608670f,  0.032740797f,  0.031959075f,  0.031268058f,
-     0.030557181f,  0.029828788f,  0.029136179f,  0.028463772f,
-     0.027804472f,  0.027151666f,  0.026512750f,  0.025903448f,
-     0.025289896f,  0.024680621f,  0.024102040f,  0.023536670f,
-     0.022982173f,  0.022445717f,  0.021901044f,  0.021379827f,
-     0.020861948f,  0.020359641f,  0.019861130f,  0.019366002f,
-     0.018889874f,  0.018418834f,  0.017971537f,  0.017514992f,
-     0.017078913f,  0.016650138f,  0.016238715f,  0.015835252f,
-     0.015427290f,  0.015037479f,  0.014637418f,  0.014270834f,
-     0.013888030f,  0.013531184f,  0.013165458f,  0.012817223f,
-};
 
 typedef struct TapeEcho4State {
     uint32_t magic;
@@ -114,18 +93,7 @@ static inline float te4_clampf(float x, float lo, float hi)
     return x;
 }
 
-TAPEECHO4_ALWAYS_INLINE(te4_param_norm)
-static inline float te4_param_norm(float raw, float fallback_norm, int group_empty)
-{
-    if (raw != raw) return te4_clampf(fallback_norm, 0.0f, 1.0f);
-    if (raw < 0.0f) return te4_clampf(fallback_norm, 0.0f, 1.0f);
-    if (raw <= 0.0001f) return group_empty ? te4_clampf(fallback_norm, 0.0f, 1.0f) : 0.0f;
-    if (raw <= (TAPEECHO4_RAW_MAX * 1.1f)) return te4_clampf(raw * TAPEECHO4_RAW_TO_NORM, 0.0f, 1.0f);
-    if (raw <= 1.0f) return te4_clampf(raw, 0.0f, 1.0f);
-    if (raw <= 100.0f) return te4_clampf(raw * 0.01f, 0.0f, 1.0f);
-    if (raw <= 240.0f) return te4_clampf(raw * 0.0041666667f, 0.0f, 1.0f);
-    return te4_clampf(fallback_norm, 0.0f, 1.0f);
-}
+
 
 TAPEECHO4_ALWAYS_INLINE(recip_approx_pos)
 static inline float recip_approx_pos(float x)
@@ -262,13 +230,31 @@ static inline float te4_tape_filter(float x, float *hpState, float *lpState,
 TAPEECHO4_ALWAYS_INLINE(te4_galaxy_filter)
 static inline float te4_galaxy_filter(float x, float *history, uint32_t index)
 {
-    float y = 0.0f;
-    uint32_t tap;
+    float y;
 
+    /* Galaxy head/tape FIR, 64 taps. Coefficients are inlined as immediate
+     * literals in an unrolled convolution rather than a static const array,
+     * so the audio code carries no code->data relocation (the documented
+     * ZDL freeze risk). Same measured response as before, relocation-free. */
     history[index] = x;
-    for (tap = 0u; tap < TAPEECHO4_FIR_TAPS; tap++) {
-        y += history[(index - tap) & (TAPEECHO4_FIR_TAPS - 1u)] * te4_galaxy_ir[tap];
-    }
+#define TE4_TAP(k, c) (history[(index - (k)) & (TAPEECHO4_FIR_TAPS - 1u)] * (c))
+    y = TE4_TAP(0u, -0.579352892f) + TE4_TAP(1u, -0.357666011f) + TE4_TAP(2u, -0.035518767f) + TE4_TAP(3u, 0.091870312f) +
+      + TE4_TAP(4u, 0.094054828f) + TE4_TAP(5u, 0.075074592f) + TE4_TAP(6u, 0.081397933f) + TE4_TAP(7u, 0.070719928f) +
+      + TE4_TAP(8u, 0.049016628f) + TE4_TAP(9u, 0.038551856f) + TE4_TAP(10u, 0.043788628f) + TE4_TAP(11u, 0.047632244f) +
+      + TE4_TAP(12u, 0.044524741f) + TE4_TAP(13u, 0.041661185f) + TE4_TAP(14u, 0.042265846f) + TE4_TAP(15u, 0.042692996f) +
+      + TE4_TAP(16u, 0.040974830f) + TE4_TAP(17u, 0.039087825f) + TE4_TAP(18u, 0.038385600f) + TE4_TAP(19u, 0.037973640f) +
+      + TE4_TAP(20u, 0.036995818f) + TE4_TAP(21u, 0.035863044f) + TE4_TAP(22u, 0.035069156f) + TE4_TAP(23u, 0.034404054f) +
+      + TE4_TAP(24u, 0.033608670f) + TE4_TAP(25u, 0.032740797f) + TE4_TAP(26u, 0.031959075f) + TE4_TAP(27u, 0.031268058f) +
+      + TE4_TAP(28u, 0.030557181f) + TE4_TAP(29u, 0.029828788f) + TE4_TAP(30u, 0.029136179f) + TE4_TAP(31u, 0.028463772f) +
+      + TE4_TAP(32u, 0.027804472f) + TE4_TAP(33u, 0.027151666f) + TE4_TAP(34u, 0.026512750f) + TE4_TAP(35u, 0.025903448f) +
+      + TE4_TAP(36u, 0.025289896f) + TE4_TAP(37u, 0.024680621f) + TE4_TAP(38u, 0.024102040f) + TE4_TAP(39u, 0.023536670f) +
+      + TE4_TAP(40u, 0.022982173f) + TE4_TAP(41u, 0.022445717f) + TE4_TAP(42u, 0.021901044f) + TE4_TAP(43u, 0.021379827f) +
+      + TE4_TAP(44u, 0.020861948f) + TE4_TAP(45u, 0.020359641f) + TE4_TAP(46u, 0.019861130f) + TE4_TAP(47u, 0.019366002f) +
+      + TE4_TAP(48u, 0.018889874f) + TE4_TAP(49u, 0.018418834f) + TE4_TAP(50u, 0.017971537f) + TE4_TAP(51u, 0.017514992f) +
+      + TE4_TAP(52u, 0.017078913f) + TE4_TAP(53u, 0.016650138f) + TE4_TAP(54u, 0.016238715f) + TE4_TAP(55u, 0.015835252f) +
+      + TE4_TAP(56u, 0.015427290f) + TE4_TAP(57u, 0.015037479f) + TE4_TAP(58u, 0.014637418f) + TE4_TAP(59u, 0.014270834f) +
+      + TE4_TAP(60u, 0.013888030f) + TE4_TAP(61u, 0.013531184f) + TE4_TAP(62u, 0.013165458f) + TE4_TAP(63u, 0.012817223f);
+#undef TE4_TAP
     return y;
 }
 
@@ -410,31 +396,21 @@ void TAPEECHO4_AUDIO_FUNC(unsigned int *ctx)
         return;
     }
 
-    int page1Empty = (params[TAPEECHO4_TEMPO_SLOT] <= 0.0001f &&
-                      params[TAPEECHO4_DIV_SLOT] <= 0.0001f &&
-                      params[TAPEECHO4_FEED_SLOT] <= 0.0001f);
-    int page2Empty = (params[TAPEECHO4_FLUTTER_SLOT] <= 0.0001f &&
-                      params[TAPEECHO4_WOW_SLOT] <= 0.0001f &&
-                      params[TAPEECHO4_WEAR_SLOT] <= 0.0001f);
-    int page3Empty = (params[TAPEECHO4_DRIVE_SLOT] <= 0.0001f &&
-                      params[TAPEECHO4_SPRING_SLOT] <= 0.0001f &&
-                      params[TAPEECHO4_MIX_SLOT] <= 0.0001f);
-
-    float tempoNorm = te4_param_norm(params[TAPEECHO4_TEMPO_SLOT], TAPEECHO4_TEMPO_DEFAULT_NORM, page1Empty);
-    float divNorm = te4_param_norm(params[TAPEECHO4_DIV_SLOT], TAPEECHO4_DIV_DEFAULT_NORM, page1Empty);
-    float feedNorm = te4_param_norm(params[TAPEECHO4_FEED_SLOT], TAPEECHO4_FEED_DEFAULT_NORM, page1Empty);
-    float flutter = te4_param_norm(params[TAPEECHO4_FLUTTER_SLOT], TAPEECHO4_FLUTTER_DEFAULT_NORM, page2Empty);
-    float wow = te4_param_norm(params[TAPEECHO4_WOW_SLOT], TAPEECHO4_WOW_DEFAULT_NORM, page2Empty);
-    float wear = te4_param_norm(params[TAPEECHO4_WEAR_SLOT], TAPEECHO4_WEAR_DEFAULT_NORM, page2Empty);
-    float drive = te4_param_norm(params[TAPEECHO4_DRIVE_SLOT], TAPEECHO4_DRIVE_DEFAULT_NORM, page3Empty);
-    float spring = te4_param_norm(params[TAPEECHO4_SPRING_SLOT], TAPEECHO4_SPRING_DEFAULT_NORM, page3Empty);
-    float mix = te4_param_norm(params[TAPEECHO4_MIX_SLOT], TAPEECHO4_MIX_DEFAULT_NORM, page3Empty);
+    float tempoNorm = zoom_param_norm01(params[TAPEECHO4_TEMPO_SLOT], TAPEECHO4_TEMPO_DEFAULT_NORM);
+    float divNorm = zoom_param_norm01(params[TAPEECHO4_DIV_SLOT], TAPEECHO4_DIV_DEFAULT_NORM);
+    float feedNorm = zoom_param_norm01(params[TAPEECHO4_FEED_SLOT], TAPEECHO4_FEED_DEFAULT_NORM);
+    float flutter = zoom_param_norm01(params[TAPEECHO4_FLUTTER_SLOT], TAPEECHO4_FLUTTER_DEFAULT_NORM);
+    float wow = zoom_param_norm01(params[TAPEECHO4_WOW_SLOT], TAPEECHO4_WOW_DEFAULT_NORM);
+    float wear = zoom_param_norm01(params[TAPEECHO4_WEAR_SLOT], TAPEECHO4_WEAR_DEFAULT_NORM);
+    float drive = zoom_param_norm01(params[TAPEECHO4_DRIVE_SLOT], TAPEECHO4_DRIVE_DEFAULT_NORM);
+    float spring = zoom_param_norm01(params[TAPEECHO4_SPRING_SLOT], TAPEECHO4_SPRING_DEFAULT_NORM);
+    float mix = zoom_param_norm01(params[TAPEECHO4_MIX_SLOT], TAPEECHO4_MIX_DEFAULT_NORM);
 
     float bpm = 40.0f + tempoNorm * 160.0f;
     float beatSamples = 2646000.0f * recip_approx_pos(bpm);
     float baseDelay = beatSamples * te4_division(divNorm);
     baseDelay = te4_clampf(baseDelay, TAPEECHO4_MIN_DELAY_F, TAPEECHO4_MAX_DELAY_F);
-    float feedback = feedNorm * feedNorm * 0.92f;
+    float feedback = spool_feedback(feedNorm);
 
     int i;
     for (i = 0; i < 8; i++) {

@@ -1,0 +1,45 @@
+{
+  "effect_name": "Rooms",
+  "comment": "Death By Audio Rooms-inspired multi-mode stereo reverberator. One reverb core (Freeverb-style comb+allpass) with 6 blendable characters selected by Mode: ROOM/DIGIT/PEAK/GATE/WAVE/GONG. Freq/Depth are reinterpreted per mode. Mode selection is branchless (no switch -> no jump table -> no freeze).",
+  "audio_func_name": "Fx_REV_Rooms",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY with the rest of the pack.",
+  "fxid": 472,
+  "fxid_comment": "0x01D8. Gain-structure fix (was inaudibly quiet). Bumped from 471 so the pedal loads the fixed binary fresh.",
+  "fxid_version": "2.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Mode",
+      "max": 100,
+      "default": 0,
+      "comment": "params[5]. Reverb character: 0-16 ROOM, 17-33 DIGIT, 34-50 PEAK, 51-66 GATE, 67-83 WAVE, 84-100 GONG."
+    },
+    {
+      "name": "Time",
+      "max": 100,
+      "default": 55,
+      "comment": "params[6]. Reverb decay length (all modes)."
+    },
+    {
+      "name": "Freq",
+      "max": 100,
+      "default": 45,
+      "comment": "params[7]. Per-mode frequency parameter (damping / crush-rate / filter freq / gate-time / LFO rate / gong pitch)."
+    },
+    {
+      "name": "Depth",
+      "max": 100,
+      "default": 45,
+      "comment": "params[8]. Per-mode depth parameter (size / bit-depth / resonance / threshold / mod depth / regen)."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "params[9]. Dry/wet. Default 40 so it's audible on load (custom effects read params as 0 until a knob is touched, so this default is the on-load value). Push it up; high mix + high Time/Depth lets PEAK/GONG self-oscillate."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

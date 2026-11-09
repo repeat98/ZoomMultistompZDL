@@ -1,0 +1,29 @@
+# Drop this crate in as <ziddle>/product/zdlprobe/ and it builds with the
+# workspace. Ziddle is a separate CC0 project (berbasoft.com/ziddle) and is NOT
+# vendored here -- only these two source files, which are ours.
+#
+# The upstream crate inherits version/edition/license from the workspace. Those
+# are spelled out below so this also builds if you point it at ziddle-emu from
+# somewhere else.
+[package]
+name = "zdlprobe"
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+description = "Headless ZDL test rig against the emulated C674x."
+
+[[bin]]
+name = "zdlprobe"
+path = "src/main.rs"
+
+[[bin]]
+name = "matcheck"
+path = "src/bin/matcheck.rs"
+
+[[bin]]
+name = "namstate"
+path = "src/bin/namstate.rs"
+
+[dependencies]
+ziddle-emu = { path = "../emu" }
+ziddle-formats = { path = "../formats" }

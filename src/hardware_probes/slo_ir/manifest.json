@@ -1,0 +1,25 @@
+{
+  "effect_name": "SloIR",
+  "audio_func_name": "Fx_REV_SloIR",
+  "gid": 8,
+  "fxid": 908,
+  "fxid_version": "0.01",
+  "params": [
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50
+    },
+    {
+      "name": "Level",
+      "max": 100,
+      "default": 50
+    },
+    {
+      "name": "Tone",
+      "max": 100,
+      "default": 100
+    }
+  ],
+  "comment": "Experimental fixed Sl\u00f6 wet IR. Reduced-rate long convolution, about 48ms wet-only latency. Hardware unverified."
+}

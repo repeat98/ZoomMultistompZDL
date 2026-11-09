@@ -1,3 +1,8 @@
+> Investigation correction (2026-09-10): the local template disassembly sets
+> state[21] to **0xc00ca380**, not 0xc00c8c80 as historical entries below say.
+> The init dispatch is now identified at 0xc00c3c74, with B14[98] set to 1.
+> See [PARAM-INIT-INVESTIGATION.md](PARAM-INIT-INVESTIGATION.md) for the trace.
+
 # State ABI Progress
 
 Last updated: 2026-05-19 (per-slot table region reinterpreted as RAM)

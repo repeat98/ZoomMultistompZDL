@@ -1,19 +1,14 @@
 {
-  "effect_name": "StChorus",
+  "effect_name": "Lush",
   "comment": "Release ctx[3]-backed Airwindows StereoChorus port.",
-
-  "audio_func_name": "Fx_MOD_StChorus",
-
-  "gid": 6,
-  "gid_comment": "0x06 = Modulation category. StereoChorus belongs in MOD now that the ctx[3] state path and no-divide chorus core are hardware-proven under the release build.",
-
+  "audio_func_name": "Fx_DLY_Lush",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay -> Fx_DLY_; consolidated under DLY.",
   "fxid": 404,
   "fxid_comment": "0x0194 in the custom Airwindows range.",
-
   "fxid_version": "1.00",
   "flags_byte": 1,
   "fixed_stage": 5,
-
   "params": [
     {
       "name": "Speed",
@@ -21,7 +16,7 @@
       "max": 100,
       "default": 0,
       "scale": "source_pow10",
-      "audio_min": 0.0000115292,
+      "audio_min": 1.15292e-05,
       "audio_max": 0.000745,
       "audio_default": 0.0,
       "source_default": 0.0,
@@ -42,6 +37,5 @@
       "comment": "Airwindows B. Chorus delay depth; default 0 is dry."
     }
   ],
-
   "audio_nop": false
 }

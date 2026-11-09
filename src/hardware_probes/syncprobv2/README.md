@@ -21,7 +21,7 @@ results showed.
 ## v2's change
 
 Patch the same LineSel-cloned knob1 handler twice. Both patches live
-in [build/syncprobe_v2_handler.bin](../../../build/syncprobe_v2_handler.bin).
+in `build/syncprobe_v2_handler.bin` (kept locally: [STOCK-FILES.md](../../../docs/STOCK-FILES.md)).
 
 | blob offset | original instruction                              | v2 patch |
 |-------------|---------------------------------------------------|---------|

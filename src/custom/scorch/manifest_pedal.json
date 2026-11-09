@@ -1,0 +1,27 @@
+{
+  "effect_name": "Scorch",
+  "comment": "PEDAL BUILD manifest for Scorch (2-knob). build.py reads THIS file; manifest.json is the 6-knob desktop-preview manifest. Tone stack + cab are baked (cab as 5 biquads, not the desktop FIR, to stay relocation-free).",
+  "audio_func_name": "Fx_DLY_Scorch",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY (fewest stock effects = easy to find).",
+  "fxid": 457,
+  "fxid_comment": "0x01C9. Reverted from 479 to the last known-working id + safe default. (The 479 bump collided with stock effect fxids and broke on hardware; the audible-on-load Mix hack is obsolete now the editor materialises patches via a full-patch send.)",
+  "fxid_version": "2.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Gain",
+      "max": 100,
+      "default": 22,
+      "comment": "params[5]. Preamp gain / distortion amount."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet crossfade. Renamed from 'Level' so every effect in the pack ends with the same control."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

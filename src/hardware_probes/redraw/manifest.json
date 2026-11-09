@@ -1,0 +1,15 @@
+{
+  "effect_name": "Redraw",
+  "comment": "Test A of docs/pedal-research/animated-covers.md: does the pedal redraw an effect's screen on its own? Knob 1 and 2 show the DSP cycle counter (TSCL) as their value text, read in the value-text callbacks. Audio passes through. No memory writes, no fardata.",
+  "audio_func_name": "Fx_DLY_Redraw",
+  "gid": 8,
+  "fxid": 411,
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {"name": "Slow", "type": "knob", "max": 100, "default": 50, "comment": "Shows (TSCL >> 24) as 2 hex digits: ticks ~18x/s at ~300 MHz, wraps ~every 14 s."},
+    {"name": "Fast", "type": "knob", "max": 100, "default": 50, "comment": "Shows (TSCL >> 12) & 0xFFF as 3 hex digits: different on every call."},
+    {"name": "Plain", "type": "knob", "max": 100, "default": 50, "comment": "Normal number, for comparison."}
+  ],
+  "audio_nop": false
+}

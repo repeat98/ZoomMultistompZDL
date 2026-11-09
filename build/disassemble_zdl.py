@@ -16,10 +16,16 @@ from pathlib import Path
 
 from zdl import Zdl
 
-DEFAULT_DIS6X = Path(
-    "/Applications/ti/ccs2050/ccs/tools/compiler/"
-    "ti-cgt-c6000_8.5.0.LTS/bin/dis6x"
+# Try the standalone CGT install first -- that is what build/toolchain.py uses and
+# what is actually on this machine. The CCS-bundled path is kept as a fallback for
+# anyone who installed the compiler through Code Composer Studio instead.
+_DIS6X_CANDIDATES = (
+    Path("/Applications/ti/ti-cgt-c6000_8.5.0.LTS/bin/dis6x"),
+    Path("/Applications/ti/ccs2050/ccs/tools/compiler/"
+         "ti-cgt-c6000_8.5.0.LTS/bin/dis6x"),
 )
+DEFAULT_DIS6X = next((p for p in _DIS6X_CANDIDATES if p.exists()),
+                     _DIS6X_CANDIDATES[0])
 
 
 def _audio_lines(asm_text: str) -> list[str]:

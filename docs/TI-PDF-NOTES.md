@@ -2,9 +2,9 @@
 
 Source PDFs:
 
-* `docs/sprab89b.pdf` - C6000 Embedded Application Binary Interface.
-* `docs/sprui03f.pdf` - TMS320C6000 Assembly Language Tools v8.5.x.
-* `docs/sprui04g.pdf` - TMS320C6000 Optimizing C/C++ Compiler v8.5.x.
+* [SPRAB89B](https://www.ti.com/lit/an/sprab89b/sprab89b.pdf) - C6000 Embedded Application Binary Interface.
+* [SPRUI03F](https://www.ti.com/lit/ug/sprui03f/sprui03f.pdf) - TMS320C6000 Assembly Language Tools v8.5.x.
+* [SPRUI04G](https://www.ti.com/lit/ug/sprui04g/sprui04g.pdf) - TMS320C6000 Optimizing C/C++ Compiler v8.5.x.
 
 This is a practical extraction, not a replacement for the manuals. It records
 the parts that explain current linker/DSP rules.

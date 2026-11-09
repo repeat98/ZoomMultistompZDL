@@ -1,0 +1,15 @@
+{
+  "effect_name": "Scope",
+  "comment": "Live oscilloscope on the pedal screen (MS-70CDR 2.10). Pass-through; draws the incoming signal into its own cover at up to ~30 fps (frame composed in the arena, imageInfo picture pointer swapped, UI redraw woken). Method: docs/pedal-research/animated-covers.md; firmware facts from Leemuzhko's ZOOM_development SDK (credited, own code).",
+  "audio_func_name": "Fx_DLY_Scope",
+  "gid": 8,
+  "fxid": 414,
+  "fxid_version": "0.03",
+  "flags_byte": 1,
+  "params": [
+    {"name": "Time", "type": "knob", "max": 100, "default": 30, "comment": "Time across the screen: 1-64 samples per column (2.9-186 ms)."},
+    {"name": "Gain", "type": "knob", "max": 100, "default": 25, "comment": "Vertical zoom, x0.5 to x32 (default x2.5)."},
+    {"name": "Mode", "type": "knob", "max": 1, "default": 0, "comment": "0 = waveform, 1 = XY (left against right)."}
+  ],
+  "audio_nop": false
+}

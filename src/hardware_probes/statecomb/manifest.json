@@ -1,21 +1,16 @@
 {
   "effect_name": "StateComb",
   "comment": "Hardware ABI probe. Uses the proven ctx[2]+0x18 words as actual sample history for a tiny 16-sample feedback comb. This is a state-memory test, not a production delay.",
-
   "audio_func_name": "Fx_FLT_StateComb",
-
   "gid": 2,
   "gid_comment": "0x02 = Filter category. Diagnostic only.",
-
-  "fxid": 415,
-  "fxid_comment": "0x019f, follows StatePing/StateIso probe IDs.",
-
+  "fxid": 460,
+  "fxid_comment": "0x1CC. Reassigned from 415 to clear an fxid collision (audit 2026-08-18); every fxid in the tree is now unique.",
   "fxid_version": "1.00",
   "flags_byte": 1,
   "state_base": "ctx[2]+0x18",
   "ring_words": "0..15",
   "index_word": 18,
-
   "params": [
     {
       "name": "Arm",
@@ -38,6 +33,5 @@
       "comment": "Delayed comb contribution. Default should be clearly audible but conservative."
     }
   ],
-
   "audio_nop": false
 }

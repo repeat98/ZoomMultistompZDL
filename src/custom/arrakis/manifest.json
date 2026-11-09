@@ -1,0 +1,50 @@
+{
+  "effect_name": "Arrakis",
+  "comment": "Arrakis \u2014 a Dune-style detuned sub-octave drone. Pitches the input down one or two octaves and splits it into two voices detuned in OPPOSITE directions by a slowly-swept amount, so they beat against each other and the throb speeds up / slows down (the 'two low oscillators tuning back and forth' sound). Saturation + low-pass add the massive weight. Desktop preview implements the full DSP; pedal C port is staged (audio_nop smoke build).",
+  "gid": 6,
+  "gid_comment": "0x06 = Modulation category (detune/beating is modulation).",
+  "fxid": 453,
+  "fxid_comment": "0x01C5 = above the repo's used range, distinct from microloom (450)/flower (451)/shatter (452). Verify uniqueness before flashing.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Pitch",
+      "max": 100,
+      "default": 50,
+      "comment": "Sub-octave depth: 0 = unison, 50 = -1 octave, 100 = -2 octaves."
+    },
+    {
+      "name": "Detune",
+      "max": 100,
+      "default": 45,
+      "comment": "Spread between the two voices in cents (the beat amount). 0 = locked, high = wide wobble."
+    },
+    {
+      "name": "Sweep",
+      "max": 100,
+      "default": 35,
+      "comment": "How fast the detune wanders back and forth (~0.02..0.6 Hz). The 'tuning back and forth'."
+    },
+    {
+      "name": "Drive",
+      "max": 100,
+      "default": 55,
+      "comment": "Saturation / weight. Adds harmonics and the brassy Dune growl."
+    },
+    {
+      "name": "Tone",
+      "max": 100,
+      "default": 40,
+      "comment": "Low-pass cutoff. Low = dark and massive, high = more upper growl."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet blend."
+    }
+  ],
+  "audio_nop": true,
+  "audio_nop_comment": "Pedal C port starts as a UI-only smoke build. Full DSP validated on desktop first; see tools/audio_preview/renderers/arrakis.py."
+}

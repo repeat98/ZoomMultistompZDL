@@ -1,25 +1,79 @@
 {
-  "effect_name": "VerbTiny",
+  "effect_name": "Room",
   "comment": "Airwindows VerbTiny reverb port candidate. Uses ctx[3] for the delay network; dither is omitted for the Zoom float32 path.",
-
-  "audio_func_name": "Fx_REV_VerbTiny",
-
-  "gid": 9,
-  "gid_comment": "0x09 = Reverb category.",
-
+  "audio_func_name": "Fx_DLY_Room",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay -> Fx_DLY_; consolidated under DLY.",
   "fxid": 405,
   "fxid_comment": "0x0195 in the custom Airwindows range.",
-
   "fxid_version": "1.00",
   "flags_byte": 1,
-
   "params": [
-    {"name": "Replace", "type": "knob", "max": 100, "default": 50,  "scale": "source_normalized", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "source_default": 0.5, "source_formula": "reg4n = 0.03125 + (1.0 - pow(1.0 - A, 2.0)) * 0.03125; attenuate = A-shaped replacement amount", "comment": "Airwindows A. Reverb replacement/drive into the tank."},
-    {"name": "Derez",   "type": "knob", "max": 100, "default": 100, "scale": "source_squared", "audio_min": 0.0001, "audio_max": 1.0, "audio_default": 1.0, "source_default": 1.0, "source_formula": "derez = clamp(B * B / overallscale, 0.0001, 1.0)", "comment": "Airwindows B. Reverb engine sample decimation."},
-    {"name": "Filter",  "type": "knob", "max": 100, "default": 100, "scale": "source_squared", "audio_min": 0.0001, "audio_max": 1.0, "audio_default": 1.0, "source_default": 1.0, "source_formula": "derezFreq = clamp(C * C / overallscale, 0.0001, 1.0)", "comment": "Airwindows C. Output filtering decimation."},
-    {"name": "Wider",   "type": "knob", "max": 100, "default": 0,   "scale": "source_0_to_2", "audio_min": 0.0, "audio_max": 2.0, "audio_default": 0.0, "source_default": 0.0, "source_formula": "wider = D * 2.0", "comment": "Airwindows D. Width/matrix blend."},
-    {"name": "DryWet",  "type": "knob", "max": 100, "default": 100, "scale": "source_normalized", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 1.0, "source_default": 1.0, "source_formula": "wet = E", "comment": "Airwindows E. Dry/wet mix."}
+    {
+      "name": "Replace",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "scale": "source_normalized",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.5,
+      "source_default": 0.5,
+      "source_formula": "reg4n = 0.03125 + (1.0 - pow(1.0 - A, 2.0)) * 0.03125; attenuate = A-shaped replacement amount",
+      "comment": "Airwindows A. Reverb replacement/drive into the tank."
+    },
+    {
+      "name": "Derez",
+      "type": "knob",
+      "max": 100,
+      "default": 100,
+      "scale": "source_squared",
+      "audio_min": 0.0001,
+      "audio_max": 1.0,
+      "audio_default": 1.0,
+      "source_default": 1.0,
+      "source_formula": "derez = clamp(B * B / overallscale, 0.0001, 1.0)",
+      "comment": "Airwindows B. Reverb engine sample decimation."
+    },
+    {
+      "name": "Filter",
+      "type": "knob",
+      "max": 100,
+      "default": 100,
+      "scale": "source_squared",
+      "audio_min": 0.0001,
+      "audio_max": 1.0,
+      "audio_default": 1.0,
+      "source_default": 1.0,
+      "source_formula": "derezFreq = clamp(C * C / overallscale, 0.0001, 1.0)",
+      "comment": "Airwindows C. Output filtering decimation."
+    },
+    {
+      "name": "Wider",
+      "type": "knob",
+      "max": 100,
+      "default": 0,
+      "scale": "source_0_to_2",
+      "audio_min": 0.0,
+      "audio_max": 2.0,
+      "audio_default": 0.0,
+      "source_default": 0.0,
+      "source_formula": "wider = D * 2.0",
+      "comment": "Airwindows D. Width/matrix blend."
+    },
+    {
+      "name": "DryWet",
+      "type": "knob",
+      "max": 100,
+      "default": 100,
+      "scale": "source_normalized",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 1.0,
+      "source_default": 1.0,
+      "source_formula": "wet = E",
+      "comment": "Airwindows E. Dry/wet mix."
+    }
   ],
-
   "audio_nop": false
 }

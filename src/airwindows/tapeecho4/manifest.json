@@ -1,30 +1,115 @@
 {
-  "effect_name": "TapeEcho4",
-  "output_basename": "TEcho4",
+  "effect_name": "Spool",
+  "output_basename": "Spool",
   "comment": "Airwindows-inspired custom tape echo for Zoom Multistomp. Uses ctx[3] for a bounded stereo delay line and compact mono spring fallback, a FIR derived from a UAD Galaxy Tape Echo IR, TapeHack-style soft clipping, adjustable wear filtering, measured flutter/wow modulation, and a BPM+division tempo workflow. The closer desktop spring target still needs a bounded pedal-safe implementation. Hardware untested.",
-
-  "audio_func_name": "Fx_DLY_TapeEcho4",
-
+  "audio_func_name": "Fx_DLY_Spool",
   "gid": 8,
-  "gid_comment": "0x08 = Delay category.",
-
-  "fxid": 946,
-  "fxid_comment": "0x03B2 (header 0x080003B2). Was 409 (0x0199) until 2026-10-29, the same Delay ID as Spool.ZDL from themanro/ZoomMultistompZDL (issue #8). 946 is unused by every collection listed in docs/FXID-REGISTRY.md.",
-
-  "fxid_version": "1.00",
+  "gid_comment": "0x08 = Delay -> Fx_DLY_; consolidated under DLY.",
+  "fxid": 914,
+  "fxid_comment": "0x0392. Was 409 until 2026-10-29, which TEcho4.ZDL (repeat98/ZoomMultistompZDL) also used: swapping the two froze an MS-70CDR at boot. 914 is used by no collection in any group.",
+  "fxid_version": "1.02",
   "flags_byte": 1,
-
   "params": [
-    {"name": "Tempo",   "type": "tempo", "max": 240, "default": 120, "flags": 40, "scale": "bpm", "audio_min": 40.0, "audio_max": 200.0, "audio_default": 0.5, "comment": "BPM source for synced delay times. Descriptor is marked with the stock tempo flag pattern; true tap-tempo host writes still need hardware proof."},
-    {"name": "Div",     "type": "knob",  "max": 100, "default": 67,  "scale": "division", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.67, "comment": "Discrete musical division selector inside the DSP: 1/16, 1/8T, 1/8, dotted 1/8, 1/4, dotted 1/4."},
-    {"name": "Feed",    "type": "knob",  "max": 100, "default": 35,  "scale": "linear", "audio_min": 0.0, "audio_max": 1.40, "audio_default": 0.35, "comment": "Feedback amount. Top of knob is firmly in self-oscillation territory; tape_saturate in the feedback path limits the runaway so it sustains rather than explodes."},
-    {"name": "Flutter", "type": "knob",  "max": 100, "default": 35,  "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.35, "comment": "Fast tape flutter depth."},
-    {"name": "Wow",     "type": "knob",  "max": 100, "default": 25,  "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.25, "comment": "Slow tape-speed drift depth."},
-    {"name": "Wear",    "type": "knob",  "max": 100, "default": 55,  "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.55, "comment": "Adds aged-tape filtering around the fixed Galaxy-derived head/tape FIR response."},
-    {"name": "Drive",   "type": "knob",  "max": 100, "default": 35,  "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.35, "comment": "TapeHack-style soft clipping into the record path."},
-    {"name": "Spring",  "type": "knob",  "max": 100, "default": 0,   "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.0, "comment": "Experimental parallel mono spring-reverb return. Disabled by default while a closer Galaxy model is developed."},
-    {"name": "Mix",     "type": "knob",  "max": 100, "default": 40,  "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.4, "comment": "Dry/wet crossfade."}
+    {
+      "name": "Tempo",
+      "type": "tempo",
+      "max": 240,
+      "default": 120,
+      "flags": 40,
+      "scale": "bpm",
+      "audio_min": 40.0,
+      "audio_max": 200.0,
+      "audio_default": 0.5,
+      "comment": "BPM source for synced delay times. Descriptor is marked with the stock tempo flag pattern; true tap-tempo host writes still need hardware proof."
+    },
+    {
+      "name": "Div",
+      "type": "knob",
+      "max": 100,
+      "default": 67,
+      "scale": "division",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.67,
+      "comment": "Discrete musical division selector inside the DSP: 1/16, 1/8T, 1/8, dotted 1/8, 1/4, dotted 1/4."
+    },
+    {
+      "name": "Feed",
+      "type": "knob",
+      "max": 100,
+      "default": 35,
+      "scale": "custom_feedback",
+      "audio_min": 0.0,
+      "audio_max": 1.4,
+      "audio_default": 0.35,
+      "comment": "Progressive repeats through 80; loop coefficient crosses unity near 92, reaching 1.4 at 100. Actual sustain depends on Wear, Drive and signal spectrum; record saturation bounds the loop."
+    },
+    {
+      "name": "Flutter",
+      "type": "knob",
+      "max": 100,
+      "default": 35,
+      "scale": "linear",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.35,
+      "comment": "Fast tape flutter depth."
+    },
+    {
+      "name": "Wow",
+      "type": "knob",
+      "max": 100,
+      "default": 25,
+      "scale": "linear",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.25,
+      "comment": "Slow tape-speed drift depth."
+    },
+    {
+      "name": "Wear",
+      "type": "knob",
+      "max": 100,
+      "default": 55,
+      "scale": "linear",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.55,
+      "comment": "Adds aged-tape filtering around the fixed Galaxy-derived head/tape FIR response."
+    },
+    {
+      "name": "Drive",
+      "type": "knob",
+      "max": 100,
+      "default": 35,
+      "scale": "linear",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.35,
+      "comment": "TapeHack-style soft clipping into the record path."
+    },
+    {
+      "name": "Spring",
+      "type": "knob",
+      "max": 100,
+      "default": 0,
+      "scale": "linear",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.0,
+      "comment": "Experimental parallel mono spring-reverb return. Disabled by default while a closer Galaxy model is developed."
+    },
+    {
+      "name": "Mix",
+      "type": "knob",
+      "max": 100,
+      "default": 35,
+      "scale": "linear",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.35,
+      "comment": "Dry/wet crossfade."
+    }
   ],
-
   "audio_nop": false
 }

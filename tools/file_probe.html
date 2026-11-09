@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>File Probe</title>
+<style>
+  :root { --bg:#111312; --panel:#1a1d1b; --line:#2c312e; --text:#e4e8e5; --dim:#8d968f; --accent:#7fd1a0; --warn:#e6b450; --bad:#e07a6a; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg:#f4f6f4; --panel:#fff; --line:#d5dbd6; --text:#1b1f1c; --dim:#5d665f; --accent:#1f7a48; --warn:#9a6a00; --bad:#b23b2a; } }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system, system-ui, sans-serif; }
+  main { max-width:860px; margin:0 auto; padding:24px 16px 48px; display:grid; gap:16px; }
+  h1 { font-size:22px; margin:0; }
+  p { margin:0; color:var(--dim); max-width:65ch; }
+  section.danger { border-color:var(--bad); }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; display:grid; gap:10px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  button { font:inherit; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:var(--bg); color:var(--text); cursor:pointer; }
+  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  button:disabled { opacity:.45; cursor:default; }
+  .status { font-family:ui-monospace, Menlo, monospace; font-size:13px; }
+  .ok { color:var(--accent); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+  ul.files { margin:0; padding-left:20px; columns:3 180px; font-family:ui-monospace, Menlo, monospace; font-size:13px; }
+  pre { margin:0; max-height:360px; overflow:auto; font:12px/1.45 ui-monospace, Menlo, monospace; color:var(--dim); white-space:pre-wrap; word-break:break-all; }
+</style>
+</head>
+<body>
+<main>
+  <h1>File Probe <span class="status" style="color:var(--dim)">read-only</span></h1>
+  <p>Asks the pedal whether it answers Zoom's file commands as the ZD2 pedals do (from zoom-zt2). This page only sends the commands listed below: identity, editor mode, disk usage, list files, read files (one, or all of them as a backup zip), close. It never writes or deletes a file. Close Zoom Effect Manager first (it holds the MIDI port), and use Chrome or Edge.</p>
+
+  <section>
+    <div class="row"><button id="connect">Connect</button><span id="conn" class="status">Not connected</span></div>
+  </section>
+
+  <section>
+    <div class="row">
+      <button data-step="editor" disabled>1. Editor mode on</button>
+      <button data-step="usage" disabled>2. Disk usage</button>
+      <button data-step="list" disabled>3. List files</button>
+      <button data-step="read" disabled>4. Read FLST_SEQ.ZDT</button>
+      <button data-step="backup" disabled>5. Back up all files</button>
+      <a id="save" hidden>Save</a>
+    </div>
+    <div class="row">
+      <button data-step="pcmode" disabled>Optional: PC mode on</button>
+      <button data-step="pcmodeoff" disabled>PC mode off</button>
+      <span class="status" style="color:var(--dim)">Only if steps 2 and 3 get no answer.</span>
+    </div>
+    <div id="result" class="status"></div>
+    <ul id="files" class="files"></ul>
+  </section>
+
+  <section class="danger">
+    <div class="row"><strong>Write test</strong><span class="status bad">writes to the pedal</span></div>
+    <p>Only after a verified backup. Writes one small new file, <code>TEST.TXT</code> (not an effect, not in the effect list), reads it back and compares it; the second button deletes it again. These buttons can write no other file. Don't touch the pedal or the cable while it runs. Recovery if anything goes wrong: Zoom Effect Manager, or the backup image in update mode.</p>
+    <div class="row">
+      <button data-step="writetest" disabled>6. Write TEST.TXT and read it back</button>
+      <button data-step="deletetest" disabled>7. Delete TEST.TXT</button>
+    </div>
+    <p>Replace one of our own effects that is already on the pedal with another build of it (same name and effect ID). Stock effects and new files are refused. The pedal's current copy is read first and offered for saving.</p>
+    <div class="row">
+      <input type="file" id="zdl" accept=".ZDL,.zdl">
+      <button data-step="overwrite" disabled>8. Replace it on the pedal</button>
+    </div>
+    <p>Add a new effect: the test effect RingT (a copy of Ring, effect ID 418) and its entry in the effect list, then remove both again. The effect list is read first and offered for saving.</p>
+    <div class="row">
+      <input type="file" id="ringt" accept=".ZDL,.zdl">
+      <button data-step="addeffect" disabled>9. Add RingT</button>
+      <button data-step="removeeffect" disabled>10. Remove RingT</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="row"><strong>Log</strong><button id="copy">Copy log</button></div>
+    <pre id="log"></pre>
+  </section>
+</main>
+<script>
+"use strict";
+// Commands from mungewell/zoom-zt2 (MIT), zoomzt2.py, with the device id the pedal reports instead of the G1Four's 0x6e.
+// Every message this page can send is built here and nowhere else.
+let devId = null, midiIn = null, midiOut = null, waiter = null, quiet = false;
+const lines = [];
+const $ = id => document.getElementById(id);
+const hex = bytes => Array.from(bytes, b => b.toString(16).padStart(2, '0')).join(' ');
+function log(text) { lines.push(new Date().toISOString().slice(11, 23) + '  ' + text); $('log').textContent = lines.join('\n'); $('log').scrollTop = 1e9 }
+function result(text, cls = '') { $('result').className = 'status ' + cls; $('result').textContent = text }
+
+const zoom = body => [0xf0, 0x52, 0x00, devId, ...body, 0xf7];
+const TEST_FILE = 'TEST.TXT';
+// The only names a write may use: the test file, and our own effects (the ZDLs in dist/, fetched when connecting).
+let OUR_EFFECTS = new Set();
+// The add-effect test may also write the effect list, and only while it runs.
+const ADD_FILE = 'RINGT.ZDL', LIST_FILE = 'FLST_SEQ.ZDT';
+let listWritable = false;
+function writable(name) {
+  if (name === TEST_FILE || name === ADD_FILE || OUR_EFFECTS.has(name.toUpperCase())) return name;
+  if (name === LIST_FILE && listWritable) return name;
+  throw new Error('refusing to write ' + name + ': not the test file or one of our effects');
+}
+const nameBytes = name => [...Array.from(name, c => c.charCodeAt(0)), 0x00];
+const MESSAGES = {
+  identity: () => [0xf0, 0x7e, 0x7f, 0x06, 0x01, 0xf7],
+  editorOn: () => zoom([0x50]),
+  pcmodeOn: () => zoom([0x52]),
+  pcmodeOff: () => zoom([0x53]),
+  diskUsage: () => zoom([0x60, 0x29, 0x00, 0x00, 0x00, 0x00, 0x00]),
+  findFirst: () => zoom([0x60, 0x25, 0x00, 0x00, ...nameBytes('*')]),
+  findNext: () => zoom([0x60, 0x26, 0x00, 0x00, ...nameBytes('*')]),
+  openRead: name => zoom([0x60, 0x20, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...nameBytes(name)]),
+  readStep: () => zoom([0x60, 0x05, 0x00]),
+  readChunk: () => zoom([0x60, 0x22, 0x14, 0x2f, 0x60, 0x00, 0x0c, 0x00, 0x04, 0x00, 0x00, 0x00]),
+  // Writes, in zoom-zt2's order (file_check, file_upload / file_delete, file_close). writable() decides which names may be written.
+  check: name => zoom([0x60, 0x25, 0x00, 0x00, ...nameBytes(writable(name))]),
+  checkEnd: () => zoom([0x60, 0x27]),
+  remove: name => zoom([0x60, 0x24, ...nameBytes(writable(name))]),
+  openWrite: name => zoom([0x60, 0x20, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...nameBytes(writable(name))]),
+  writeBlock: data => {
+    const crc = (crc32(data) ^ 0xffffffff) >>> 0;
+    return zoom([0x60, 0x23, 0x40, 0x00, 0x00, 0x00, 0x00, data.length & 0x7f, (data.length >> 7) & 0x7f, 0x00, 0x00, 0x00,
+      ...pack7(data), crc & 0x7f, (crc >>> 7) & 0x7f, (crc >>> 14) & 0x7f, (crc >>> 21) & 0x7f, (crc >>> 28) & 0x0f]);
+  },
+  closeA: () => zoom([0x60, 0x21, 0x40, 0x00, 0x00, 0x00, 0x00]),
+  closeB: () => zoom([0x60, 0x09]),
+};
+
+// Send one message and wait for the next SysEx reply (or a timeout).
+function ask(name, timeout = 1500, arg) {
+  const bytes = MESSAGES[name](arg);
+  return new Promise(resolve => {
+    const timer = setTimeout(() => { waiter = null; log('    no reply to ' + name + ' (' + timeout + ' ms)'); resolve(null) }, timeout);
+    waiter = data => { clearTimeout(timer); waiter = null; resolve(data) };
+    if (!quiet) log('OUT ' + name.padEnd(10) + (bytes.length > 48 ? hex(bytes.slice(0, 48)) + ' …(' + bytes.length + ' bytes)' : hex(bytes)));
+    midiOut.send(bytes);
+  });
+}
+
+function onMessage(event) {
+  const data = event.data;
+  if (data[0] !== 0xf0) return;
+  if (!quiet) log('IN             ' + (data.length > 48 ? hex(data.slice(0, 48)) + ' …(' + data.length + ' bytes)' : hex(data)));
+  if (waiter) waiter(data);
+}
+
+$('connect').onclick = async () => {
+  try {
+    const access = await navigator.requestMIDIAccess({ sysex: true });
+    const pick = ports => Array.from(ports.values()).find(port => /zoom/i.test(port.name));
+    midiIn = pick(access.inputs); midiOut = pick(access.outputs);
+    if (!midiIn || !midiOut) { $('conn').textContent = 'No ZOOM MIDI port. Pedal on USB? Effect Manager closed?'; $('conn').className = 'status bad'; return }
+    midiIn.onmidimessage = onMessage;
+    log('ports: ' + midiIn.name + ' / ' + midiOut.name);
+    const reply = await ask('identity');
+    // Identity reply: F0 7E <ch> 06 02 52 <device id> ...
+    if (!reply || reply[3] !== 0x06 || reply[4] !== 0x02 || reply[5] !== 0x52) { devId = null; $('conn').textContent = 'No identity reply from a Zoom pedal.'; $('conn').className = 'status bad'; return }
+    devId = reply[6];
+    const names = { 0x61: 'MS-70CDR', 0x58: 'MS-50G', 0x5f: 'MS-60B' };
+    $('conn').textContent = 'Connected: ' + (names[devId] ?? 'unknown model') + ' (device id 0x' + devId.toString(16) + ')';
+    $('conn').className = 'status ok';
+    try {
+      const index = await (await fetch('../dist/')).text();
+      OUR_EFFECTS = new Set([...index.matchAll(/href="([^"]+\.ZDL)"/gi)].map(m => decodeURIComponent(m[1]).toUpperCase()));
+      log('our effects (dist/): ' + OUR_EFFECTS.size);
+    } catch { log('could not list dist/; replacing effects is disabled') }
+    document.querySelectorAll('[data-step]').forEach(button => button.disabled = false);
+  } catch (error) { $('conn').textContent = 'MIDI access failed: ' + error.message; $('conn').className = 'status bad' }
+};
+
+// 8-into-7 unpacking (high bits first) and Zoom's CRC check, as in zoom-zt2.
+function unpack7(bytes) {
+  const out = [];
+  for (let i = 0; i < bytes.length; i += 8) for (let j = 1; j < 8 && i + j < bytes.length; j++) out.push(bytes[i + j] | (bytes[i] & (1 << (7 - j)) ? 0x80 : 0));
+  return out;
+}
+function pack7(bytes) {
+  const out = [];
+  for (let i = 0; i < bytes.length; i += 7) {
+    const group = bytes.slice(i, i + 7);
+    let high = 0;
+    group.forEach((b, j) => { if (b & 0x80) high |= 1 << (6 - j) });
+    out.push(high, ...group.map(b => b & 0x7f));
+  }
+  return out;
+}
+function crc32(bytes) {
+  let c = 0xffffffff;
+  for (const b of bytes) { c ^= b; for (let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xedb88320 : c >>> 1 }
+  return (c ^ 0xffffffff) >>> 0;
+}
+// The data comes in the reply to the step after the read request (zoom-zt2 reads it there too):
+// F0 52 00 id 60 04 22 01 …, length at [9..10], packed data from [11], CRC in the last 5 bytes before F7.
+// The reply to the read request itself (… 60 04 22 00 …) is only an acknowledgement.
+function chunkOf(reply) {
+  if (!reply) return null;
+  const d = Array.from(reply).slice(1, -1);
+  if (d[3] !== 0x60 || d[4] !== 0x04 || d[5] !== 0x22 || d.length < 15) return { end: true, data: [] };
+  const length = d[8] + d[9] * 128;
+  if (!length) return { data: [], end: true };
+  const data = unpack7(d.slice(10, 10 + length + Math.floor(length / 7) + 1)).slice(0, length);
+  const t = d.slice(-5), crc = (t[0] + (t[1] << 7) + (t[2] << 14) + (t[3] << 21) + ((t[4] & 0x0f) << 28)) >>> 0;
+  return { data, ok: ((crc ^ 0xffffffff) >>> 0) === crc32(data) };
+}
+
+// Every file on the pedal, in directory order, with the size the listing reports.
+async function listFiles() {
+  const files = [];
+  let reply = await ask('findFirst');
+  for (let guard = 0; reply && guard < 600; guard++) {
+    const d = Array.from(reply).slice(1);
+    if (d[3] !== 0x60 || d[4] !== 0x04) break;
+    // An 8.3 name has at most 12 characters; a 12-character name has no 00 after it, and the next byte can be anything.
+    const end = d.indexOf(0, 14), name = String.fromCharCode(...d.slice(14, end > 14 && end < 26 ? end : 26));
+    if (!name) break;
+    files.push({ name, size: d[29] + d[30] * 128 + d[31] * 16384 + d[32] * 2097152 + d[33] * 268435456 });
+    reply = await ask('findNext');
+  }
+  await ask('closeA'); await ask('closeB');
+  return files;
+}
+// One file, every block CRC-checked; null if anything does not check out.
+async function readFile(name) {
+  const file = [];
+  let ok = true;
+  await ask('openRead', 1500, name);
+  for (let guard = 0; guard < 256; guard++) {
+    await ask('readStep'); await ask('readChunk');
+    const chunk = chunkOf(await ask('readStep'));
+    if (chunk.end) break;
+    if (!chunk.ok) { ok = false; break }
+    file.push(...chunk.data);
+  }
+  await ask('closeA'); await ask('closeB');
+  return ok ? file : null;
+}
+// Write one file, zoom-zt2's way. Returns null, or what went wrong.
+async function writeFile(name, data) {
+  const steps = [['check', name], ['readStep'], ['checkEnd'], ['remove', name], ['openWrite', name], ['readStep']];
+  for (const [step, arg] of steps) if (!await ask(step, 1500, arg)) { await ask('closeA'); await ask('closeB'); return 'no reply to ' + step + '; stopped before writing data. See the log.' }
+  for (let at = 0; at < data.length; at += 512) {
+    if (!await ask('writeBlock', 3000, data.slice(at, at + 512)) || !await ask('readStep')) { await ask('closeA'); await ask('closeB'); return 'no reply while writing block ' + (at / 512 + 1) + '. See the log, then check the file list.' }
+  }
+  await ask('closeA'); await ask('closeB');
+  return null;
+}
+// What a ZDL says it is: group, effect id and version from its header.
+function zdlInfo(bytes) {
+  if (bytes.length < 0x50 || String.fromCharCode(...bytes.slice(4, 8)) !== 'SIZE' || bytes[0x4c] !== 0x7f || String.fromCharCode(...bytes.slice(0x4d, 0x50)) !== 'ELF') return null;
+  return { gid: bytes[0x3c], fxid: bytes[0x40] | bytes[0x41] << 8, version: String.fromCharCode(...bytes.slice(0x44, 0x48)) };
+}
+// FLST_SEQ.ZDT: sections '>>>' 00 <group> 8 x 00, 13-byte records (name padded with 00 to 12, then 00), '<<<' 00.
+function listSection(list, gid) {
+  for (let at = 0; at + 4 < list.length; at++) {
+    if (list[at] === 0x3e && list[at + 1] === 0x3e && list[at + 2] === 0x3e && list[at + 3] === 0 && list[at + 4] === gid) {
+      for (let end = at + 13; end + 3 < list.length; end += 13) if (list[end] === 0x3c && list[end + 1] === 0x3c && list[end + 2] === 0x3c && list[end + 3] === 0) return { start: at + 13, end };
+      return null;
+    }
+  }
+  return null;
+}
+const recordName = (list, at) => String.fromCharCode(...list.slice(at, at + 12)).replace(/\0+$/, '');
+function listWith(list, gid, name) {
+  const section = listSection(list, gid);
+  if (!section) return null;
+  for (let at = section.start; at < section.end; at += 13) if (recordName(list, at) === name) return null;
+  if (list.slice(-13).some(b => b)) return null;               // no spare room at the end
+  const record = [...Array.from(name, c => c.charCodeAt(0)), ...Array(13 - name.length).fill(0)];
+  return [...list.slice(0, section.end), ...record, ...list.slice(section.end, list.length - 13)];
+}
+function listWithout(list, gid, name) {
+  const section = listSection(list, gid);
+  if (!section) return null;
+  for (let at = section.start; at < section.end; at += 13) if (recordName(list, at) === name) return [...list.slice(0, at), ...list.slice(at + 13), ...Array(13).fill(0)];
+  return null;
+}
+const sameBytes = (a, b) => a && b && a.length === b.length && a.every((x, i) => x === b[i]);
+// Write a file and read it back; null when it checks out, else what went wrong.
+async function writeChecked(name, data) {
+  const problem = await writeFile(name, data);
+  if (problem) return problem;
+  return sameBytes(await readFile(name), data) ? null : name + ' read back different';
+}
+// A plain (stored, uncompressed) zip, so the backup opens anywhere.
+function zip(entries) {
+  const parts = [], central = [], enc = new TextEncoder();
+  let offset = 0;
+  const u16 = v => [v & 255, v >> 8 & 255], u32 = v => [v & 255, v >> 8 & 255, v >> 16 & 255, v >>> 24 & 255];
+  for (const { name, data } of entries) {
+    const n = Array.from(enc.encode(name)), c = crc32(data), common = [...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0x21), ...u32(c), ...u32(data.length), ...u32(data.length), ...u16(n.length), ...u16(0)];
+    const local = [0x50, 0x4b, 3, 4, ...common, ...n];
+    parts.push(new Uint8Array(local), new Uint8Array(data));
+    central.push(...[0x50, 0x4b, 1, 2, ...u16(20), ...common, ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(offset), ...n]);
+    offset += local.length + data.length;
+  }
+  parts.push(new Uint8Array(central), new Uint8Array([0x50, 0x4b, 5, 6, 0, 0, 0, 0, ...u16(entries.length), ...u16(entries.length), ...u32(central.length), ...u32(offset), 0, 0]));
+  return new Blob(parts, { type: 'application/zip' });
+}
+function offer(blob, name) {
+  Object.assign($('save'), { href: URL.createObjectURL(blob), download: name, hidden: false, textContent: 'Save ' + name });
+}
+
+const STEPS = {
+  async read() {
+    const name = 'FLST_SEQ.ZDT';
+    $('save').hidden = true;
+    const file = await readFile(name);
+    if (!file) return result('Read ' + name + ': a block failed its checksum. See the log.', 'bad');
+    if (!file.length) return result('Read ' + name + ': no data came back. See the log.', 'warn');
+    offer(new Blob([new Uint8Array(file)]), name);
+    result('Read ' + name + ': ' + file.length + ' bytes (CRC checked). Save it and send it over.', 'ok');
+  },
+  async list() {
+    $('files').textContent = '';
+    const files = await listFiles();
+    for (const f of files) { const item = document.createElement('li'); item.textContent = f.name + '  ' + f.size; $('files').append(item) }
+    result(files.length ? 'Files listed: ' + files.length + '.' : 'List files: no names came back. See the log.', files.length ? 'ok' : 'warn');
+  },
+  async backup() {
+    $('save').hidden = true;
+    const started = performance.now(), files = await listFiles();
+    if (!files.length) return result('Backup: the pedal listed no files. See the log.', 'bad');
+    log('backup: ' + files.length + ' files listed; reading them (messages not logged)');
+    const entries = [], problems = [];
+    quiet = true;
+    try {
+      for (const [index, f] of files.entries()) {
+        result('Backup: reading ' + (index + 1) + ' of ' + files.length + ': ' + f.name, '');
+        const data = await readFile(f.name);
+        if (!data) problems.push(f.name + ': checksum failed');
+        else if (data.length !== f.size) problems.push(f.name + ': read ' + data.length + ' bytes, listed ' + f.size);
+        else entries.push({ name: 'files/' + f.name, data });
+      }
+    } finally { quiet = false }
+    const seconds = ((performance.now() - started) / 1000).toFixed(1);
+    if (problems.length) { log('backup problems:\n  ' + problems.join('\n  ')); return result('Backup incomplete: ' + problems.length + ' of ' + files.length + ' files did not check out. See the log; nothing was saved.', 'bad') }
+    const enc = new TextEncoder();
+    entries.push({ name: 'order.txt', data: Array.from(enc.encode(files.map(f => f.name).join('\n') + '\n')) });
+    entries.push({ name: 'listing.txt', data: Array.from(enc.encode(files.map(f => f.name + ' ' + f.size).join('\n') + '\n')) });
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    offer(zip(entries), 'pedal-backup-' + stamp + '.zip');
+    const total = files.reduce((n, f) => n + f.size, 0);
+    log('backup: ' + files.length + ' files, ' + total + ' bytes, ' + seconds + ' s, every block CRC-checked and every size matched');
+    result('Backup: ' + files.length + ' files, ' + total.toLocaleString() + ' bytes in ' + seconds + ' s, all checked. Save the zip.', 'ok');
+  },
+  async writetest() {
+    const before = await listFiles();
+    if (!before.length) return result('Write test: the pedal listed no files; not writing.', 'bad');
+    if (before.some(f => f.name === TEST_FILE)) return result('Write test: ' + TEST_FILE + ' is already on the pedal. Delete it first (7).', 'warn');
+    const enc = new TextEncoder(), text = 'Write test from ZoomMultistompZDL tools/file_probe.html, ' + new Date().toISOString() + '. Not an effect; safe to delete.\n';
+    const data = Array.from(enc.encode(text.repeat(Math.ceil(700 / text.length)))).slice(0, 700);   // two blocks: 512 + 188
+    if (!confirm('Write ' + TEST_FILE + ' (' + data.length + ' bytes) to the pedal? A verified backup should exist. Do not touch the pedal or the cable.')) return result('Write test: cancelled.', '');
+    log('write test: ' + before.length + ' files before; writing ' + TEST_FILE + ', ' + data.length + ' bytes');
+    const problem = await writeFile(TEST_FILE, data);
+    if (problem) return result('Write test: ' + problem, 'bad');
+    const back = await readFile(TEST_FILE), after = await listFiles();
+    const same = back && back.length === data.length && back.every((b, i) => b === data[i]);
+    const listed = after.find(f => f.name === TEST_FILE);
+    log('write test: read back ' + (back ? back.length : 'nothing') + ' bytes, ' + (same ? 'identical' : 'DIFFERENT') + '; ' + after.length + ' files listed, ' + TEST_FILE + (listed ? ' listed with ' + listed.size + ' bytes' : ' not listed'));
+    result(same && listed && after.length === before.length + 1
+      ? 'Write test: ' + TEST_FILE + ' written, read back identical, listed (' + after.length + ' files). Now power-cycle the pedal and check it plays, then delete it (7).'
+      : 'Write test: something did not check out. Copy the log and send it; don\'t power-cycle yet.', same && listed ? 'ok' : 'bad');
+  },
+  async overwrite() {
+    const picked = $('zdl').files[0];
+    if (!picked) return result('Overwrite: choose one of our .ZDL files first.', 'warn');
+    const data = Array.from(new Uint8Array(await picked.arrayBuffer())), info = zdlInfo(data);
+    if (!info) return result('Overwrite: ' + picked.name + ' is not a ZDL.', 'bad');
+    if (!OUR_EFFECTS.has(picked.name.toUpperCase())) return result('Overwrite: ' + picked.name + ' is not one of our effects (dist/); only those can be written.', 'bad');
+    const files = await listFiles(), target = files.find(f => f.name.toUpperCase() === picked.name.toUpperCase());
+    if (!target) return result('Overwrite: ' + picked.name + ' is not on the pedal. This step only replaces an installed effect; it never adds one.', 'warn');
+    const current = await readFile(target.name);
+    if (!current || current.length !== target.size) return result('Overwrite: could not read the pedal\'s ' + target.name + ' back; not writing.', 'bad');
+    const was = zdlInfo(current);
+    if (!was || was.gid !== info.gid || was.fxid !== info.fxid) return result('Overwrite: the pedal\'s ' + target.name + ' is a different effect (id ' + (was ? was.gid + '/' + was.fxid : '?') + ', picked ' + info.gid + '/' + info.fxid + '); not writing.', 'bad');
+    offer(new Blob([new Uint8Array(current)]), 'pedal-' + target.name);
+    if (current.length === data.length && current.every((b, i) => b === data[i])) return result('Overwrite: the pedal already has this exact ' + target.name + ' (' + was.version + '); nothing written. Its copy is offered for saving above.', 'ok');
+    if (!confirm('Replace ' + target.name + ' ' + was.version + ' (' + current.length + ' bytes) on the pedal with ' + info.version + ' (' + data.length + ' bytes)? Save the offered copy of the current one first. Do not touch the pedal or the cable.')) return result('Overwrite: cancelled. The current copy is offered for saving.', '');
+    log('overwrite: ' + target.name + ' ' + was.version + ' -> ' + info.version + ', ' + data.length + ' bytes (messages not logged)');
+    quiet = true;
+    let problem;
+    try { problem = await writeFile(target.name, data) } finally { quiet = false }
+    if (problem) return result('Overwrite: ' + problem, 'bad');
+    const back = await readFile(target.name), after = await listFiles();
+    const same = back && back.length === data.length && back.every((b, i) => b === data[i]);
+    const listed = after.find(f => f.name === target.name);
+    log('overwrite: read back ' + (back ? back.length : 'nothing') + ' bytes, ' + (same ? 'identical' : 'DIFFERENT') + '; ' + after.length + ' files, ' + target.name + (listed ? ' listed with ' + listed.size + ' bytes' : ' NOT LISTED'));
+    result(same && listed && after.length === files.length
+      ? 'Overwrite: ' + target.name + ' is now ' + info.version + ', read back identical. Power-cycle the pedal and try the effect.'
+      : 'Overwrite: something did not check out. Copy the log and send it; don\'t power-cycle yet.', same && listed ? 'ok' : 'bad');
+  },
+  async addeffect() {
+    const picked = $('ringt').files[0];
+    if (!picked || picked.name.toUpperCase() !== ADD_FILE) return result('Add: choose RingT.ZDL (the test effect) first.', 'warn');
+    const data = Array.from(new Uint8Array(await picked.arrayBuffer())), info = zdlInfo(data);
+    if (!info || info.fxid !== 418) return result('Add: that is not the RingT test effect (effect ID 418).', 'bad');
+    const files = await listFiles();
+    if (files.some(f => f.name === ADD_FILE)) return result('Add: ' + ADD_FILE + ' is already on the pedal. Remove it first (10).', 'warn');
+    // Effect ID 418 was checked against a full backup of the pedal when RingT was built.
+    const list = await readFile(LIST_FILE);
+    if (!list || list.length !== 4108) return result('Add: could not read the effect list back; not writing.', 'bad');
+    const updated = listWith(list, info.gid, ADD_FILE);
+    if (!updated) return result('Add: could not place ' + ADD_FILE + ' in group ' + info.gid + ' of the effect list; not writing.', 'bad');
+    offer(new Blob([new Uint8Array(list)]), 'pedal-' + LIST_FILE);
+    if (!confirm('Add ' + ADD_FILE + ' (' + data.length + ' bytes) and its entry in the effect list? The current effect list is offered for saving: save it first. Do not touch the pedal or the cable.')) return result('Add: cancelled.', '');
+    log('add: writing ' + ADD_FILE + ', then the effect list (messages not logged)');
+    quiet = true; listWritable = true;
+    let problem;
+    try {
+      problem = await writeChecked(ADD_FILE, data);
+      if (!problem) {
+        problem = await writeChecked(LIST_FILE, updated);
+        if (problem) { log('add: effect list write failed (' + problem + '); writing the original back'); const back = await writeChecked(LIST_FILE, list); if (back) problem += '; RESTORING THE LIST ALSO FAILED: ' + back }
+      }
+    } finally { quiet = false; listWritable = false }
+    if (problem) return result('Add: ' + problem + '. Copy the log and send it; don\'t power-cycle yet.', 'bad');
+    const after = await listFiles();
+    log('add: ' + ADD_FILE + ' and the effect list written and read back identical; ' + after.length + ' files');
+    result('Add: ' + ADD_FILE + ' written, effect list updated, both read back identical (' + after.length + ' files). Power-cycle, then look for RingT in the effect list (next to Ring).', after.length === files.length + 1 ? 'ok' : 'warn');
+  },
+  async removeeffect() {
+    const files = await listFiles();
+    const list = await readFile(LIST_FILE);
+    if (!list || list.length !== 4108) return result('Remove: could not read the effect list back; not writing.', 'bad');
+    const updated = listWithout(list, 8, ADD_FILE);
+    const present = files.some(f => f.name === ADD_FILE);
+    if (!updated && !present) return result('Remove: ' + ADD_FILE + ' is neither on the pedal nor in the effect list.', 'warn');
+    if (!confirm('Remove ' + ADD_FILE + ' from the effect list and delete the file?')) return result('Remove: cancelled.', '');
+    quiet = true; listWritable = true;
+    let problem = null;
+    try {
+      if (updated) problem = await writeChecked(LIST_FILE, updated);
+      if (!problem && present) { await ask('check', 1500, ADD_FILE); await ask('readStep'); await ask('checkEnd'); await ask('remove', 1500, ADD_FILE); await ask('closeA'); await ask('closeB') }
+    } finally { quiet = false; listWritable = false }
+    if (problem) return result('Remove: ' + problem + '. Copy the log and send it.', 'bad');
+    const after = await listFiles();
+    const gone = !after.some(f => f.name === ADD_FILE);
+    log('remove: effect list ' + (updated ? 'updated' : 'already without it') + '; ' + ADD_FILE + (gone ? ' deleted' : ' STILL LISTED') + '; ' + after.length + ' files');
+    result(gone ? 'Remove: done, ' + after.length + ' files. Power-cycle and check RingT is gone.' : 'Remove: the file is still listed. Copy the log and send it.', gone ? 'ok' : 'bad');
+  },
+  async deletetest() {
+    const before = await listFiles();
+    if (!before.some(f => f.name === TEST_FILE)) return result('Delete: ' + TEST_FILE + ' is not on the pedal.', 'warn');
+    if (!confirm('Delete ' + TEST_FILE + ' from the pedal?')) return result('Delete: cancelled.', '');
+    await ask('check', 1500, TEST_FILE); await ask('readStep'); await ask('checkEnd');
+    const reply = await ask('remove', 1500, TEST_FILE);
+    await ask('closeA'); await ask('closeB');
+    const after = await listFiles();
+    const gone = !after.some(f => f.name === TEST_FILE);
+    log('delete: ' + (reply ? 'answered' : 'no reply') + '; ' + after.length + ' files listed, ' + TEST_FILE + (gone ? ' gone' : ' STILL LISTED'));
+    result(gone && after.length === before.length - 1 ? 'Delete: ' + TEST_FILE + ' removed; ' + after.length + ' files, as before the test.' : 'Delete: did not check out. Copy the log and send it.', gone ? 'ok' : 'bad');
+  },
+  async editor() { const reply = await ask('editorOn'); result(reply ? 'Editor mode: answered.' : 'Editor mode: no answer (the pedal may not acknowledge it; carry on).', reply ? 'ok' : 'warn') },
+  async pcmode() { const reply = await ask('pcmodeOn'); result(reply ? 'PC mode: answered.' : 'PC mode: no answer.', reply ? 'ok' : 'warn') },
+  async pcmodeoff() { const reply = await ask('pcmodeOff'); result(reply ? 'PC mode off: answered.' : 'PC mode off: no answer.', reply ? 'ok' : 'warn') },
+  async usage() {
+    const r = await ask('diskUsage');
+    if (!r) return result('Disk usage: no answer.', 'warn');
+    // zoom-zt2: reply F0 52 00 id 60 04 29 ..., max at data[10..14], free at data[15..19] (7-bit groups, data = without F0).
+    const d = Array.from(r).slice(1), word = at => d[at] + d[at + 1] * 128 + d[at + 2] * 16384 + d[at + 3] * 2097152 + d[at + 4] * 268435456;
+    if (d[3] !== 0x60 || d[4] !== 0x04 || d.length < 21) return result('Disk usage: answered, but not in the ZD2 shape. See the log.', 'warn');
+    const max = word(10), free = word(15);
+    result('Disk usage: ' + free.toLocaleString() + ' of ' + max.toLocaleString() + ' bytes free.', 'ok');
+  },
+
+};
+document.querySelectorAll('[data-step]').forEach(button => button.onclick = async () => {
+  document.querySelectorAll('[data-step]').forEach(b => b.disabled = true);
+  try { await STEPS[button.dataset.step]() } finally { document.querySelectorAll('[data-step]').forEach(b => b.disabled = false) }
+});
+$('copy').onclick = () => navigator.clipboard.writeText(lines.join('\n')).then(() => result('Log copied.', 'ok'));
+</script>
+</body>
+</html>

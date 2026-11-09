@@ -1,25 +1,79 @@
 {
   "effect_name": "Galactic",
   "comment": "Airwindows Galactic reverb port candidate. Uses ctx[3] for the original delay network converted to float32; dither is omitted for the Zoom float32 path. Hardware untested.",
-
-  "audio_func_name": "Fx_REV_Galactic",
-
-  "gid": 9,
-  "gid_comment": "0x09 = Reverb category.",
-
+  "audio_func_name": "Fx_DLY_Galactic",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay -> Fx_DLY_; consolidated under DLY.",
   "fxid": 408,
   "fxid_comment": "0x0198 in the custom Airwindows range.",
-
   "fxid_version": "1.00",
   "flags_byte": 1,
-
   "params": [
-    {"name": "Replace", "type": "knob", "max": 100, "default": 50,  "scale": "source_normalized", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "source_default": 0.5, "source_formula": "regen = 0.0625 + (1.0 - A) * 0.0625; attenuate = (1.0 - regen / 0.125) * 1.333", "comment": "Airwindows A. Reverb replacement/regeneration balance."},
-    {"name": "Bright",  "type": "knob", "max": 100, "default": 50,  "scale": "source_squared", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "source_default": 0.5, "source_formula": "lowpass = pow(0.00001 + B, 2.0) at 44.1 kHz", "comment": "Airwindows B. Reverb brightness/lowpass."},
-    {"name": "Detune",  "type": "knob", "max": 100, "default": 50,  "scale": "source_cubed", "audio_min": 0.0, "audio_max": 0.001, "audio_default": 0.5, "source_default": 0.5, "source_formula": "drift = pow(C, 3.0) * 0.001", "comment": "Airwindows C. Predelay vibrato drift."},
-    {"name": "Bigness", "type": "knob", "max": 100, "default": 100, "scale": "source_size", "audio_min": 0.1, "audio_max": 1.87, "audio_default": 1.0, "source_default": 1.0, "source_formula": "size = D * 1.77 + 0.1", "comment": "Airwindows D. Delay-network size."},
-    {"name": "DryWet",  "type": "knob", "max": 100, "default": 100, "scale": "source_cubed_wet", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 1.0, "source_default": 1.0, "source_formula": "wet = 1.0 - pow(1.0 - E, 3.0)", "comment": "Airwindows E. Dry/wet mix."}
+    {
+      "name": "Replace",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "scale": "source_normalized",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.5,
+      "source_default": 0.5,
+      "source_formula": "regen = 0.0625 + (1.0 - A) * 0.0625; attenuate = (1.0 - regen / 0.125) * 1.333",
+      "comment": "Airwindows A. Reverb replacement/regeneration balance."
+    },
+    {
+      "name": "Bright",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "scale": "source_squared",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.5,
+      "source_default": 0.5,
+      "source_formula": "lowpass = pow(0.00001 + B, 2.0) at 44.1 kHz",
+      "comment": "Airwindows B. Reverb brightness/lowpass."
+    },
+    {
+      "name": "Detune",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "scale": "source_cubed",
+      "audio_min": 0.0,
+      "audio_max": 0.001,
+      "audio_default": 0.5,
+      "source_default": 0.5,
+      "source_formula": "drift = pow(C, 3.0) * 0.001",
+      "comment": "Airwindows C. Predelay vibrato drift."
+    },
+    {
+      "name": "Bigness",
+      "type": "knob",
+      "max": 100,
+      "default": 100,
+      "scale": "source_size",
+      "audio_min": 0.1,
+      "audio_max": 1.87,
+      "audio_default": 1.0,
+      "source_default": 1.0,
+      "source_formula": "size = D * 1.77 + 0.1",
+      "comment": "Airwindows D. Delay-network size."
+    },
+    {
+      "name": "Mix",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "scale": "source_cubed_wet",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 1.0,
+      "source_default": 1.0,
+      "source_formula": "wet = 1.0 - pow(1.0 - E, 3.0)",
+      "comment": "Dry/wet crossfade. Renamed from 'DryWet' so every effect in the pack ends with the same control."
+    }
   ],
-
   "audio_nop": false
 }

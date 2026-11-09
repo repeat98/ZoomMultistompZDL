@@ -1,38 +1,32 @@
 {
   "effect_name": "TapeHack",
   "comment": "Airwindows TapeHack port. Drive into 11th-order Taylor sin, then output trim. Stateless, audibly aggressive.",
-
-  "audio_func_name": "Fx_FLT_TapeHack",
-
-  "gid":  2,
-  "gid_comment": "0x02 = Filter category. Same as GAIN/PurestDr.",
-
+  "audio_func_name": "Fx_DLY_TapeHack",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay -> Fx_DLY_.",
   "fxid": 402,
-  "fxid_comment": "0x0192 — adjacent to GAIN (0x0190) and PurestDr (0x0191).",
-
+  "fxid_comment": "0x0192 \u2014 adjacent to GAIN (0x0190) and PurestDr (0x0191).",
   "fxid_version": "1.00",
-  "flags_byte":   1,
-
+  "flags_byte": 1,
   "params": [
     {
-      "name":    "Input",
-      "max":     100,
+      "name": "Input",
+      "max": 100,
       "default": 50,
       "comment": "params[5]. Pre-saturation level trim 0..2x. Default 50 = unity (1x). Knob 1, knob_id=2, LineSel knob1_edit handler."
     },
     {
-      "name":    "Drive",
-      "max":     100,
+      "name": "Drive",
+      "max": 100,
       "default": 0,
       "comment": "params[6]. Wet/dry blend AND preamp boost combined. 0 = bit-perfect dry, 100 = saturated polynomial at 3x preamp. Knob 2, knob_id=3, LineSel knob2_edit handler."
     },
     {
-      "name":    "Output",
-      "max":     150,
+      "name": "Output",
+      "max": 150,
       "default": 100,
-      "comment": "params[7]. Post trim. Last entry: max=150, default=100 — matches Exciter's Level entry exactly. ALL 5 stock 3-param effects (Exciter/OptComp/ZNR/BottomB/SlowATTCK) use max=150 on the last entry, never 100. Testing whether this is the trigger for the edit-mode 3rd-param bug (2026-05-11). DSP scaling will be slightly off (params[7] maxes at 0.93 not 0.14) but irrelevant for the visibility test."
+      "comment": "params[7]. Post trim. Last entry: max=150, default=100 \u2014 matches Exciter's Level entry exactly. ALL 5 stock 3-param effects (Exciter/OptComp/ZNR/BottomB/SlowATTCK) use max=150 on the last entry, never 100. Testing whether this is the trigger for the edit-mode 3rd-param bug (2026-05-11). DSP scaling will be slightly off (params[7] maxes at 0.93 not 0.14) but irrelevant for the visibility test."
     }
   ],
-
   "audio_nop": false
 }

@@ -1,0 +1,45 @@
+{
+  "effect_name": "Taffy",
+  "comment": "PEDAL BUILD manifest for Taffy (5-knob). Red Panda Tensor-style live tape warp: reverse .. stop .. double speed with random slips. Speed is now the anchor the head always trends toward; Depth scales how far slips deviate from it; Glide sets tape-motor smoothness.",
+  "audio_func_name": "Fx_DLY_Taffy",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY with the rest of the pack.",
+  "fxid": 466,
+  "fxid_comment": "0x01D2. Reverted from 482 to the last known-working id + safe default. (The 482 bump collided with stock effect fxids and broke on hardware; the audible-on-load Mix hack is obsolete now the editor materialises patches via a full-patch send.)",
+  "fxid_version": "3.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Speed",
+      "max": 100,
+      "default": 50,
+      "comment": "params[5]. Tape-motor speed the head ALWAYS trends toward: 0=-1x reverse, 25=stop, 50=+1x normal, 100=+2x octave up."
+    },
+    {
+      "name": "Chance",
+      "max": 100,
+      "default": 35,
+      "comment": "params[6]. How often random speed/direction slips happen."
+    },
+    {
+      "name": "Depth",
+      "max": 100,
+      "default": 60,
+      "comment": "params[7]. How far a slip deviates from Speed (0 = slips do nothing, pure speed control; 100 = fully random tape warps)."
+    },
+    {
+      "name": "Glide",
+      "max": 100,
+      "default": 60,
+      "comment": "params[8]. Tape-motor smoothness: 0 = snappy/abrupt speed jumps, 100 = long smooth pitch glides."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Mix default 1 (quiet-safe). The editor materialises patches on load (full-patch send), so audible-on-load no longer needs a hot default."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

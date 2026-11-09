@@ -1,0 +1,50 @@
+{
+  "effect_name": "Shatter",
+  "comment": "Shatter \u2014 a stutter / beat-repeat glitch processor for drums and rhythmic material. Slices the signal on a grid; with some probability each slice is retriggered (stutter), reversed, and/or bitcrushed. Great on drum machines. Desktop preview implements the full DSP; pedal C port is staged (audio_nop smoke build).",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category. Buffer/slice-based, like the other ctx[3] effects.",
+  "fxid": 452,
+  "fxid_comment": "0x01C4 = above the repo's used range, distinct from microloom (450) and flower (451). Verify uniqueness before flashing.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Rate",
+      "max": 100,
+      "default": 50,
+      "comment": "Glitch grid speed: slice length ~400ms (slow) to ~30ms (fast/chopped)."
+    },
+    {
+      "name": "Chance",
+      "max": 100,
+      "default": 55,
+      "comment": "Probability each slice is glitched. 0 = clean pass-through, 100 = every slice."
+    },
+    {
+      "name": "Repeat",
+      "max": 100,
+      "default": 45,
+      "comment": "Stutter subdivisions per slice (2 = halve-repeat, high = fast machine-gun retrigger)."
+    },
+    {
+      "name": "Reverse",
+      "max": 100,
+      "default": 30,
+      "comment": "Probability a glitched slice plays backwards instead of stuttering."
+    },
+    {
+      "name": "Crush",
+      "max": 100,
+      "default": 35,
+      "comment": "Bitcrush + sample-rate reduction on the wet path for lo-fi grit."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet blend. Glitch is usually 100% wet."
+    }
+  ],
+  "audio_nop": true,
+  "audio_nop_comment": "Pedal C port starts as a UI-only smoke build. Full DSP validated on desktop first; see tools/audio_preview/renderers/shatter.py."
+}

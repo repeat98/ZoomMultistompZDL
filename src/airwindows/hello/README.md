@@ -20,7 +20,7 @@ DSP code from Airwindows.
 python3 hello/build.py
 ```
 
-This loads [stock_zdls/MS-70CDR_LINESEL.ZDL](../../../stock_zdls/MS-70CDR_LINESEL.ZDL),
+This loads `stock_zdls/MS-70CDR_LINESEL.ZDL` (your local copy: [STOCK-FILES.md](../../../docs/STOCK-FILES.md)),
 patches the on-screen label slot from `LineSel` to `HELLO`, rewrites the
 INFO block (`sort_index = 250` so the unit shows it as a *new* effect rather
 than overwriting LineSel), and writes `HELLO.ZDL`.

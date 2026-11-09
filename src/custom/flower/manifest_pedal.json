@@ -1,0 +1,27 @@
+{
+  "effect_name": "Flower",
+  "comment": "PEDAL BUILD manifest for Flower (2-knob, hardware-proven UI shape). The 6-knob manifest.json in this dir is the desktop-preview manifest; build.py reads THIS file. Reso, sweep range, and center frequency are baked into flower.c.",
+  "audio_func_name": "Fx_DLY_Flower",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY (fewest stock effects = easy to find).",
+  "fxid": 451,
+  "fxid_comment": "0x01C3. Reverted from 475 to the last known-working id + safe default. (The 475 bump collided with stock effect fxids and broke on hardware; the audible-on-load Mix hack is obsolete now the editor materialises patches via a full-patch send.)",
+  "fxid_version": "2.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Rate",
+      "max": 100,
+      "default": 45,
+      "comment": "params[5]. Random step speed (~0.5..14 Hz)."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Mix default 1 (quiet-safe). The editor materialises patches on load (full-patch send), so audible-on-load no longer needs a hot default."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build (confirms it LOADS before trusting the DSP). The safe ladder is: flash audio_nop=true first; if it boots and shows up, set false and rebuild for sound."
+}

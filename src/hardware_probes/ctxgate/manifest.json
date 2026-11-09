@@ -1,18 +1,13 @@
 {
   "effect_name": "CtxGate",
   "comment": "Hardware ABI probe. Reads ctx[Slot] as a raw 32-bit word and uses Bit to pan/weight the input signal left or right. No generated oscillator, no fardata, no dereference of the selected ctx word.",
-
   "audio_func_name": "Fx_FLT_CtxGate",
-
   "gid": 2,
   "gid_comment": "0x02 = Filter category. Diagnostic only.",
-
-  "fxid": 407,
-  "fxid_comment": "0x0197, separate from CtxMap and ParamTap.",
-
+  "fxid": 446,
+  "fxid_comment": "0x1BE. Reassigned from 407 to clear an fxid collision (audit 2026-08-18); every fxid in the tree is now unique.",
   "fxid_version": "1.00",
   "flags_byte": 1,
-
   "params": [
     {
       "name": "Slot",
@@ -35,6 +30,5 @@
       "comment": "Bit index inside the selected 32-bit ctx word."
     }
   ],
-
   "audio_nop": false
 }

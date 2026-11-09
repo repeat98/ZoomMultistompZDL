@@ -1,0 +1,73 @@
+name: Bug report — an effect or the patch editor
+description: Something behaves wrong on an MS-70CDR (or another ZDL-based MultiStomp).
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **The diagnostics matter more than the description.** Nearly every bug in this
+        project was found in the raw bytes and missed by the prose — including some
+        the author was confidently wrong about.
+
+        In the patch editor: **Show diagnostics → Copy diag**, then paste it below.
+        It contains the last patch the pedal sent, the last patch the editor wrote,
+        a byte-level diff, and the recent MIDI.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got.
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Pedal model and firmware
+      placeholder: "MS-70CDR, firmware 2.10"
+    validations:
+      required: true
+  - type: input
+    id: effects
+    attributes:
+      label: Which effects were involved
+      description: Names as the editor shows them. If one displayed as `unknown effect 0x...`, say so — the editor cannot know its knob layout and writing to it is a known hazard.
+      placeholder: "Spiral in slot 2, RackComp in slot 4"
+    validations:
+      required: false
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it happen
+      multiple: true
+      options:
+        - Turning a knob in the editor
+        - Reordering / swapping slots
+        - Changing an effect type
+        - Renaming a patch
+        - Writing or storing a patch
+        - On the pedal itself, no editor involved
+        - Installing effects with Zoom Effect Manager
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: diag
+    attributes:
+      label: Editor diagnostics (Copy diag)
+      description: >
+        Paste the whole thing. If the problem involves slots changing or effects
+        disappearing, a capture from BEFORE and one from AFTER is far more useful
+        than either alone — most such reports so far arrived after the damage, where
+        the bytes can no longer show what caused it.
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Worth ruling out first
+      options:
+        - label: The effect is actually installed on my pedal via Zoom Effect Manager (the editor lists the full catalogue from every MS/G1/B1 model, not what is on your unit — writing one you have not installed leaves the slot blank)
+        - label: I reloaded the editor with Ctrl+Shift+R / Cmd+Shift+R, so I am not on a cached older build
+        - label: I clicked Reload bank at least once this session (that is how the editor learns which effects your pedal has)

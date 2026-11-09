@@ -1,0 +1,14 @@
+{
+  "effect_name": "NAMTest",
+  "audio_func_name": "Fx_FLT_NAMTest",
+  "gid": 2,
+  "fxid": 497,
+  "fxid_version": "0.01",
+  "flags_byte": 1,
+  "params": [
+    {"name": "Input", "max": 100, "default": 50},
+    {"name": "Output", "max": 100, "default": 50},
+    {"name": "Mix", "max": 100, "default": 100}
+  ],
+  "comment": "Stage 1 pass-through only. All three knobs are UI placeholders and intentionally have no audio effect. No NAM weights, arena or sample-rate conversion."
+}

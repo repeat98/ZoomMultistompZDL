@@ -1,0 +1,90 @@
+NAMLite engine template, derived from the tested 0.12 block build.
+All 1,871 capture coefficients are zeroed; engine.bin is not an installable effect.
+User captures are inserted locally by nam_loader.js. No capture is bundled.
+
+MIT License
+
+Copyright (c) 2026 Roman Rusinov
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---------------------------------------------------------------------------
+SCOPE — please read
+
+The MIT grant above covers the ORIGINAL work in this fork, namely:
+
+  * the custom effects in src/custom/ (DSP, manifests, build scripts)
+  * the browser tools in tools/ (patch editor, cover editor, serve_editor.py,
+    apply_cover.py, the desktop audio-preview renderers)
+  * the reverse-engineering notes in docs/ and the cover artwork in graphics/
+
+It does NOT and cannot cover the following, which are owned by others:
+
+  * Upstream toolchain. This repository is a fork of
+    https://github.com/repeat98/ZoomMultistompZDL , which publishes no licence
+    file. Absent a licence, that material is under its author's default
+    copyright — all rights reserved. Anything inherited from upstream is used
+    here on that basis, and the MIT grant above does not extend to it. If you
+    intend to redistribute, ask that author.
+
+  * Airwindows-derived DSP (src/airwindows/): MIT, Copyright (c) Chris Johnson
+    / Airwindows. Its own terms apply.
+
+  * Dustbox (src/custom/dustbox/): MIT, Copyright (c) 2026 Marcelo Fuentes,
+    from https://github.com/marcfuentes/dustbox-zdl . Folded into this pack
+    under its own licence, which is kept alongside the source at
+    src/custom/dustbox/LICENSE. The DSP is unmodified; only the Power knob's
+    default was raised from 1 to 50 so it is audible on select, matching this
+    pack's convention.
+
+  * Zoom firmware, stock effect binaries under stock_zdls/, decoded stock cover
+    images, and the TI C6000 toolchain: owned by Zoom Corporation and Texas
+    Instruments respectively. Not licensed here. They are referenced solely for
+    interoperability and reverse-engineering research, and no Zoom or TI code
+    is redistributed by this repository.
+
+Zoom and MultiStomp are trademarks of Zoom Corporation. This project is not
+affiliated with, endorsed by, or supported by Zoom Corporation. Flashing
+custom effects is done at your own risk and may void your warranty.
+
+
+NeuralAmpModelerCore numerical reference:
+https://github.com/sdatkinson/NeuralAmpModelerCore
+
+MIT License
+
+Copyright (c) 2023 Steven Atkinson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

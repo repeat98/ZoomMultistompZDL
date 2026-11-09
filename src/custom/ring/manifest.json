@@ -1,0 +1,15 @@
+{
+  "effect_name": "Ring",
+  "comment": "Rotating ring oscilloscope on the pedal screen (MS-70CDR 2.10, zvis). Pass-through; the signal is wrapped around a circle that spins. Firmware facts: Leemuzhko's ZOOM_development SDK (credited, own code).",
+  "audio_func_name": "Fx_DLY_Ring",
+  "gid": 8,
+  "fxid": 415,
+  "fxid_version": "0.02",
+  "flags_byte": 1,
+  "params": [
+    {"name": "Time", "type": "knob", "max": 100, "default": 25, "comment": "How much signal goes around the ring: 1-64 samples per point."},
+    {"name": "Size", "type": "knob", "max": 100, "default": 35, "comment": "How far the signal pushes the ring in and out."},
+    {"name": "Spin", "type": "knob", "max": 100, "default": 60, "comment": "50 = still; below spins one way, above the other."}
+  ],
+  "audio_nop": false
+}

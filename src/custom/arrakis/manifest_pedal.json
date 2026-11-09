@@ -1,0 +1,27 @@
+{
+  "effect_name": "Arrakis",
+  "comment": "PEDAL BUILD manifest for Arrakis (2-knob). build.py reads THIS file; manifest.json is the 6-knob desktop-preview manifest. Sub-octave depth, sweep rate, drive, and tone are baked in arrakis.c.",
+  "audio_func_name": "Fx_DLY_Arrakis",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY (fewest stock effects = easy to find).",
+  "fxid": 473,
+  "fxid_comment": "0x01D9. Bumped from 453 to reload the audible-on-load Mix default (custom effects read params as 0 until a knob is touched, so the manifest default IS the on-load value; Mix=1 made it silent until you wiggled it).",
+  "fxid_version": "2.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Detune",
+      "max": 100,
+      "default": 63,
+      "comment": "params[5]. Beat spread between the two detuned voices."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "params[6]. Dry/wet. Default 45 (not ~0) so the effect is AUDIBLE the moment a patch loads \u2014 custom effects read params as 0 until a knob is touched, so this default is the on-load value."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

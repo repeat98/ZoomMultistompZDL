@@ -16,11 +16,10 @@ sys.path.insert(0, str(HERE.parent / "common"))
 
 from linker import LinkerConfig, link, params_from_manifest  # noqa: E402
 from airwindows_image import make_airwindows_totape_screen  # noqa: E402
+from custom_covers import make_cover  # noqa: E402
 from manifest_params import write_param_header  # noqa: E402
 
-TI_ROOT = Path(os.environ.get(
-    "TI_CGT_ROOT",
-    "/Applications/ti/ccs2050/ccs/tools/compiler/ti-cgt-c6000_8.5.0.LTS"))
+TI_ROOT = Path(os.environ.get("TI_CGT_ROOT", "/Applications/ti/ti-cgt-c6000_8.5.0.LTS"))
 CL6X = TI_ROOT / "bin" / "cl6x"
 
 CFLAGS = [
@@ -50,6 +49,7 @@ def main() -> None:
     )
 
     cfg = LinkerConfig(
+        materialize_init=True,
         effect_name=manifest["effect_name"],
         audio_func_name=manifest.get("audio_func_name"),
         gid=manifest["gid"],
@@ -59,7 +59,7 @@ def main() -> None:
         output_path=out_zdl,
         fxid_version=manifest.get("fxid_version", "1.00").encode("ascii"),
         flags_byte=manifest.get("flags_byte", 0x01),
-        screen_image=make_airwindows_totape_screen(),
+        screen_image=make_cover(manifest["effect_name"], [p["name"] for p in manifest["params"]]),
         knob_positions=[(2, 14, 46), (3, 55, 46), (4, 96, 46)],
         audio_nop=manifest.get("audio_nop", False),
         # Input/Tilt use LineSel's stock handlers. Shape and pages 2/3 use

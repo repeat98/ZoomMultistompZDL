@@ -1,0 +1,15 @@
+{
+  "effect_name": "Spectrum",
+  "comment": "Live spectrum analyzer on the pedal screen (MS-70CDR 2.10). Pass-through; a 1024-point FFT of (L+R)/2 drawn as 126 log-spaced bars (40 Hz - 16 kHz) with peak hold, at up to ~30 fps. On zvis (src/custom/common/zvis.h).",
+  "audio_func_name": "Fx_DLY_Spectrum",
+  "gid": 8,
+  "fxid": 468,
+  "fxid_version": "0.02",
+  "flags_byte": 1,
+  "params": [
+    {"name": "Range", "type": "knob", "max": 100, "default": 50, "comment": "Shown range below 0 dBFS: 30 to 90 dB (default 60)."},
+    {"name": "Fall", "type": "knob", "max": 100, "default": 40, "comment": "How fast the bars fall."},
+    {"name": "Tilt", "type": "knob", "max": 100, "default": 50, "comment": "Lift the highs: 0 to 6 dB per octave around 1 kHz (default 3, so pink noise reads flat)."}
+  ],
+  "audio_nop": false
+}

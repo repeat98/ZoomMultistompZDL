@@ -18,8 +18,8 @@ src/custom/*/*_params.h
 src/hardware_probes/*/*.obj
 src/hardware_probes/*/*_params.h
 *.wav
+!previews/audio/*.wav
 tools/measure/out/
-ghidra_12.1_PUBLIC/
 build/probes/
 *.id0
 *.id1
@@ -27,11 +27,60 @@ build/probes/
 *.nam
 *.til
 
-# Redistributed Zoom/TI copyrighted material — not distributed in this repo.
-# See docs/OBTAINING-REFERENCE-FILES.md for how to obtain them locally.
-stock_zdls/
-firmware/
-docs/*.pdf
+# local per-effect safety backups
+src/custom/*/backup_v1/
 
-# Temporary planning file
-SDK_PLAN.md
+# Experimental/diagnostic ZDLs staged in dist/ for convenient Effect Manager
+# upload. dist/ is what the install docs tell people to point Effect Manager at,
+# so these must never be committed -- a stray diagnostic ends up on a stranger's
+# pedal. build_all.py's stray-probe guard only knows about plugins registered in
+# DIAGNOSTIC_PLUGINS, and these are not, so it cannot catch them. A `git add -A`
+# would otherwise sweep them straight in.
+# NAM captures (dist/NAMLite-<name>.ZDL) also embed a user's private capture
+# weights, so they must never be committed either.
+dist/NAM*
+dist/CabIR.*
+
+# Archived NAM trial builds. They embed a user's private capture weights, so they
+# must never be committed (the loader templates in tools/nam_template/ are
+# capture-free; these are not).
+build/nam-archive/
+# HYBRID IR test bank: inherited Zoom runtime + a user-supplied commercial IR (not redistributable)
+dist/IRMesa*
+build/ir-archive/
+# CabIR cab files: fits of user-owned IRs, not redistributable
+dist/C[0-9][0-9]*
+# Built from a private capture (amptrec weights)
+build/capture-art/*.ZDL
+# local test-host build artifact
+build/tonic-validation/host.so
+# Redraw probe (test A, docs/pedal-research/animated-covers.md): staged for upload, never shipped
+dist/Redraw.ZDL
+dist/Redraw.png
+# CoverRW probe (test C): staged for upload, never shipped
+dist/CoverRW.ZDL
+dist/CoverRW.png
+# Blink probe (test D): staged for upload, never shipped
+dist/Blink.ZDL
+dist/Blink.png
+# Zoom's and TI's files: kept locally, never published (docs/STOCK-FILES.md).
+# Zoom firmware and what was extracted from it
+firmware/*
+!firmware/wrap_for_dis6x.py
+# Zoom's stock effects (the effect database and analysis tools read them)
+stock_zdls/
+# Code extracted from stock effects; the linker needs these locally
+build/linesel_handlers.bin
+build/air_knob3_edit.bin
+build/divf_rts.bin
+build/exciter_outlv_edit.bin
+build/lofidly_handlers.bin
+build/syncprobe_handler*.bin
+build/syncprobe_v2_handler.bin
+build/TI_section_flags.bin
+build/c6xabi_attributes.bin
+ofd_zdl.txt
+# TI manuals: link to ti.com instead (docs/TI-PDF-NOTES.md)
+docs/sprab89b.pdf
+docs/sprui03f.pdf
+docs/sprui04g.pdf

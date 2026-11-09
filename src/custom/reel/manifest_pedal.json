@@ -1,0 +1,27 @@
+{
+  "effect_name": "Reel",
+  "comment": "PEDAL BUILD manifest for Reel \u2014 light, stable tape saturation (replaces the freezing upstream TapeHack). 2-knob proven LineSel path; tape tone baked.",
+  "audio_func_name": "Fx_DLY_Reel",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY (fewest stock effects = easy to find).",
+  "fxid": 443,
+  "fxid_comment": "0x1BB. Reassigned from 459, which collided with a SHIPPED effect -- flashing this alongside it would have had two entries claiming one id.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Drive",
+      "max": 100,
+      "default": 54,
+      "comment": "params[5]. Tape drive / saturation."
+    },
+    {
+      "name": "Level",
+      "max": 100,
+      "default": 26,
+      "comment": "params[6]. Output level."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

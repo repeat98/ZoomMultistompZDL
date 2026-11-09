@@ -1,0 +1,26 @@
+{
+  "effect_name": "CtxWatch",
+  "comment": "HARDWARE PROBE, not a release effect. Answers: when the Patch Editor writes a patch (0x28) to a slot-4..6 effect, does ANY host-owned region the DSP can see change? Hashes a window behind each ctx[] pointer every block and blips that word's index when its hash moves (3 blips = ctx[3]). Skips the audio buffers ctx[4]/[5]/[6]/[12]/[13]/[14], which change every block by definition. ctx[1] (params table) is watched as the CONTROL -- on slots 4-6 it should NOT react, which is the whole bug. If some other word blips, a custom effect could read its knobs from there instead of params[] and behave the same on all six slots with no bypass bounce. DEREFERENCES ctx words behind a guard (non-zero, 4-aligned, inside the host arena window); a bad deref is exactly how this DSP hard-freezes, so back up patches first -- a freeze is cleared by rewriting from Effect Manager.",
+  "gid": 7,
+  "gid_comment": "0x07 = SFX category, matching the other probes; keeps diagnostics out of the Delay group with the release pack.",
+  "fxid": 447,
+  "fxid_comment": "0x01BF. Free: no stock effect uses it and it is not a retired custom alias. Probe-only, never shipped in dist/.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "audio_func_name": "Fx_SFX_CtxWatch",
+  "audio_nop": false,
+  "params": [
+    {
+      "name": "Span",
+      "max": 100,
+      "default": 40,
+      "comment": "How many 32-bit words to hash behind each pointer, 8..256. Wider catches more but is likelier to include something that churns on its own."
+    },
+    {
+      "name": "Level",
+      "max": 100,
+      "default": 60,
+      "comment": "Blip volume."
+    }
+  ]
+}

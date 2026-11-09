@@ -1,0 +1,25 @@
+{
+  "effect_name": "Microlm",
+  "comment": "Microloom — a Microcosm-style granular pitch-shimmer cloud delay. Records audio into a circular buffer, sprays pitch-shifted grains, regenerates them with feedback, and washes the result through a reverb tail. Desktop preview implements the full DSP; the pedal C port is a staged effort (see README).",
+
+  "gid":  8,
+  "gid_comment": "0x08 = Delay category. Granular delay is the core mechanism.",
+  "fxid": 450,
+  "fxid_comment": "0x01C2 = above the repo's used range (400-444). Verify uniqueness before flashing.",
+
+  "fxid_version": "1.00",
+  "flags_byte":   1,
+
+  "params": [
+    { "name": "Size",  "max": 100, "default": 55, "comment": "Grain length: ~23ms (small/glitchy) to ~370ms (smooth/blurred)." },
+    { "name": "Pitch", "max": 100, "default": 100, "comment": "Grain pitch in semitones, -12..+12. 50=unison, 100=+1 octave (classic shimmer)." },
+    { "name": "Dense", "max": 100, "default": 60, "comment": "Grain overlap/voice count and cloud thickness." },
+    { "name": "Spray", "max": 100, "default": 40, "comment": "Random scatter of grain read positions for the diffuse texture." },
+    { "name": "Regen", "max": 100, "default": 72, "comment": "Feedback: grains regenerate into the buffer, building the cloud and the rising shimmer cascade." },
+    { "name": "Verb",  "max": 100, "default": 60, "comment": "Reverb wash amount applied to the granular output." },
+    { "name": "Mix",   "max": 100, "default": 50, "comment": "Dry/wet blend." }
+  ],
+
+  "audio_nop": true,
+  "audio_nop_comment": "Pedal C port starts as a UI-only smoke build. Full granular DSP is validated on desktop first; see tools/audio_preview/renderers/microloom.py."
+}

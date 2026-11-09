@@ -26,8 +26,8 @@
  *            ID6 = FlutSpd   A3[9]   0-1  → flutter LFO speed
  *            ID7 = Bias      A3[10]  0-1  → tape bias (0=dark, 0.5=neutral, 1=bright)
  *    Page 3  ID8 = HeadBump  A3[11]  0-1  → head-bump resonance amount
- *            ID9 = HeadFrq   A3[12]  0-1  → head-bump freq (H^2 → 25-200 Hz)
- *            ID10= Output    A3[13]  0-1  → output gain 0-2×
+ *            ID9 = Output    A3[12]  0-1  → wet output trim 0-2×
+ *            ID10= Mix       A3[13]  0-1  → dry/wet crossfade
  *
  *    A3[0]  = on/off multiplier (1.0 when on, 0.0 when off)
  *    A3[4]  = knob level multiplier  (so knob value 100 → 1.0)
@@ -51,6 +51,7 @@
 #include <stdint.h>
 
 #include "../common/zoom_params.h"
+#include "../common/tape_controls.h"
 #include "totape9_params.h"
 
 #define TOTAPE9_PERSISTENT_STATE 1
@@ -157,6 +158,10 @@ TOTAPE9_CODE_SECTION(TOTAPE9_AUDIO_FUNC)
  * syntax-checking) the compiler will warn; those warnings are expected and safe
  * to ignore.
  */
+/* By-ear level match against the rest of the pack: tape saturation lifts RMS,
+ * so the wet path needs trimming before it is crossfaded in. */
+#define TOTAPE9_WET_TRIM 0.7f
+
 #define ZDL_PTR(type, word)  ((type)(uintptr_t)(word))
 
 /* -------------------------------------------------------------------------
@@ -251,13 +256,8 @@ static inline uintptr_t align4(uintptr_t x)
     return (x + 3u) & ~(uintptr_t)3u;
 }
 
-#define TOTAPE9_PARAM_MISSING(raw) (((raw) != (raw)) || ((raw) <= 0.0001f))
-#define TOTAPE9_PARAM_NORM(raw, fallback_norm) \
-    (TOTAPE9_PARAM_MISSING(raw) ? zoom_clamp01(fallback_norm) : \
-     ((raw) < 0.0f ? zoom_clamp01(fallback_norm) : \
-      ((raw) <= (ZOOM_PARAM_RAW_MAX * 1.1f) ? zoom_clamp01((raw) * ZOOM_PARAM_RAW_TO_NORM) : \
-       ((raw) <= 1.0f ? zoom_clamp01(raw) : \
-        ((raw) <= 100.0f ? zoom_clamp01((raw) * 0.01f) : zoom_clamp01(fallback_norm))))))
+#define TOTAPE9_PARAM_MISSING(raw) (!((raw) >= 0.0f && (raw) <= 100.0f))
+#define TOTAPE9_PARAM_NORM(raw, fallback_norm) zoom_param_norm01((raw), (fallback_norm))
 
 static inline void start_lazy_init(ToTape9State *st)
 {
@@ -273,7 +273,7 @@ static inline void start_lazy_init(ToTape9State *st)
     st->criticalParamCacheReady = 1u;
     st->cachedInput = TOTAPE9_INPUT_DEFAULT_NORM;
     st->cachedBias = TOTAPE9_BIAS_DEFAULT_NORM;
-    st->cachedOutput = TOTAPE9_OUTPUT_DEFAULT_NORM;
+    st->cachedOutput = TOTAPE9_MIX_DEFAULT_NORM;
 }
 
 static inline void clear_state_chunk(ToTape9State *st)
@@ -306,7 +306,7 @@ static inline void clear_state_chunk(ToTape9State *st)
         st->criticalParamCacheReady = 1u;
         st->cachedInput = TOTAPE9_INPUT_DEFAULT_NORM;
         st->cachedBias = TOTAPE9_BIAS_DEFAULT_NORM;
-        st->cachedOutput = TOTAPE9_OUTPUT_DEFAULT_NORM;
+        st->cachedOutput = TOTAPE9_MIX_DEFAULT_NORM;
         st->initialized = 1u;
     }
 }
@@ -402,16 +402,23 @@ void TOTAPE9_AUDIO_FUNC(unsigned int *ctx)
 
     /* Small-stack release core. The full Airwindows body below is kept for
      * future state-ABI work, but this path avoids the large state block that
-     * freezes hardware while preserving the source parameter control laws. */
-    float pInput   = zoom_param_norm(params[TOTAPE9_INPUT_SLOT],   TOTAPE9_INPUT_DEFAULT_NORM);
-    float pTilt    = zoom_param_norm(params[TOTAPE9_TILT_SLOT],    TOTAPE9_TILT_DEFAULT_NORM);
-    float pShape   = zoom_param_norm(params[TOTAPE9_SHAPE_SLOT],   TOTAPE9_SHAPE_DEFAULT_NORM);
-    float pFlutter = zoom_param_norm(params[TOTAPE9_FLUTTER_SLOT], TOTAPE9_FLUTTER_DEFAULT_NORM);
-    float pFlutSpd = zoom_param_norm(params[TOTAPE9_FLUTSPD_SLOT], TOTAPE9_FLUTSPD_DEFAULT_NORM);
-    float pBias    = zoom_param_norm(params[TOTAPE9_BIAS_SLOT],    TOTAPE9_BIAS_DEFAULT_NORM);
-    float pHeadBmp = zoom_param_norm(params[TOTAPE9_HEADBMP_SLOT], TOTAPE9_HEADBMP_DEFAULT_NORM);
-    float pHeadFrq = zoom_param_norm(params[TOTAPE9_HEADFRQ_SLOT], TOTAPE9_HEADFRQ_DEFAULT_NORM);
-    float pOutput  = zoom_param_norm(params[TOTAPE9_OUTPUT_SLOT],  TOTAPE9_OUTPUT_DEFAULT_NORM);
+     * freezes hardware while preserving the source parameter control laws.
+     *
+     * These read through zoom_param_norm01, NOT zoom_param_norm. The latter
+     * multiplies by 1/0.14, which pins every knob to its maximum above ~14% of
+     * travel -- so Input leapt to full gain around 15 and then did nothing, and
+     * Tilt and Shape sat clamped at 1.0 across almost their whole range, i.e.
+     * felt dead. zoom_params.h documents this and says to use the 0..1 scaler;
+     * this file was the last one still on the old helper. */
+    float pInput   = zoom_param_norm01(params[TOTAPE9_INPUT_SLOT],   TOTAPE9_INPUT_DEFAULT_NORM);
+    float pTilt    = zoom_param_norm01(params[TOTAPE9_TILT_SLOT],    TOTAPE9_TILT_DEFAULT_NORM);
+    float pShape   = zoom_param_norm01(params[TOTAPE9_SHAPE_SLOT],   TOTAPE9_SHAPE_DEFAULT_NORM);
+    float pFlutter = zoom_param_norm01(params[TOTAPE9_FLUTTER_SLOT], TOTAPE9_FLUTTER_DEFAULT_NORM);
+    float pFlutSpd = zoom_param_norm01(params[TOTAPE9_FLUTSPD_SLOT], TOTAPE9_FLUTSPD_DEFAULT_NORM);
+    float pBias    = zoom_param_norm01(params[TOTAPE9_BIAS_SLOT],    TOTAPE9_BIAS_DEFAULT_NORM);
+    float pHeadBmp = zoom_param_norm01(params[TOTAPE9_HEADBMP_SLOT], TOTAPE9_HEADBMP_DEFAULT_NORM);
+    float pOutput  = zoom_param_norm01(params[TOTAPE9_OUTPUT_SLOT], TOTAPE9_OUTPUT_DEFAULT_NORM);
+    float pMix     = zoom_param_norm01(params[TOTAPE9_MIX_SLOT],  TOTAPE9_MIX_DEFAULT_NORM);
 
     float inputGain = pInput * 2.0f;
     inputGain *= inputGain;
@@ -438,24 +445,41 @@ void TOTAPE9_AUDIO_FUNC(unsigned int *ctx)
 
     float headBumpDrive = pHeadBmp * 0.1f;
     float headBumpMix = pHeadBmp * 0.5f;
-    float headHz = pHeadFrq * pHeadFrq * 175.0f + 25.0f;
-    float outputGain = pOutput * 2.0f;
 
     /* Stateless approximations of ToTape9's stateful blocks. These keep the
      * same source-derived knob tapers while avoiding large persistent memory. */
     float encodeAmt = dublyAmount * (0.35f + iirEncFreq * 0.65f);
     float decodeAmt = -outlyAmount * (0.35f + iirDecFreq * 0.65f);
     float tapeDrive = 1.0f + encodeAmt * 0.35f + headBumpDrive * 12.0f;
-    float headLift = 1.0f + headBumpMix * (1.0f + (200.0f - headHz) * (1.0f / 175.0f));
+    /* HeadBmp alone now spans the whole lift range. HeadFrq used to scale this
+     * same value by (200 - headHz)/175 -- it controlled no frequency, there is
+     * no filter here, so the two knobs were adjusting one quantity between
+     * them. Its slot went to Output, which the pack actually lacked. */
+    float headLift = 1.0f + headBumpMix * 2.0f;
+    /* Makeup gain after the tape stage, before the Mix crossfade: drive hard
+     * with Input, then compensate. Losing this was a regression when Output
+     * became Mix. */
+    float outGain = pOutput * 2.0f;
     float flutterTrim = 1.0f - flutterDepth * flutFrequency * 0.1f;
     float biasCurve = bias * (0.12f + underBias * 0.18f + overBias * 0.018f);
-    float wet = 0.35f + encodeAmt * 0.25f + decodeAmt * 0.15f;
-    if (wet > 0.9f) wet = 0.9f;
-    float dry = 1.0f - wet;
+    /* Tilt's own encode/decode balance. This is INTERNAL to the tape character
+     * -- how much saturated path against clean path the machine itself runs --
+     * and is not the user's Mix. */
+    float tapeWet = 0.35f + encodeAmt * 0.25f + decodeAmt * 0.15f;
+    if (tapeWet > 0.9f) tapeWet = 0.9f;
+    float tapeDry = 1.0f - tapeWet;
+
+    /* Mix is a real dry/wet crossfade against the untouched input, matching
+     * every other effect in the pack. It replaces an output GAIN (pOutput*2),
+     * which blended nothing and so gave no way to sit the tape against the dry
+     * signal -- part of why levels across the pack never matched. */
+    float wetLvl = pMix;
+    float dryLvl = 1.0f - pMix;
 
     int i;
     for (i = 0; i < 16; i++) {
-        float x = fxBuf[i] * inputGain;
+        float clean = fxBuf[i];              /* untouched, for the Mix crossfade */
+        float x = clean * inputGain;
         float biased = x + biasCurve * x * x;
         float driven = biased * tapeDrive * flutterTrim * headLift;
         if (driven >  2.305929f) driven =  2.305929f;
@@ -474,7 +498,8 @@ void TOTAPE9_AUDIO_FUNC(unsigned int *ctx)
             sat += p * 0.00000444473f;
             p *= x2;
             sat -= p * 0.000000100208f;
-            fxBuf[i] = (x * dry + sat * wet) * outputGain;
+            float tape = x * tapeDry + sat * tapeWet;
+            fxBuf[i] = dryLvl * clean + wetLvl * tape * outGain * TOTAPE9_WET_TRIM;
         }
     }
     return;
@@ -567,17 +592,30 @@ void TOTAPE9_AUDIO_FUNC(unsigned int *ctx)
     float rawFlutSpd = params[TOTAPE9_FLUTSPD_SLOT];
     float rawBias = params[TOTAPE9_BIAS_SLOT];
     float rawHeadBmp = params[TOTAPE9_HEADBMP_SLOT];
-    float rawHeadFrq = params[TOTAPE9_HEADFRQ_SLOT];
+    /* Knob 8 is labelled OUTPUT and knob 9 MIX, and until now this block read them
+     * as HeadFrq and Output -- everything from knob 8 on was shifted by one. So
+     * "Output" moved a 25-200 Hz filter corner instead of the level, which is
+     * exactly the "Output does nothing" it was reported as: it does something,
+     * just never the thing written on it. There was no Mix at all.
+     *
+     * The shift survived because an earlier pass fixed it in the OTHER branch of
+     * this file -- the one under `#if !TOTAPE9_FULL_DSP`, which does not compile:
+     * TOTAPE9_FULL_DSP defaults to 1. The edit was real, it just never shipped.
+     *
+     * HeadFrq is retired rather than given a knob back. It was the least useful
+     * control on the pedal and the pack has no room for it; the bump now sits at
+     * a fixed 62 Hz, near the middle of its old travel and where a tape machine's
+     * head bump actually lives. */
     float rawOutput = params[TOTAPE9_OUTPUT_SLOT];
+    float rawMix    = params[TOTAPE9_MIX_SLOT];
 
-    int paramBlockMissing = TOTAPE9_PARAM_MISSING(rawInput) ||
-                            TOTAPE9_PARAM_MISSING(rawBias) ||
-                            TOTAPE9_PARAM_MISSING(rawOutput);
-    /* During reload the host can briefly expose zeroed user slots before an
-     * edit interaction materializes them. In that state params[0] can also
-     * read like "off", causing a hard mute. Trust the off gate only once the
-     * mute-prone controls are present. */
-    if (params[0] < 0.5f && !paramBlockMissing) return;
+    /* Bypass = clean dry passthrough, same off-gate as every other effect.
+     * (An earlier build kept processing while "off" whenever the param block
+     * looked unmaterialized, to dodge a reload mute -- but the host exposes a
+     * BYPASSED effect's params as all-zero too, so that made a switched-OFF
+     * Oxide keep running its up-to-2x output gain: louder when off. Reload
+     * materialization is handled at the editor / knob-latch level instead.) */
+    if (params[0] < 0.5f) return;
     float pInput = TOTAPE9_PARAM_NORM(rawInput, TOTAPE9_INPUT_DEFAULT_NORM);
     float pTilt = TOTAPE9_PARAM_NORM(rawTilt, TOTAPE9_TILT_DEFAULT_NORM);
     float pShape = TOTAPE9_PARAM_NORM(rawShape, TOTAPE9_SHAPE_DEFAULT_NORM);
@@ -585,8 +623,9 @@ void TOTAPE9_AUDIO_FUNC(unsigned int *ctx)
     float pFlutSpd = TOTAPE9_PARAM_NORM(rawFlutSpd, TOTAPE9_FLUTSPD_DEFAULT_NORM);
     float pBias = TOTAPE9_PARAM_NORM(rawBias, TOTAPE9_BIAS_DEFAULT_NORM);
     float pHeadBmp = TOTAPE9_PARAM_NORM(rawHeadBmp, TOTAPE9_HEADBMP_DEFAULT_NORM);
-    float pHeadFrq = TOTAPE9_PARAM_NORM(rawHeadFrq, TOTAPE9_HEADFRQ_DEFAULT_NORM);
+    const float pHeadFrq = 0.45f;          /* retired knob -> fixed ~62 Hz bump */
     float pOutput = TOTAPE9_PARAM_NORM(rawOutput, TOTAPE9_OUTPUT_DEFAULT_NORM);
+    float pMixFull = TOTAPE9_PARAM_NORM(rawMix, TOTAPE9_MIX_DEFAULT_NORM);
 
     if (!TOTAPE9_PARAM_MISSING(rawInput)) st->cachedInput = pInput;
     else if (st->criticalParamCacheReady && st->cachedInput == st->cachedInput) pInput = zoom_clamp01(st->cachedInput);
@@ -595,10 +634,16 @@ void TOTAPE9_AUDIO_FUNC(unsigned int *ctx)
     if (!TOTAPE9_PARAM_MISSING(rawOutput)) st->cachedOutput = pOutput;
     else if (st->criticalParamCacheReady && st->cachedOutput == st->cachedOutput) pOutput = zoom_clamp01(st->cachedOutput);
 
+    /* Output level. 0..2x with unity at the knob's midpoint, applied to the
+     * finished tape signal before Mix blends it against the dry. */
+    float outputGain = pOutput * 2.0f;
+
     /* --- Derive algorithm parameters (matching ToTape9 formulas exactly)
      *     overallscale = 1.0 throughout                                  --- */
 
     float inputGain    = pInput * 2.0f; inputGain = inputGain * inputGain;
+    /* Custom Oxide voicing: drive the tape harder without the full level jump. */
+    if (inputGain > 1.0f) outputGain *= recip_approx_pos(oxide_drive_denominator(inputGain));
 
     float dublyAmount  = pTilt * 2.0f;
     float outlyAmount  = (1.0f - pTilt) * -2.0f;
@@ -647,7 +692,6 @@ void TOTAPE9_AUDIO_FUNC(unsigned int *ctx)
     computeHDB(hdbA, hfA, reso);
     computeHDB(hdbB, hfB, reso);
 
-    float outputGain = pOutput * 2.0f;
 
 #ifdef TOTAPE9_DSP_NO_LOOP
     /* Diagnostic build: run derived-params + computeHDB (which uses tanf
@@ -666,6 +710,9 @@ void TOTAPE9_AUDIO_FUNC(unsigned int *ctx)
     {
         float sL = fxL[i];
         float sR = fxR[i];
+        /* Held for the Mix crossfade: this effect had no dry path at all, so it
+         * could only ever be heard at full wet however its last knob was set. */
+        const float cleanL = sL, cleanR = sR;
 
         /* == Input gain == */
         sL *= inputGain;
@@ -991,8 +1038,10 @@ void TOTAPE9_AUDIO_FUNC(unsigned int *ctx)
         /* ================================================================
          * Write back, scaled by on/off
          * ============================================================= */
-        fxL[i] = sL;
-        fxR[i] = sR;
+        /* Output is a level on the finished signal, and Mix sits it against the
+         * dry -- the order every other effect in the pack uses. */
+        fxL[i] = cleanL * (1.0f - pMixFull) + sL * pMixFull;
+        fxR[i] = cleanR * (1.0f - pMixFull) + sR * pMixFull;
     }
     /* (no return value; jump to B3 handled by compiler epilogue) */
 #endif

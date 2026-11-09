@@ -1,0 +1,17 @@
+{
+  "effect_name": "MatProb",
+  "comment": "DISPOSABLE hardware probe for _init parameter materialization. Gain defaults to 0, so an effect whose params were zeroed on load is SILENT and one whose params materialized is AUDIBLE. Not a musical effect; never ship it.",
+  "gid": 8,
+  "fxid": 496,
+  "fxid_comment": "0x1F0. Free as of the 2026-09-07 audit.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "audio_func_name": "Fx_DLY_MatProb",
+  "audio_nop": false,
+  "params": [
+    { "name": "Gain", "max": 100, "default": 0,
+      "comment": "Output level. DEFAULT 0 on purpose: if params are zeroed on load this falls back to silence, which is the failure signal." },
+    { "name": "Tone", "max": 100, "default": 50,
+      "comment": "One-pole low-pass, dark to bright. Second knob so the _init has more than one handler to call." }
+  ]
+}

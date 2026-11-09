@@ -1,17 +1,13 @@
 {
   "effect_name": "SyncProbe",
-  "comment": "Hardware probe: prove that a custom ZDL can invoke state[24] (the BPM-to-samples helper) without freezing. Uses a single-byte patch of linesel_handlers.bin that changes the knob1 handler's LDW *+A7[31] (read knob) to LDW *+A7[24] (BPM helper). Everything else is the proven LineSel-cloned shape.\n\nThe handler still passes B4=2 to the callback (the LineSel knob_id), which is NOT TAPEECH3's convention for state[24]. So the *value* this probe writes to params[5] is probably garbage. The probe's primary signal is whether the pedal stays alive when the knob is touched.\n\nWhat to watch for after flashing:\n  1. Load — does SyncProbe show up in the Filter category browser?\n  2. Unbypass — does the pedal stay alive when activated?\n  3. Knob interaction — does turning the knob freeze the pedal?\n  4. Tap tempo — if alive, does tapping the tempo button change the audio output?\n\nThe audio body amplifies / DC-offsets the input by params[5] so any value that lands there is audible.",
+  "comment": "Hardware probe: prove that a custom ZDL can invoke state[24] (the BPM-to-samples helper) without freezing. Uses a single-byte patch of linesel_handlers.bin that changes the knob1 handler's LDW *+A7[31] (read knob) to LDW *+A7[24] (BPM helper). Everything else is the proven LineSel-cloned shape.\n\nThe handler still passes B4=2 to the callback (the LineSel knob_id), which is NOT TAPEECH3's convention for state[24]. So the *value* this probe writes to params[5] is probably garbage. The probe's primary signal is whether the pedal stays alive when the knob is touched.\n\nWhat to watch for after flashing:\n  1. Load \u2014 does SyncProbe show up in the Filter category browser?\n  2. Unbypass \u2014 does the pedal stay alive when activated?\n  3. Knob interaction \u2014 does turning the knob freeze the pedal?\n  4. Tap tempo \u2014 if alive, does tapping the tempo button change the audio output?\n\nThe audio body amplifies / DC-offsets the input by params[5] so any value that lands there is audible.",
   "audio_func_name": "Fx_FLT_SyncProbe",
-
   "gid": 2,
   "gid_comment": "0x02 = Filter category. Stays out of Delay so it does not collide with TapeEcho4.",
-
-  "fxid": 410,
-  "fxid_comment": "0x019A. New FXID for the sync probe so it does not overlap any existing build.",
-
+  "fxid": 453,
+  "fxid_comment": "0x1C5. Reassigned from 410 to clear an fxid collision (audit 2026-08-18); every fxid in the tree is now unique.",
   "fxid_version": "1.00",
   "flags_byte": 1,
-
   "params": [
     {
       "name": "Sync",
@@ -19,13 +15,12 @@
       "max": 15,
       "default": 0,
       "flags": 40,
-      "flags_comment": "0x28 — the tempo-sync bit. Same value the linker emits for stock Pattern-B SYNC slots (TAPEECH3/STOMPDLY).",
+      "flags_comment": "0x28 \u2014 the tempo-sync bit. Same value the linker emits for stock Pattern-B SYNC slots (TAPEECH3/STOMPDLY).",
       "audio_min": 0.0,
       "audio_max": 1.0,
       "audio_default": 0.0,
       "comment": "Single-page slot. The patched handler stores state[24]'s return value (not the knob value) into params[5]."
     }
   ],
-
   "audio_nop": false
 }

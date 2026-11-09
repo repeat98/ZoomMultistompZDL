@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import os
 from pathlib import Path
 
 
@@ -52,5 +53,8 @@ def write_param_header(manifest: dict, out_path: str | Path, prefix: str) -> Non
             f"#define {prefix}_{name}_AUDIO_MAX {c_float(float(p.get('audio_max', 1.0)))}",
             f"#define {prefix}_{name}_DEFAULT_NORM {c_float(default_norm)}",
         ])
+    if os.environ.get("ZDL_SELECTOR_LABELS", "1") == "1":
+        from selector_metadata import pedal_label_c
+        lines.append(pedal_label_c(manifest))
     lines.extend(["", f"#endif /* {prefix}_PARAMS_H */", ""])
     Path(out_path).write_text("\n".join(lines))

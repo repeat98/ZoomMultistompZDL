@@ -1,0 +1,364 @@
+{
+ "effects": [
+  {
+   "file": "Arrakis.ZDL",
+   "name": "Arrakis",
+   "gid": 8,
+   "fxid": 473,
+   "version": "2.00",
+   "bytes": 6914,
+   "sha256": "45dcf1e5177c6aa3507219245b05e636742ec2366ac653f990b4511a79dd8c89"
+  },
+  {
+   "file": "Breather.ZDL",
+   "name": "Breather",
+   "gid": 8,
+   "fxid": 493,
+   "version": "1.00",
+   "bytes": 15594,
+   "sha256": "4fded786b226833208b010a3dc810308b7ff348e25e0ad89689cd0d2b3c0629f"
+  },
+  {
+   "file": "Choral.ZDL",
+   "name": "Choral",
+   "gid": 8,
+   "fxid": 486,
+   "version": "1.00",
+   "bytes": 29618,
+   "sha256": "5e3ca6a1c25359bc40b068c64df1c649ae26071c5b87673b50593df0d1db98d2"
+  },
+  {
+   "file": "Corrupt.ZDL",
+   "name": "Corrupt",
+   "gid": 8,
+   "fxid": 454,
+   "version": "2.00",
+   "bytes": 9542,
+   "sha256": "8ee58e03d0d5863cf0ac0671ca8749f545eca023b7851c086f873fc3665ed324"
+  },
+  {
+   "file": "DirtBox.ZDL",
+   "name": "DirtBox",
+   "gid": 8,
+   "fxid": 491,
+   "version": "1.00",
+   "bytes": 21754,
+   "sha256": "7e4ffd72524bce62d5dad1a24daa71958767c835c0833deaf044a97e3b49732a"
+  },
+  {
+   "file": "Dissolve.ZDL",
+   "name": "Dissolve",
+   "gid": 8,
+   "fxid": 461,
+   "version": "2.00",
+   "bytes": 8050,
+   "sha256": "53be6d443b17550761bb3beababf96565270e259475751fb8e715190d889cce9"
+  },
+  {
+   "file": "DualShft.ZDL",
+   "name": "DualShft",
+   "gid": 8,
+   "fxid": 480,
+   "version": "1.00",
+   "bytes": 23614,
+   "sha256": "4a6bd07eaad1f8e02bfc696691bfdc805e2c808ee6c551075860ff7b3144759f"
+  },
+  {
+   "file": "DubSiren.ZDL",
+   "name": "DubSiren",
+   "gid": 8,
+   "fxid": 485,
+   "version": "1.00",
+   "bytes": 18910,
+   "sha256": "45130dfa4b4c255a9a6a62a654f59d5a418c03ad90c149c7f7032c0eb5c18e89"
+  },
+  {
+   "file": "Dustbox.ZDL",
+   "name": "Dustbox",
+   "gid": 8,
+   "fxid": 463,
+   "version": "1.00",
+   "bytes": 11462,
+   "sha256": "84776f81c89d385f9bc62bda1560b6e4ce6add3c28db55d0e94a20ee7f37ff41"
+  },
+  {
+   "file": "EuGate.ZDL",
+   "name": "EuGate",
+   "gid": 8,
+   "fxid": 488,
+   "version": "1.00",
+   "bytes": 14478,
+   "sha256": "00203fe6565d039346940cc0ccc6cf9c0aea97cda0427ac3f14b6ee726b0b807"
+  },
+  {
+   "file": "Flower.ZDL",
+   "name": "Flower",
+   "gid": 8,
+   "fxid": 451,
+   "version": "2.00",
+   "bytes": 7054,
+   "sha256": "cd57ae26bd66974dbfd7df9aa06a55ca044bdc32e46e5729d60625a3d7fb56b6"
+  },
+  {
+   "file": "Galactic.ZDL",
+   "name": "Galactic",
+   "gid": 8,
+   "fxid": 408,
+   "version": "1.00",
+   "bytes": 13026,
+   "sha256": "48d56674eb083d214806754fa96bfdb4f1cb12b417aae718444c86bd85c42764"
+  },
+  {
+   "file": "GenLoss.ZDL",
+   "name": "GenLoss",
+   "gid": 8,
+   "fxid": 456,
+   "version": "1.00",
+   "bytes": 9358,
+   "sha256": "3f5f88154146eab99291b0876461196fcc895294d21a813aa01d965323dea2d4"
+  },
+  {
+   "file": "GridDly.ZDL",
+   "name": "GridDly",
+   "gid": 8,
+   "fxid": 495,
+   "version": "1.00",
+   "bytes": 20482,
+   "sha256": "812ed8b9f6181688b3659044a56a8cb1bf8561dd4b4d16c6ffbf8f1b15c7ff3d"
+  },
+  {
+   "file": "Gyre.ZDL",
+   "name": "Gyre",
+   "gid": 8,
+   "fxid": 484,
+   "version": "1.00",
+   "bytes": 11674,
+   "sha256": "e804f0d47e0236b6527de0734153ddafe81e4fda82e44df8838e6b9e3c8bc73a"
+  },
+  {
+   "file": "Howl.ZDL",
+   "name": "Howl",
+   "gid": 8,
+   "fxid": 458,
+   "version": "2.00",
+   "bytes": 7842,
+   "sha256": "a9e8f6831f92ccd953ba89450a9824233ca4b7aa8c2909ad6f610fa94bc7030e"
+  },
+  {
+   "file": "Hydra.ZDL",
+   "name": "Hydra",
+   "gid": 8,
+   "fxid": 459,
+   "version": "1.00",
+   "bytes": 10502,
+   "sha256": "643cf62329064034e83f8b670881664b44568fd874eeb0f246f98684b9357ac3"
+  },
+  {
+   "file": "Klang.ZDL",
+   "name": "Klang",
+   "gid": 8,
+   "fxid": 455,
+   "version": "2.00",
+   "bytes": 9498,
+   "sha256": "ffaa1f0bb00e087a7d0fee634c0cea76c56983cb4c0b65fe189f95ed64ea8283"
+  },
+  {
+   "file": "Loop.ZDL",
+   "name": "Loop",
+   "gid": 8,
+   "fxid": 467,
+   "version": "0.03",
+   "bytes": 30738,
+   "sha256": "cd76a2314591e83ecef2884cabd2444e0c4920c36fe12294661d7e55cddd25b0"
+  },
+  {
+   "file": "Mangle.ZDL",
+   "name": "Mangle",
+   "gid": 8,
+   "fxid": 470,
+   "version": "9.00",
+   "bytes": 10158,
+   "sha256": "571d984f91e669e1e5cc8badff72ea24854e3859ca212157328a5974f792fcf5"
+  },
+  {
+   "file": "Microlm.ZDL",
+   "name": "Microlm",
+   "gid": 8,
+   "fxid": 450,
+   "version": "2.00",
+   "bytes": 8138,
+   "sha256": "1299cbc150a5a4afe225ebb1ebc5100a67c618cc2226018752a1d58040af6884"
+  },
+  {
+   "file": "Oxide.ZDL",
+   "name": "Oxide",
+   "gid": 8,
+   "fxid": 403,
+   "version": "1.01",
+   "bytes": 18598,
+   "sha256": "bcd8ed29219244ef834602b5e6a2b344c50798e0d8e763dcea591d50be4ce05e"
+  },
+  {
+   "file": "Rewire.ZDL",
+   "name": "Rewire",
+   "gid": 8,
+   "fxid": 465,
+   "version": "1.00",
+   "bytes": 15566,
+   "sha256": "8ae029c110cadaf8ae56b72d22745c656f064d5409d4573b30d4be3b274de717"
+  },
+  {
+   "file": "Ring.ZDL",
+   "name": "Ring",
+   "gid": 8,
+   "fxid": 415,
+   "version": "0.02",
+   "bytes": 12494,
+   "sha256": "e2493710c8cba43fe8d123926c235162e9c8715e4ed56f16d63b6553324f7627"
+  },
+  {
+   "file": "Rooms.ZDL",
+   "name": "Rooms",
+   "gid": 8,
+   "fxid": 472,
+   "version": "2.00",
+   "bytes": 11746,
+   "sha256": "3de9807d94bc8946970a5a2bb8c703d703f8ddaa0d0593e73a5da87f153f7e79"
+  },
+  {
+   "file": "Scope.ZDL",
+   "name": "Scope",
+   "gid": 8,
+   "fxid": 414,
+   "version": "0.03",
+   "bytes": 11682,
+   "sha256": "38b0c6e3772bed2f17a4f916a883ff053eba63bc24557b59943863c73a721e68"
+  },
+  {
+   "file": "Scorch.ZDL",
+   "name": "Scorch",
+   "gid": 8,
+   "fxid": 457,
+   "version": "2.00",
+   "bytes": 6238,
+   "sha256": "6a966eed1c43ac9079454657c13d1992d306fcc373047564e9fc097bf4a724b4"
+  },
+  {
+   "file": "Scrub.ZDL",
+   "name": "Scrub",
+   "gid": 8,
+   "fxid": 490,
+   "version": "1.00",
+   "bytes": 19294,
+   "sha256": "bfbc98307b36231f385beb65b35f873b75cc32c08dd44de8ba1d2e4cee3840d3"
+  },
+  {
+   "file": "SGNL.ZDL",
+   "name": "S.GN_L",
+   "gid": 8,
+   "fxid": 489,
+   "version": "1.00",
+   "bytes": 18374,
+   "sha256": "1a27ab980ba2502df3257d13ee7afd54a4e88c021dd509aaa551f12f28ad61f2"
+  },
+  {
+   "file": "Shatter.ZDL",
+   "name": "Shatter",
+   "gid": 8,
+   "fxid": 452,
+   "version": "2.00",
+   "bytes": 5770,
+   "sha256": "5438e223c368910482728edd20a9e057d217a37db1411e20705f676123e849ff"
+  },
+  {
+   "file": "Skull.ZDL",
+   "name": "Skull",
+   "gid": 8,
+   "fxid": 416,
+   "version": "0.05",
+   "bytes": 31934,
+   "sha256": "e5079ddb5c1ec3fc391cbe7f537e5fadf92c8dbffaaf84cc4aaa9ee508554eb1"
+  },
+  {
+   "file": "Spectrum.ZDL",
+   "name": "Spectrum",
+   "gid": 8,
+   "fxid": 468,
+   "version": "0.02",
+   "bytes": 18366,
+   "sha256": "0462a8447b5949743cf67d6e49b6c3aba3776fa5c00f03d52c944aa0bb8a8f76"
+  },
+  {
+   "file": "Spiral.ZDL",
+   "name": "Spiral",
+   "gid": 8,
+   "fxid": 449,
+   "version": "1.00",
+   "bytes": 12734,
+   "sha256": "ed3b6c57ee3b5b83216eadbf2623514ab5dfc90b43f6c183556fd96c142f8f2d"
+  },
+  {
+   "file": "Spool.ZDL",
+   "name": "Spool",
+   "gid": 8,
+   "fxid": 914,
+   "version": "1.02",
+   "bytes": 20746,
+   "sha256": "66645a569daddec93d7260e53b3c6e7b95d062b705c76c3595edeb16164e0aba"
+  },
+  {
+   "file": "Stasis.ZDL",
+   "name": "Stasis",
+   "gid": 8,
+   "fxid": 440,
+   "version": "1.02",
+   "bytes": 11350,
+   "sha256": "185ef8fc70e010201817d82496b41da2d48ff67830b241610c368bc925bd9706"
+  },
+  {
+   "file": "Sweep.ZDL",
+   "name": "Sweep",
+   "gid": 8,
+   "fxid": 496,
+   "version": "1.00",
+   "bytes": 21302,
+   "sha256": "1add846aa0cc7a748310fb01fe27bb186cc09f473f371a79165bcef939db9907"
+  },
+  {
+   "file": "SyncEQ.ZDL",
+   "name": "SyncEQ",
+   "gid": 8,
+   "fxid": 494,
+   "version": "1.00",
+   "bytes": 25558,
+   "sha256": "4d0268c0deba8efb24b56c88358b02634b1178a637b38f0ba069f07e4bfdf297"
+  },
+  {
+   "file": "Taffy.ZDL",
+   "name": "Taffy",
+   "gid": 8,
+   "fxid": 466,
+   "version": "3.00",
+   "bytes": 8930,
+   "sha256": "c3c9fd31d8977dfe4149dc90e723631db999f0d79b384b7d0a7a75fcae8adef6"
+  },
+  {
+   "file": "Tonic.ZDL",
+   "name": "Tonic",
+   "gid": 8,
+   "fxid": 499,
+   "version": "0.01",
+   "bytes": 13582,
+   "sha256": "c009563a57e759ac125dd5f518fc7e1202655175794dc41da1e26e86931ee7c9"
+  },
+  {
+   "file": "WaveFold.ZDL",
+   "name": "WaveFold",
+   "gid": 8,
+   "fxid": 487,
+   "version": "1.00",
+   "bytes": 9342,
+   "sha256": "8d3b30bd2be8cee9c6778c1b7591e712efcc1418f01fe75a25441e24c8c17e43"
+  }
+ ]
+}

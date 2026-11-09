@@ -1,19 +1,14 @@
 {
   "effect_name": "StatePing",
   "comment": "Hardware ABI probe. Default-safe pass-through; when armed, writes a small counter into a stock-style ctx[2] derived state block and reports persistence as stereo panning.",
-
   "audio_func_name": "Fx_FLT_StatePing",
-
   "gid": 2,
   "gid_comment": "0x02 = Filter category. Diagnostic only.",
-
-  "fxid": 409,
-  "fxid_comment": "0x0199, separate from earlier ctx/state probes.",
-
+  "fxid": 442,
+  "fxid_comment": "0x1BA. Reassigned from 409, which collided with a SHIPPED effect -- flashing this alongside it would have had two entries claiming one id.",
   "fxid_version": "1.00",
   "flags_byte": 1,
   "fixed_word": 0,
-
   "variants": [
     {
       "effect_name": "StatePing",
@@ -40,7 +35,6 @@
       "screen_label": "State 19"
     }
   ],
-
   "params": [
     {
       "name": "Arm10",
@@ -63,6 +57,5 @@
       "comment": "0=safe pass-through, 1=test the variant's fixed word at ctx[2]+0x18. Takes priority if both arms are on."
     }
   ],
-
   "audio_nop": false
 }

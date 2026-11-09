@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""Build experimental Tonic; no changes to Rewire."""
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent.parent.parent           # src/custom/tonic/build.py -> repo root
+sys.path.insert(0, str(ROOT / "build"))
+sys.path.insert(0, str(ROOT / "src" / "airwindows" / "common"))
+
+from linker import LinkerConfig, ObjFile, link, params_from_manifest  # noqa: E402
+from manifest_params import write_param_header  # noqa: E402
+from custom_covers import make_cover  # noqa: E402
+
+TI_ROOT = Path("/Applications/ti/ti-cgt-c6000_8.5.0.LTS")
+CL6X = TI_ROOT / "bin" / "cl6x"
+
+CFLAGS = [
+    "--c99",
+    "--opt_level=2",
+    "-mv6740",
+    "--abi=eabi",
+    "--mem_model:data=far",
+    f"--include_path={TI_ROOT}/include",
+]
+
+
+def main() -> None:
+    manifest = json.loads((HERE / "manifest.json").read_text())
+    write_param_header(manifest, HERE / "tonic_params.h", "TONIC")
+
+    src_c = HERE / "tonic.c"
+    out_dir = ROOT / "dist"
+    out_dir.mkdir(exist_ok=True)
+
+    effect_name = manifest["effect_name"]
+    audio_func = manifest["audio_func_name"]
+    obj = HERE / f"{effect_name.lower()}.obj"
+    out_zdl = out_dir / f"{effect_name}.ZDL"
+
+    print(f"[tonic] compiling {src_c.name} -> {obj.name}")
+    subprocess.run(
+        [
+            str(CL6X),
+            *CFLAGS,
+            f"--define=TONIC_AUDIO_FUNC={audio_func}",
+            "-c",
+            str(src_c),
+            f"--output_file={obj}",
+        ],
+        check=True,
+        cwd=HERE,
+    )
+
+    for junk in ("compiler.opt", "linker.cmd"):
+        p = HERE / junk
+        if p.exists():
+            p.unlink()
+
+    parsed = ObjFile(obj)
+    assert not any(s['name'] and s['shndx']==0 for s in parsed.symbols), 'Unexpected external helper'
+    for section in parsed.sections:
+        if section['name'] in ('.bss','.far','.fardata') or section['name'].startswith('.switch'):
+            assert section['size']==0, section['name']
+    # Non-audio code must be the generated UI label callbacks only.
+    for sym in parsed.symbols:
+        if sym['type']==2 and sym['shndx'] and sym['size']:
+            assert sym['name']==audio_func or sym['name'].startswith('ZDL_GetLabel_'), sym['name']
+    cfg = LinkerConfig(
+        materialize_init=True,
+        effect_name=effect_name,
+        screen_image=make_cover(effect_name, [p["name"] for p in manifest["params"]]),
+        audio_func_name=audio_func,
+        gid=manifest["gid"],
+        fxid=manifest["fxid"],
+        params=params_from_manifest(manifest["params"]),
+        obj_path=obj,
+        output_path=out_zdl,
+        fxid_version=manifest.get("fxid_version", "1.00").encode("ascii"),
+        flags_byte=manifest.get("flags_byte", 0x01),
+        audio_nop=manifest.get("audio_nop", False),
+        knob_positions=[(2, 14, 46), (3, 55, 46), (4, 96, 46)],
+        use_object_edit_handlers=False,
+        synthesize_linesel_edit_handlers=True,
+        synth_edit_start_index=2,
+        knob3_blob_path="/tmp/__nonexistent__",
+    )
+    link(cfg)
+
+    print(f"\n[tonic] done -> {out_zdl}")
+
+
+if __name__ == "__main__":
+    main()

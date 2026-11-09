@@ -1,5 +1,11 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Hardware report
-    url: https://github.com/repeat98/ZoomMultistompZDL/issues/new?template=hardware-report.yml
-    about: Report a ZDL hardware test result
+  - name: Effects will not appear in Zoom Effect Manager
+    url: https://github.com/themanro/ZoomMultistompZDL/blob/main/docs/INSTALLING-ZDLS.md
+    about: '"No data to display, check filters" is almost always the From Folder source not being ticked, or a .ZDL that is really a saved HTML page. Both are covered there.'
+  - name: A slot went blank after choosing an effect
+    url: https://github.com/themanro/ZoomMultistompZDL/blob/main/README.md#install-with-zoom-effect-manager
+    about: The editor lists every stock effect from every MS/G1/B1 model, not what is installed on your pedal. Writing one Effect Manager has never installed leaves that slot empty. Install it first, then try again.
+  - name: Can the "+" models be modded?
+    url: https://github.com/themanro/ZoomMultistompZDL/blob/main/docs/PROBING-A-NEW-PEDAL.md
+    about: Nobody here has one. That guide is how to find out in an evening, and a probe report is genuinely wanted.

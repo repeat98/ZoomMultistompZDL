@@ -1,0 +1,56 @@
+[
+  {
+    "effect": "Hydra",
+    "labels": [
+      "Div"
+    ],
+    "patch_abi": "unchanged",
+    "init": "verified",
+    "hardware": "not tested"
+  },
+  {
+    "effect": "Rewire",
+    "labels": [
+      "Route"
+    ],
+    "patch_abi": "unchanged",
+    "init": "verified",
+    "hardware": "not tested"
+  },
+  {
+    "effect": "Rooms",
+    "labels": [
+      "Mode"
+    ],
+    "patch_abi": "unchanged",
+    "init": "verified",
+    "hardware": "not tested"
+  },
+  {
+    "effect": "Spiral",
+    "labels": [
+      "Div"
+    ],
+    "patch_abi": "unchanged",
+    "init": "verified",
+    "hardware": "not tested"
+  },
+  {
+    "effect": "Spool",
+    "labels": [
+      "Div"
+    ],
+    "patch_abi": "unchanged",
+    "init": "verified",
+    "hardware": "not tested"
+  },
+  {
+    "effect": "Stasis",
+    "labels": [
+      "Capture"
+    ],
+    "patch_abi": "unchanged",
+    "init": "verified",
+    "hardware": "not tested"
+  }
+]

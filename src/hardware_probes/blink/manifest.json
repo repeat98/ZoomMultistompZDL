@@ -1,0 +1,15 @@
+{
+  "effect_name": "Blink",
+  "comment": "Test D of docs/pedal-research/animated-covers.md: can an effect trigger screen redraws itself? While on, it inverts a band in its own cover every 0.5 s and asks the firmware to redraw (MS-70CDR 2.10 Event_post, UI event bit 0x40) -- only after checking the firmware's code bytes and the event handle. Knob 1 shows a clock, knob 2 whether the check passed. Audio passes through.",
+  "audio_func_name": "Fx_DLY_Blink",
+  "gid": 8,
+  "fxid": 413,
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {"name": "Clock", "type": "knob", "max": 100, "default": 50, "comment": "Value text: TSCL >> 24 in hex; moves by itself only if redraws are being triggered."},
+    {"name": "Check", "type": "knob", "max": 100, "default": 50, "comment": "Value text: OK if the firmware check passed (redraws are requested), NO if not (nothing is called)."},
+    {"name": "Plain", "type": "knob", "max": 100, "default": 50}
+  ],
+  "audio_nop": false
+}

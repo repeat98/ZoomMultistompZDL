@@ -1,0 +1,33 @@
+{
+  "effect_name": "Klang",
+  "comment": "PEDAL BUILD manifest for Klang v2 (3-knob swept ring mod). build.py reads THIS file. Sweep oscillates the carrier (rate+depth on one knob; 0 = static v1 behavior).",
+  "audio_func_name": "Fx_DLY_Klang",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY (fewest stock effects = easy to find).",
+  "fxid": 455,
+  "fxid_comment": "0x01C7. Reverted from 478 to the last known-working id + safe default. (The 478 bump collided with stock effect fxids and broke on hardware; the audible-on-load Mix hack is obsolete now the editor materialises patches via a full-patch send.)",
+  "fxid_version": "2.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Freq",
+      "max": 100,
+      "default": 40,
+      "comment": "params[5]. Carrier centre frequency (~0.5..2000 Hz, linear)."
+    },
+    {
+      "name": "Sweep",
+      "max": 100,
+      "default": 30,
+      "comment": "params[6]. Carrier LFO rate (0..~12 Hz) + depth together; 0 = static."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Mix default 1 (quiet-safe). The editor materialises patches on load (full-patch send), so audible-on-load no longer needs a hot default."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

@@ -1,0 +1,50 @@
+{
+  "effect_name": "Flower",
+  "comment": "Flower \u2014 a Korg Toneworks 'Random' style sample-and-hold step filter, the 'Digital Bath' (Deftones) middle-eight sound. A resonant filter whose cutoff jumps to a new random value every step at a set Rate, run as independent L/R sequences for a stereo random filter. Named after Pandora PX3 preset #29. Desktop preview implements the full DSP; pedal C port is staged (audio_nop smoke build).",
+  "gid": 6,
+  "gid_comment": "0x06 = Modulation category (random filter is a modulation effect, like StChorus).",
+  "fxid": 451,
+  "fxid_comment": "0x01C3 = above the repo's used range (400-444), distinct from microloom (450). Verify uniqueness before flashing.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Rate",
+      "max": 100,
+      "default": 45,
+      "comment": "Steps per second the random filter cutoff jumps (~0.5..14 Hz)."
+    },
+    {
+      "name": "Range",
+      "max": 100,
+      "default": 70,
+      "comment": "How wide the random cutoff jumps span, in octaves (0..3.5)."
+    },
+    {
+      "name": "Manual",
+      "max": 100,
+      "default": 45,
+      "comment": "Center frequency the random sweep is built around (~100..2000 Hz, log)."
+    },
+    {
+      "name": "Reso",
+      "max": 100,
+      "default": 75,
+      "comment": "Filter resonance. High = glassy whistling peak (the Korg character)."
+    },
+    {
+      "name": "Smooth",
+      "max": 100,
+      "default": 15,
+      "comment": "Glide between steps. 0 = hard glitchy steps; high = liquid sweeps."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet blend. Digital Bath is mostly wet."
+    }
+  ],
+  "audio_nop": true,
+  "audio_nop_comment": "Pedal C port starts as a UI-only smoke build. Full DSP validated on desktop first; see tools/audio_preview/renderers/flower.py."
+}

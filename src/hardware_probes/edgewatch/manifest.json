@@ -1,0 +1,16 @@
+{
+  "effect_name": "EdgeWatch",
+  "comment": "HARDWARE PROBE, not a release effect. Answers the two questions a freeze effect depends on: (1) can a running effect SEE the slot's bypass bit change, promptly enough to use the footswitch as a capture trigger, and (2) does input audio still reach the effect while it is bypassed, so a ring buffer can already be recording at the instant you stomp. Silent by default. Two mid beeps at boot = alive; two HIGH beeps = slot switched ON; one LOW beep = slot switched OFF (hearing that at all also re-proves the effect keeps running while bypassed); a short mid tick, at most once a second, while bypassed and playing = input audio is being delivered. Deliberately does NOT return early on params[0], since that return is the behaviour under test. Knobs are hardcoded and ignored: a probe must not depend on the mechanism it is testing.",
+  "gid": 7,
+  "gid_comment": "0x07 = SFX category, matching the other probes; keeps diagnostics out of the Delay group with the release pack.",
+  "fxid": 448,
+  "fxid_comment": "0x01C0. Free: no stock effect uses it, not a retired custom alias, and one past CtxWatch (447). Probe-only, never shipped in dist/.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "audio_func_name": "Fx_SFX_EdgeWatch",
+  "audio_nop": false,
+  "params": [
+    { "name": "Unused", "max": 100, "default": 50, "comment": "Ignored by the DSP. Present only because the descriptor wants knobs." },
+    { "name": "Unused2", "max": 100, "default": 50, "comment": "Ignored by the DSP." }
+  ]
+}

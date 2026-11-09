@@ -1,0 +1,62 @@
+{
+  "effect_name": "Gyre",
+  "comment": "A loop you hold, that keeps spiralling. Spiral's self-oscillation at maximum feedback was its most interesting behaviour and its least usable, because the only exit was a power cycle. Gyre is that on purpose: two overlapping grains whose windows sum to exactly 1 make the loop unity-throughput, so Decay=0 holds by arithmetic rather than by a gain that happened to land above unity -- and backing Decay off always releases it.",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category, matching the rest of the release pack.",
+  "fxid": 484,
+  "fxid_comment": "0x1E4. Free as of the 2026-08-28 fxid audit; every id in the tree is unique.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "audio_func_name": "Fx_DLY_Gyre",
+  "audio_nop": false,
+  "params": [
+    {
+      "name": "Size",
+      "max": 100,
+      "default": 45,
+      "comment": "Loop length, ~40 ms to ~2.9 s, squared so the short end -- where it reads as a stutter rather than a phrase -- gets most of the travel. On knob 1: verbatim-stock LineSel handler, and the control you reach for first."
+    },
+    {
+      "name": "Feed",
+      "max": 100,
+      "default": 60,
+      "comment": "How much of what you play enters the loop. At 0 the loop is sealed and what is already captured is all there is; turn it up and the loop keeps absorbing. This is the record control."
+    },
+    {
+      "name": "Decay",
+      "max": 100,
+      "default": 0,
+      "comment": "0 holds forever -- the loop neither grows nor fades, because the two-grain window sums to exactly 1. Above 0 it fades, squared so the bottom of the knob is a very slow bloom and the top a short tail. This is the way out, and it always works."
+    },
+    {
+      "name": "Rise",
+      "max": 100,
+      "default": 50,
+      "comment": "Per-pass pitch ratio: 0 is an octave down, 50 unity, 100 an octave up. The shift COMPOUNDS around the loop, so the held audio climbs or sinks endlessly instead of sitting still."
+    },
+    {
+      "name": "Glide",
+      "max": 100,
+      "default": 0,
+      "comment": "Depth of an onset-triggered ramp on that ratio. A new phrase resets the ramp, so the loop starts at pitch and drifts away over Span."
+    },
+    {
+      "name": "Span",
+      "max": 100,
+      "default": 50,
+      "comment": "How long the Glide ramp takes, ~0.19 s to ~8 s. Cubic in the knob so the long end keeps its resolution."
+    },
+    {
+      "name": "Tone",
+      "max": 100,
+      "default": 55,
+      "comment": "Low-pass inside the loop. This is what makes a held loop darken as it circulates rather than repeating identically forever."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet crossfade."
+    }
+  ]
+}

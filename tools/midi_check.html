@@ -1,0 +1,107 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>MIDI check — is the pedal talking back?</title>
+<style>
+  body{font:13px ui-monospace,Menlo,monospace;background:#0b0e11;color:#cfe3ee;margin:0;padding:18px}
+  h1{font-size:15px;margin:0 0 4px}
+  p.sub{color:#7f9db0;margin:0 0 14px}
+  button{font:inherit;background:#16202a;color:#cfe3ee;border:1px solid #2c3f4e;padding:6px 12px;
+         margin:0 6px 8px 0;cursor:pointer}
+  button:hover{background:#1e2c38}
+  #log{white-space:pre-wrap;background:#070a0c;border:1px solid #22303c;padding:10px;
+       height:60vh;overflow:auto;margin-top:10px}
+  .rx{color:#8ee6a0}.tx{color:#7f9db0}.err{color:#ff9d8c}.ok{color:#9dc1d8}
+</style>
+<h1>MIDI check</h1>
+<p class="sub">No patch-editor code. It opens every MIDI input, sends the pedal two harmless
+requests, and prints anything that comes back. If nothing arrives here, the problem is the
+browser or the port — not the editor.</p>
+
+<button id="go">1. Request MIDI access</button>
+<button id="ident">2. Identity request</button>
+<button id="dump">3. Ask for a patch (0x29)</button>
+<button id="clear">Clear</button>
+<div id="log"></div>
+
+<script>
+const L = document.getElementById('log');
+const t0 = performance.now();
+function log(s, cls){
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = ((performance.now()-t0)/1000).toFixed(2).padStart(7) + '  ' + s;
+  L.appendChild(d); L.scrollTop = L.scrollHeight;
+}
+const hex = b => Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(' ');
+
+let access = null, outs = [];
+let rx = 0;
+
+document.getElementById('go').onclick = async () => {
+  // Ask WITH sysex. A patch dump is sysex, so without this permission the pedal's
+  // replies never reach the page even though sending appears to work.
+  try {
+    if (navigator.permissions) {
+      try {
+        const st = await navigator.permissions.query({name:'midi', sysex:true});
+        log('sysex permission: ' + st.state, st.state === 'granted' ? 'ok' : 'err');
+      } catch(e){ log('permission query unsupported: ' + e.message); }
+    }
+    access = await navigator.requestMIDIAccess({sysex:true});
+    log('requestMIDIAccess({sysex:true}) OK', 'ok');
+  } catch (e) {
+    log('requestMIDIAccess FAILED: ' + e.name + ' — ' + e.message, 'err');
+    log('If this says NotAllowedError, the browser is blocking MIDI/sysex for this page.', 'err');
+    return;
+  }
+
+  const ins = [...access.inputs.values()];
+  outs = [...access.outputs.values()];
+  log(`inputs: ${ins.length}   outputs: ${outs.length}`);
+  // Listen on EVERY input, not just the one whose name looks right: if the pedal
+  // answers on a port nobody expected, this is what shows it.
+  for (const i of ins) {
+    i.onmidimessage = ev => {
+      rx++;
+      log(`RX  [${i.name}]  ${hex(ev.data).slice(0,120)}${ev.data.length>40?` …(${ev.data.length}B)`:''}`, 'rx');
+    };
+    // Assigning onmidimessage is SUPPOSED to open the port implicitly. Every port
+    // here reads "closed", so open it explicitly and say what happened -- if the
+    // implicit open stopped working, this is the whole bug and the fix is one line.
+    let before = i.connection;
+    try {
+      await i.open();
+      log(`  IN  "${i.name}"  ${i.state}/${before} -> ${i.connection}`,
+          i.connection === 'open' ? 'ok' : 'err');
+    } catch(e) {
+      log(`  IN  "${i.name}"  open() FAILED: ${e.name} ${e.message}`, 'err');
+    }
+  }
+  for (const o of outs) log(`  OUT "${o.name}"  ${o.state}/${o.connection}`);
+  const zoom = outs.find(o => /zoom ms/i.test(o.name));
+  log(zoom ? `will send to "${zoom.name}"` : 'NO output named "ZOOM MS" — is it plugged in?',
+      zoom ? 'ok' : 'err');
+};
+
+function sendTo(bytes, what){
+  if (!access) { log('press 1 first', 'err'); return; }
+  const zoom = outs.find(o => /zoom ms/i.test(o.name));
+  if (!zoom) { log('no ZOOM output', 'err'); return; }
+  const before = rx;
+  zoom.send(bytes);
+  log(`TX  ${what}: ${hex(bytes)}`, 'tx');
+  setTimeout(() => {
+    if (rx === before) log(`   …nothing came back within 1.5s (total received so far: ${rx})`, 'err');
+  }, 1500);
+}
+
+document.getElementById('ident').onclick = () =>
+  sendTo([0xf0,0x7e,0x00,0x06,0x01,0xf7], 'identity request');
+
+document.getElementById('dump').onclick = () => {
+  sendTo([0xf0,0x52,0x00,0x61,0x50,0xf7], 'edit enable');
+  setTimeout(() => sendTo([0xf0,0x52,0x00,0x61,0x29,0xf7], 'patch dump request'), 60);
+};
+
+document.getElementById('clear').onclick = () => { L.innerHTML = ''; rx = 0; };
+</script>

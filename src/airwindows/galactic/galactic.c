@@ -46,13 +46,8 @@ GALACTIC_CODE_SECTION(GALACTIC_AUDIO_FUNC)
 #define GAL_L_LEN 680
 #define GAL_M_LEN 3111
 
-#define GAL_PARAM_MISSING(raw) (((raw) != (raw)) || ((raw) <= 0.0001f))
-#define GAL_PARAM_NORM(raw, fallback_norm) \
-    (GAL_PARAM_MISSING(raw) ? zoom_clamp01(fallback_norm) : \
-     ((raw) < 0.0f ? zoom_clamp01(fallback_norm) : \
-      ((raw) <= (ZOOM_PARAM_RAW_MAX * 1.1f) ? zoom_clamp01((raw) * ZOOM_PARAM_RAW_TO_NORM) : \
-       ((raw) <= 1.0f ? zoom_clamp01(raw) : \
-        ((raw) <= 100.0f ? zoom_clamp01((raw) * 0.01f) : zoom_clamp01(fallback_norm))))))
+#define GAL_PARAM_MISSING(raw) (!((raw) >= 0.0f && (raw) <= 100.0f))
+#define GAL_PARAM_NORM(raw, fallback_norm) zoom_param_norm01((raw), (fallback_norm))
 
 #define GAL_READ(buf, count, delay) ((buf)[(count) - (((count) > (delay)) ? ((delay) + 1) : 0)])
 
@@ -352,8 +347,10 @@ static inline void gal_process_sample(GalacticState *st, float *sampleL, float *
 
     st->iirBL = (st->iirBL * (1.0f - lowpass)) + (inputSampleL * lowpass);
     st->iirBR = (st->iirBR * (1.0f - lowpass)) + (inputSampleR * lowpass);
-    inputSampleL = st->iirBL;
-    inputSampleR = st->iirBR;
+    /* Makeup gain: the raw tank output sits well below the dry level on the
+     * pedal (hardware feedback "ok but quiet"), so lift the wet path. */
+    inputSampleL = st->iirBL * 1.8f;
+    inputSampleR = st->iirBR * 1.8f;
 
     if (wet < 1.0f) {
         inputSampleL = (inputSampleL * wet) + (drySampleL * (1.0f - wet));
@@ -411,7 +408,7 @@ void GALACTIC_AUDIO_FUNC(unsigned int *ctx)
     float B = GAL_PARAM_NORM(params[GALACTIC_BRIGHT_SLOT], GALACTIC_BRIGHT_DEFAULT_NORM);
     float C = GAL_PARAM_NORM(params[GALACTIC_DETUNE_SLOT], GALACTIC_DETUNE_DEFAULT_NORM);
     float D = GAL_PARAM_NORM(params[GALACTIC_BIGNESS_SLOT], GALACTIC_BIGNESS_DEFAULT_NORM);
-    float E = GAL_PARAM_NORM(params[GALACTIC_DRYWET_SLOT], GALACTIC_DRYWET_DEFAULT_NORM);
+    float E = GAL_PARAM_NORM(params[GALACTIC_MIX_SLOT], GALACTIC_MIX_DEFAULT_NORM);
 
     float regen = 0.125f - (A * 0.0625f);
     float attenuate = A * 0.6665f;

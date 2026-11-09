@@ -1,0 +1,27 @@
+{
+  "effect_name": "Shatter",
+  "comment": "PEDAL BUILD manifest for Shatter (2-knob). build.py reads THIS file; manifest.json is the 6-knob desktop-preview manifest. Slice length, stutter subdivision, and reverse probability are baked in shatter.c.",
+  "audio_func_name": "Fx_DLY_Shatter",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY (fewest stock effects = easy to find).",
+  "fxid": 452,
+  "fxid_comment": "0x01C4. Reverted from 476 to the last known-working id + safe default. (The 476 bump collided with stock effect fxids and broke on hardware; the audible-on-load Mix hack is obsolete now the editor materialises patches via a full-patch send.)",
+  "fxid_version": "2.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Chance",
+      "max": 100,
+      "default": 55,
+      "comment": "params[5]. Probability each slice glitches (stutter/reverse)."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Mix default 1 (quiet-safe). The editor materialises patches on load (full-patch send), so audible-on-load no longer needs a hot default."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

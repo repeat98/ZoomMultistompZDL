@@ -1,0 +1,33 @@
+{
+  "effect_name": "Howl",
+  "comment": "PEDAL BUILD manifest for Howl (3-knob). build.py reads THIS file. Tuned 2-pole resonator feedback howl; Level scales the howl output.",
+  "audio_func_name": "Fx_DLY_Howl",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY (fewest stock effects = easy to find).",
+  "fxid": 458,
+  "fxid_comment": "0x01CA. Reverted from 480 to the last known-working id + safe default. (The 480 bump collided with stock effect fxids and broke on hardware; the audible-on-load Mix hack is obsolete now the editor materialises patches via a full-patch send.)",
+  "fxid_version": "2.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Tune",
+      "max": 100,
+      "default": 17,
+      "comment": "params[5]. Oscillation/resonant frequency."
+    },
+    {
+      "name": "Annihil",
+      "max": 100,
+      "default": 34,
+      "comment": "params[6]. Pole radius: short ring -> long howl."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet crossfade. Renamed from 'Level' so every effect in the pack ends with the same control."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

@@ -52,11 +52,73 @@ experiment, not a port.
 * Use release ZDL filenames with unique basenames of 8 characters or less.
   Zoom tooling/device code can truncate longer basenames, and duplicate
   post-trim names have been reported to freeze the pedal when loading.
+  **Confirmed on hardware 2026-09-29:** `NAMLite-amptrec.ZDL` + `NAMLite-smokey.ZDL`
+  (both `NAMLite-`) froze the pedal on boot; each alone was fine.
+  `build/extract_effect_db.py` now refuses to run over such a dist/.
+* **Declare an honest DSP cost** (`LinkerConfig.dsp_cost`, descriptor self-entry
+  +0x28). The firmware sums it per patch and shows "DSP Full" above ~230
+  (community measurement, MS-70CDR 2.10: github.com/Leemuzhko/ZOOM_development,
+  NAM/sdk/docs/DSP_COST_230_HYPOTHESIS_RU.md). Stock effects declare 11.6-127.7
+  (median 25; Great Muff 30.43). The linker default 20.0 is a placeholder: a
+  heavy effect declaring 20 lets the pedal build a chain that overloads and
+  crackles instead of refusing it. NAM declares 194 (full) / 188 (Eco 7/8) /
+  177 (Eco 6/8), CabIR 10. THIS pedal's limit, measured with pass-through
+  probes declaring a fixed cost next to Great Muff (30.43): 224.4 accepted,
+  228.4 refused -- below the ~230 reported elsewhere. PE's meter uses 228. The same research also confirmed our size cap (~30 KB
+  code+data, layout-dependent) and a 9-control maximum.
+* **Size cap: keep a ZDL at or under 32,126 bytes (code+data 29,576).**
+  Confirmed on hardware 2026-09-30/10-02: everything up to those sizes loaded;
+  NAM 0.24 (32,998 / 30,336) froze the pedal on load, and so did TSize2 -- the
+  working NAM 0.23 padded with dead data to 33,174 / 30,512 -- so it is size,
+  not code. The real cap lies in between (a 32 KB = 32,768-byte file limit
+  fits). `build/zdl_size_guard.py` enforces the proven sizes; the dist/ DB
+  build, the NAM template packager and the trial builder all call it.
+* **Never use a `switch` (or a dense `if/else` on an int) in `.audio` code.**
+  The compiler lowers it to a jump table: a `.switch:<func>` section of
+  absolute code addresses reached by an INDIRECT branch (`B An`/`B Bn`). Those
+  addresses need relocation, but ZDLs link with **zero relocations**, so the
+  branch lands on garbage and the DSP freezes. Replace with straight-line
+  arithmetic (e.g. `2^n` via `(float)(1<<n)`; `2^-n` by building the IEEE-754
+  exponent field `((uint32_t)(127-n))<<23` — no divide, no table). Verify with
+  `dis6x`: there must be no `.switch:*` section and no register-indirect branch
+  other than `B B3` (the return). This freeze is insidious because if the
+  switch result is unused the compiler deletes it (so a pass-through smoke build
+  looks fine) — it only appears once the result is actually consumed.
+* **The general rule behind that one: never materialize a code address as an
+  absolute constant.** A jump table is just the compiler doing it for you. The
+  same freeze is available by hand — `MVKL/MVKH` a link-time address into a
+  register and `B` through it is byte-for-byte the same defect, and the
+  hand-written `_init` in `build/init_materialize.asm` shipped exactly that for
+  four hardware attempts. `TEXT_VA` is `0x00000000` in the linker, so an
+  "absolute" target is really a section offset that is correct **only** while
+  text loads at zero. Use a PC-relative `B` to a symbol so call and return both
+  follow the load base.
+
+  This inverts the usual reading of the zero-relocation rule. `Applied 0 .obj
+  relocations` is normally the success line; here the *missing* relocation was
+  the bug. When you emit a branch target yourself, "there is no relocation for
+  it" means "this only works at link base", not "this is clean". Check
+  `.rela.dyn` for your own emitted calls, and test at a nonzero text base —
+  the emulator loads at zero, so it cannot see this class at all.
 
 ## Known Freeze Patterns
 
 * Large Airwindows delay/reverb/chorus state arrays in `.fardata`.
 * Small statics compiled into `.bss` or B14/SBR-relative addressing.
+* `switch` statements / jump tables in `.audio` (indirect branch through an
+  unrelocated `.switch` section). This froze Mangle across ~6 rebuilds — a
+  `mg_crush_scale(bits)` switch was called every buffer and its jump table's
+  indirect branch landed on garbage. The freeze presented as "turning the knob
+  freezes the pedal" because the knob changed the switch index. Every red
+  herring (granular reads, feedback, denormals) was ruled out only after
+  disassembly showed the `.switch:Fx_DLY_Mangle` section + `BNOP.S2X A5`.
+* Hand-written absolute call targets — the same defect without a compiler.
+  `build/init_materialize.asm` loaded a link-time handler address with
+  `MVKL/MVKH` and branched through it, with no `.rela.dyn` entry. Four
+  hardware attempts froze on boot. A zero-call variant of the same frame booted
+  fine, which is what eventually localised it: no calls, no absolute targets.
+  Fixed by branching PC-relative to the handler. See
+  [PARAM-INIT-INVESTIGATION.md](PARAM-INIT-INVESTIGATION.md).
 * New external `__c6xabi_*` helpers beyond the tiny set already handled by
   the linker.
 * Helper-heavy DSP paths in the first executable build. `ToTape9` cleared

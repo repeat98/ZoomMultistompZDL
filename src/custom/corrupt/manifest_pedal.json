@@ -1,0 +1,39 @@
+{
+  "effect_name": "Corrupt",
+  "comment": "PEDAL BUILD manifest for Corrupt (4-knob). build.py reads THIS file. Zero-crossing pitch track -> square master + sub octave + octave-up harmony, Tone low-pass to tame the harsh square edges.",
+  "audio_func_name": "Fx_DLY_Corrupt",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY (fewest stock effects = easy to find).",
+  "fxid": 454,
+  "fxid_comment": "0x01C6. Reverted from 477 to the last known-working id + safe default. (The 477 bump collided with stock effect fxids and broke on hardware; the audible-on-load Mix hack is obsolete now the editor materialises patches via a full-patch send.)",
+  "fxid_version": "2.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Sub",
+      "max": 100,
+      "default": 82,
+      "comment": "params[5]. Sub (octave-down) square level."
+    },
+    {
+      "name": "Tone",
+      "max": 100,
+      "default": 45,
+      "comment": "params[6]. Low-pass: dark/smooth .. raw/buzzy."
+    },
+    {
+      "name": "Wave",
+      "max": 100,
+      "default": 50,
+      "comment": "params[7]. Octave-up harmony square level (richness)."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Mix default 1 (quiet-safe). The editor materialises patches on load (full-patch send), so audible-on-load no longer needs a hot default."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

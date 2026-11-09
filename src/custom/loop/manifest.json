@@ -1,0 +1,68 @@
+{
+  "effect_name": "Loop",
+  "comment": "Looper for stock firmware. The footswitch (the effect's on/off) is the looper's button: press = record / play / overdub, double press = stop, double press when stopped = clear. The loop keeps playing whether the effect shows on or off. Mono loop (L+R), 12-bit block float, two buffers for undo. Long (experimental, MS-70CDR 2.10 only) adds 2.7 MB of RAM that MIDISTOMP's RAM test found unused. Screen: state, time and the loop's waveform with a playhead (zvis, MS-70CDR 2.10). Quantize (0.02): Tempo (BPM) and Beats per bar set before recording snap the loop to whole bars; Click adds a metronome to the output (accent on the bar).",
+  "audio_func_name": "Fx_DLY_Loop",
+  "gid": 8,
+  "fxid": 467,
+  "fxid_version": "0.03",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Loop",
+      "type": "knob",
+      "max": 100,
+      "default": 100,
+      "comment": "Loop playback level."
+    },
+    {
+      "name": "Dry",
+      "type": "knob",
+      "max": 100,
+      "default": 100,
+      "comment": "Live signal level."
+    },
+    {
+      "name": "Fade",
+      "type": "knob",
+      "max": 100,
+      "default": 100,
+      "comment": "How much of the loop stays on each overdub lap (100 = all, lower = older layers fade)."
+    },
+    {
+      "name": "Undo",
+      "type": "knob",
+      "max": 1,
+      "default": 0,
+      "comment": "Flip it either way to undo the last overdub; flip again to redo."
+    },
+    {
+      "name": "Long",
+      "type": "knob",
+      "max": 1,
+      "default": 0,
+      "comment": "1 = experimental long loops in extra RAM (MS-70CDR 2.10, not with MIDISTOMP). Takes effect when the looper is empty."
+    },
+    {
+      "name": "Tempo",
+      "type": "knob",
+      "max": 250,
+      "default": 120,
+      "comment": "BPM for quantize and the click, 40-250 (lower values play 40). Taken when recording starts."
+    },
+    {
+      "name": "Beats",
+      "type": "knob",
+      "max": 12,
+      "default": 0,
+      "comment": "Beats per bar. 0 = Off (free length); 1 = snap to beats; 2-12 = snap to bars of that many beats. Taken when recording starts."
+    },
+    {
+      "name": "Click",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "comment": "Metronome level (0 = silent), only with Beats set. Accent on each bar. In the output only, never recorded."
+    }
+  ],
+  "audio_nop": false
+}

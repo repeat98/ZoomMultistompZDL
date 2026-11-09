@@ -319,7 +319,27 @@ class LinkerConfig:
     synthesize_linesel_edit_handlers: bool = False
     synth_edit_start_index: int = 2
 
+    # Emit an _init that calls every edit handler, so params[5..N] hold the
+    # patch's saved values from the first audio block instead of zeros. Without
+    # it, a reloaded patch plays each knob's DEFAULT until the knob is touched --
+    # see docs/INIT-MATERIALIZATION.md and _init_materialize_body above.
+    materialize_init: bool = False
+
+    # Descriptor self-entry +0x28: the DSP cost the firmware adds up per patch;
+    # the community-measured MS-70CDR budget is ~230 ("DSP Full" above it;
+    # github.com/Leemuzhko/ZOOM_development NAM/sdk/docs/DSP_COST_230_HYPOTHESIS).
+    # Stock effects declare 11.6 (ParaEQ) .. 127.7 (DriveEcho); 20.0 was a
+    # placeholder for everything. Heavy effects should declare their real share
+    # so the pedal refuses an overloaded chain instead of letting it crackle.
+    dsp_cost: float = 20.0
+
     def __post_init__(self) -> None:
+        # ZDL_MATERIALIZE_INIT=1 flips this on for EVERY effect in one build, so a
+        # candidate _init can be run through the emulator (matcheck) across the
+        # whole pack without editing 22 build.py files. Off by default: this is an
+        # unproven _init and two earlier versions froze the pedal on boot.
+        if os.environ.get("ZDL_MATERIALIZE_INIT") == "1":
+            self.materialize_init = True
         if self.audio_func_name is None:
             self.audio_func_name = f"Fx_FLT_{self.effect_name}"
         if self.gid not in GID_PREFIX:
@@ -336,11 +356,13 @@ class LinkerConfig:
             )
         image_count = self.image_info_knob_count
         n_visible = min(3, image_count if image_count is not None else len(self.params))
+        # Bottom knob row (y=46), matching custom_covers.knob_layout so the
+        # firmware value boxes land on the dials drawn in the cover art.
         defaults_by_count = {
             0: [],
-            1: [(2, 54, 36)],
-            2: [(2, 38, 36), (3, 70, 36)],
-            3: [(2, 31, 36), (3, 55, 36), (4, 79, 36)],
+            1: [(2, 54, 46)],
+            2: [(2, 26, 46), (3, 82, 46)],
+            3: [(2, 14, 46), (3, 55, 46), (4, 96, 46)],
         }
         if self.knob_positions is None:
             self.knob_positions = defaults_by_count[n_visible]
@@ -463,6 +485,7 @@ class ObjFile:
                         # this, calls land early by their original section
                         # offset after we move .text/.audio in the final ZDL.
                         'addend': offset if rtype == RT_PCR_S21 else 0,
+                        'implicit': True,
                     })
             if entries:
                 self.relocs.setdefault(target_idx, []).extend(entries)
@@ -539,6 +562,7 @@ def _build_descriptor(
     onf_func_va: int,
     knob_edit_vas: list[int],
     params: list[Param],
+    dsp_cost: float = 20.0,
 ) -> tuple[bytes, list[tuple[int, int]]]:
     """Returns (descriptor_bytes, [(offset_in_desc, target_va), ...])."""
     assert len(knob_edit_vas) == len(params), (
@@ -571,7 +595,7 @@ def _build_descriptor(
     # imageInfo declare them. See docs/3-PARAM-LINKER-BUG.md.
     # 20.0f (0x41a00000) is in the typical range for simple effects
     # (Exciter=19.51, OptComp=30.76, BitCrush=14.88, AutoPan=13.89).
-    entry[0x28:0x2C] = struct.pack('<f', 20.0)
+    entry[0x28:0x2C] = struct.pack('<f', float(dsp_cost))
     relocs.append((len(desc) + 0x1C, init_func_va))
     relocs.append((len(desc) + 0x20, audio_func_va))
     desc.extend(entry)
@@ -580,7 +604,8 @@ def _build_descriptor(
     n_user = len(params)
     for i, p in enumerate(params):
         entry = bytearray(0x30)
-        nb = p.name.encode('ascii')[:8]
+        from parameter_display import pedal_name
+        nb = pedal_name(effect_name, p.name).encode('ascii')[:8]
         entry[:len(nb)] = nb
         _p32(entry, 0x0C, p.max_val)
         _p32(entry, 0x10, p.default_val)
@@ -726,6 +751,16 @@ _COMPACT_MVK_L2_B4 = {
 }
 
 
+def _local_stock_file(path) -> Path:
+    """The linker's blobs from stock Zoom effects and TI's toolchain are kept
+    locally, not in the repository (docs/STOCK-FILES.md)."""
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"{path} is missing: it holds code from a stock Zoom effect or TI's "
+                                "toolchain and is kept locally, not in the repository; see docs/STOCK-FILES.md")
+    return path
+
+
 def _patch_linesel_knob_clone(blob: bytes, knob_id: int, param_byte_off: int) -> bytes:
     """Clone LineSel's known-good knob1 handler block and retarget it.
 
@@ -770,6 +805,61 @@ _NOP_RETURN = bytes([
 
 
 
+
+
+# ---------------------------------------------------------------------------
+# _init that MATERIALIZES params on load
+#
+# THE BUG (docs/INIT-MATERIALIZATION.md): after a patch load the audio function
+# reads params[5..N] as ZEROS until a knob is touched, so zoom_param_norm01 falls
+# back to every knob's default and the user's saved values are silently ignored --
+# while the pedal's screen shows them correctly the whole time. Stock effects
+# escape it because their _init calls their own edit handlers at load. Ours has
+# always emitted a NOP_RETURN, which is why every custom effect has it.
+#
+# Confirmed in emulation with `matcheck` (2026-09-03): params read 0.000 before
+# the handlers run and exactly the knob values afterwards, so calling them is
+# sufficient -- the coefficient-table setup call stock also makes is not needed.
+#
+# The bytes come from build/init_materialize.asm through TI's own assembler
+# rather than being hand-encoded. A wrong _init hard-freezes the DSP on boot and
+# needs an Effect Manager rewrite to recover -- that is how the May 2026 attempt
+# (InitProbe stage 3) ended -- and hand-punched machine code is how you get one.
+#
+# Three 32-byte, 32-byte-aligned chunks: prologue + one call block per knob +
+# epilogue. The alignment is load-bearing: ADDKPC resolves against the FETCH
+# PACKET base, not the instruction, so "return to the next block" is only a
+# constant if every block starts on a packet boundary.
+_INIT_MAT_PROLOGUE = bytes.fromhex(
+    "f6543c07c4353c07c6353c06c4353c06c6353c05c4353c05c6353c01f4543c020080000000000000000000000000000000000000000000000000000000000000")
+_INIT_MAT_CALL_BLOCK = bytes.fromhex(
+    "e4423c0200000000000000000020000064e2930000600000120800900080000012fcff0f62018801006000000000000000000000000000000000000000000000")
+_INIT_MAT_EPILOGUE = bytes.fromhex(
+    "e4523c02e6333c01e4333c05e6333c05e4333c06e6333c06e4333c07e6523c070060000062030c00008000000000000000000000000000000000000000000000")
+# Direct B.S2 at block+0x20. It is fetch-packet aligned, so the instruction
+# address is also the C674x PC-relative branch base. No load-time fixup needed.
+_INIT_MAT_BRANCH_OFF = 0x20
+# Derived, never hardcoded: adding the ctx[31] guard grew the call block from one
+# packet to two, and a stale 32 here would have under-reserved the _init body and
+# quietly overwritten the Dll entry that follows it.
+_INIT_MAT_STRIDE = len(_INIT_MAT_CALL_BLOCK)
+
+
+
+def _init_materialize_body(handler_vas: list[int], init_va: int) -> bytes:
+    """Emit calls that remain valid when the loader rebases the text segment."""
+    if init_va % 32:
+        raise ValueError("materializing init must be fetch-packet aligned")
+    out = bytearray(_INIT_MAT_PROLOGUE)
+    for va in handler_vas:
+        blk = bytearray(_INIT_MAT_CALL_BLOCK)
+        branch_va = init_va + len(out) + _INIT_MAT_BRANCH_OFF
+        if va % 4 or branch_va % 32:
+            raise ValueError("unaligned materializing init branch/handler")
+        _patch_pcr_s21(blk, _INIT_MAT_BRANCH_OFF, va, branch_va)
+        out += blk
+    out += _INIT_MAT_EPILOGUE
+    return bytes(out)
 
 # ---------------------------------------------------------------------------
 # Dll_<Name> entry function  [v1-empirical]
@@ -847,6 +937,14 @@ def link(cfg: LinkerConfig) -> None:
     if cfg.fxid <= 384:
         print(f"  WARNING: fxid {cfg.fxid} is in the stock-effect range (0–384); "
               "see docs/FXID-REGISTRY.md for the community range (400–999).")
+    # 9 user controls (params[5..13]) is the hardware-confirmed ABI; a 10th
+    # leaked values into the neighbouring effect's state on the MS-70CDR
+    # (github.com/Leemuzhko/ZOOM_development SDK/LIMITS.md, FDRTAIL/page-4).
+    if len(cfg.params) > 9:
+        raise ValueError(f"{cfg.effect_name}: {len(cfg.params)} controls; the pedal supports at most 9")
+    if os.environ.get("ZDL_SELECTOR_OUTPUT_DIR"):
+        cfg.output_path = str(Path(os.environ["ZDL_SELECTOR_OUTPUT_DIR"]) / Path(cfg.output_path).name)
+        Path(cfg.output_path).parent.mkdir(parents=True, exist_ok=True)
     print(f"=== {cfg.effect_name} ZDL Linker ===")
 
     # ----- Parse .obj -----
@@ -872,7 +970,7 @@ def link(cfg: LinkerConfig) -> None:
     object_symbol_names = {sym['name'] for sym in obj.symbols if sym['name']}
 
     # ----- Load divf RTS -----
-    divf_code = Path(cfg.divf_rts_path).read_bytes()
+    divf_code = _local_stock_file(cfg.divf_rts_path).read_bytes()
 
     # ----- Load handler blob (or fall back to NOP_RETURN handlers) -----
     handler_blob = b""
@@ -880,7 +978,7 @@ def link(cfg: LinkerConfig) -> None:
     handler_path = Path(cfg.handler_blob_path) if cfg.handler_blob_path else None
     use_real_handlers = handler_path is not None and handler_path.exists()
     if use_real_handlers:
-        handler_blob = handler_path.read_bytes()
+        handler_blob = _local_stock_file(handler_path).read_bytes()
         print(f"  handlers: {handler_path.name} ({len(handler_blob)} bytes)")
 
     # ----- Build LineSel-cloned synthetic edit handlers -----
@@ -889,6 +987,8 @@ def link(cfg: LinkerConfig) -> None:
     synth_specs: list[tuple[int, int, int]] = []
     if cfg.synthesize_linesel_edit_handlers:
         if not use_real_handlers:
+            if handler_path is not None:
+                _local_stock_file(handler_path)   # say why it's missing (docs/STOCK-FILES.md)
             raise RuntimeError("LineSel handler synthesis requires handler_blob_path")
         for i in range(len(cfg.params)):
             if i >= cfg.synth_edit_start_index:
@@ -910,7 +1010,7 @@ def link(cfg: LinkerConfig) -> None:
     use_knob3 = (knob3_path is not None and knob3_path.exists()
                  and len(cfg.params) >= 3)
     if use_knob3:
-        knob3_blob = knob3_path.read_bytes()
+        knob3_blob = _local_stock_file(knob3_path).read_bytes()
         print(f"  knob3:    {knob3_path.name} ({len(knob3_blob)} bytes)")
 
     # ----- Screen image -----
@@ -993,7 +1093,17 @@ def link(cfg: LinkerConfig) -> None:
     NOP_RET_OFF       = _align_up(DIVF_OFF + DIVF_SIZE, 32)
     NOP_RET_STUB_SIZE = 32
     NOP_RET_SIZE      = NOP_RET_STUB_SIZE * NOP_RETURN_COUNT
-    DLL_OFF           = NOP_RET_OFF + NOP_RET_SIZE
+    # Reserved before the handler VAs are known: the SIZE only depends on the
+    # knob count, and the body is written in once the VAs exist. Measure the
+    # prologue and epilogue rather than assuming one packet each -- saving the
+    # full callee-saved set made both of them two packets, and an assumed 32
+    # would have silently under-reserved and overwritten the Dll entry.
+    INIT_MAT_OFF      = NOP_RET_OFF + NOP_RET_SIZE
+    INIT_MAT_SIZE     = (len(_INIT_MAT_PROLOGUE)
+                         + _INIT_MAT_STRIDE * len(cfg.params)
+                         + len(_INIT_MAT_EPILOGUE)
+                         if cfg.materialize_init else 0)
+    DLL_OFF           = INIT_MAT_OFF + INIT_MAT_SIZE
     DLL_SIZE          = 200
     TEXT_TOTAL        = _align_up(DLL_OFF + DLL_SIZE, 32)
 
@@ -1008,6 +1118,8 @@ def link(cfg: LinkerConfig) -> None:
         print(f"    knob3    @ 0x{KNOB3_OFF:04X}  ({KNOB3_SIZE})")
     print(f"    divf     @ 0x{DIVF_OFF:04X}  ({DIVF_SIZE})")
     print(f"    nop_ret  @ 0x{NOP_RET_OFF:04X}  ({NOP_RETURN_COUNT} × 32-byte stubs)")
+    if INIT_MAT_SIZE:
+        print(f"    init_mat @ 0x{INIT_MAT_OFF:04X}  ({INIT_MAT_SIZE}) — materializes params on load")
     print(f"    Dll      @ 0x{DLL_OFF:04X}")
     print(f"    total      0x{TEXT_TOTAL:X}")
 
@@ -1122,6 +1234,43 @@ def link(cfg: LinkerConfig) -> None:
         print(f"  WARNING: {n_nop_handlers} knob(s) using NOP_RETURN edit "
               f"handler (each gets a unique stub VA)")
 
+    # Now that every handler has an address, write the _init that calls them and
+    # point the descriptor at it instead of a NOP_RETURN. This is what stops a
+    # reloaded patch from playing defaults until you touch a knob.
+    if cfg.materialize_init:
+        # A NOP handler has nothing to materialize and its stub would just burn
+        # a call, so only real handlers go in the list.
+        nop_lo = TEXT_VA + NOP_RET_OFF
+        nop_hi = nop_lo + NOP_RET_SIZE
+        call_vas = [va for va in knob_edit_vas if not (nop_lo <= va < nop_hi)]
+        # ZDL_MATERIALIZE_INIT_MAX_CALLS caps how many handler calls the body
+        # emits. It exists for BISECTING the freeze, not for shipping.
+        #
+        # v1 (ctx in A10), v2 (ctx on the stack) and v3 (full callee-saved set)
+        # each froze the pedal on boot, and each runs clean in the Ziddle
+        # emulator. So the freeze is neither the instruction sequence nor
+        # register discipline, and a fourth candidate fix would be a fourth
+        # guess. Setting this to 0 emits the prologue and epilogue with NO calls
+        # between them: it materializes nothing, and asks one question --
+        #   boots  -> our _init frame is fine; the fault is in calling handlers
+        #             from _init (they tail-branch into ctx[7], which may not be
+        #             ready at load), and ctx[34]/ctx[35] is the next thing to
+        #             understand.
+        #   freezes-> the prologue/epilogue itself is wrong, and every version
+        #             built on it was built on sand.
+        _max = os.environ.get("ZDL_MATERIALIZE_INIT_MAX_CALLS")
+        if _max is not None:
+            call_vas = call_vas[:int(_max)]
+            print(f"  init:    BISECT -- capped to {int(_max)} handler call(s)")
+        body = _init_materialize_body(call_vas, TEXT_VA + INIT_MAT_OFF)
+        if len(body) > INIT_MAT_SIZE:
+            raise RuntimeError(
+                f"materialize_init body {len(body)}B exceeds reserved {INIT_MAT_SIZE}B")
+        out_text[INIT_MAT_OFF:INIT_MAT_OFF + len(body)] = body
+        init_va = TEXT_VA + INIT_MAT_OFF
+        print(f"  init:    materializing {len(call_vas)} param(s) at load "
+              f"(_init @ 0x{init_va:08X}, {len(body)}B)")
+
     desc_bytes, desc_relocs = _build_descriptor(
         effect_name=cfg.effect_name,
         audio_func_va=TEXT_VA + AUDIO_OFF,
@@ -1129,7 +1278,18 @@ def link(cfg: LinkerConfig) -> None:
         onf_func_va=onf_va,
         knob_edit_vas=knob_edit_vas,
         params=cfg.params,
+        dsp_cost=cfg.dsp_cost,
     )
+    # Stock RNDMFLTR descriptor +0x24 holds GetString(value, destination).
+    # Object-defined callbacks are opt-in via generated parameter headers.
+    desc_bytes = bytearray(desc_bytes)
+    for i in range(len(cfg.params)):
+        va = obj_symbol_va.get(f"ZDL_GetLabel_{i}")
+        if va is not None:
+            offset = (i + 2) * 0x30 + 0x24
+            _p32(desc_bytes, offset, va)
+            desc_relocs.append((offset, va))
+    desc_bytes = bytes(desc_bytes)
     expected = 0x30 * (2 + len(cfg.params))
     assert len(desc_bytes) == expected, \
         f"descriptor size {len(desc_bytes)} != {expected}"
@@ -1265,6 +1425,19 @@ def link(cfg: LinkerConfig) -> None:
     if coe_sym_name in undefined:
         sym_addr[undefined[coe_sym_name]] = COE_VA
 
+    # Same for the cover picture (the RLE blob at the start of .const): a probe
+    # that declares `extern unsigned char _<audio>_Pic[]` gets its runtime
+    # address (src/hardware_probes/coverrw, docs/pedal-research/animated-covers.md).
+    pic_sym_name = f"_{cfg.audio_func_name}_Pic"
+    if pic_sym_name in undefined:
+        sym_addr[undefined[pic_sym_name]] = PIC_VA
+    # And imageInfo (128x64 header, picture pointer at word 5, control positions):
+    # the firmware re-reads it on every redraw, so an effect can point word 5 at
+    # frames it draws itself (src/custom/scope; Leemuzhko SDK EFFECT_UI_WRITES).
+    info_sym_name = f"_{cfg.audio_func_name}_Info"
+    if info_sym_name in undefined:
+        sym_addr[undefined[info_sym_name]] = INFO_VA
+
     # Compiler-emitted register save/restore helpers — resolve to the
     # spliced LineSel copies if present.  Without these, any moderately
     # complex audio function (anything that spills to stack) would link
@@ -1299,8 +1472,7 @@ def link(cfg: LinkerConfig) -> None:
                     f"--mem_model:data=far."
                 )
             if rel['sym_idx'] not in sym_addr:
-                print(f"  SKIP unresolved sym {sym['name']!r} at {sec['name']}+0x{offset:X}")
-                continue
+                raise RuntimeError(f"unresolved relocation for {sym['name']!r} at {sec['name']}+0x{offset:X}")
             # cl6x's intra-section CALLP placeholders encode a displacement
             # measured from the SECTION START, not from the instruction. We
             # compensate by adding the instruction's section offset (stored
@@ -1310,17 +1482,35 @@ def link(cfg: LinkerConfig) -> None:
             # real target by exactly the instruction's section offset, which
             # froze the pedal on InitProbe stage 2.
             addend = rel['addend'] if sym['shndx'] != 0 else 0
+            # ...but only within the same section. A REL CALLP to a function in
+            # ANOTHER section (e.g. .audio calling a helper in .text) carries no
+            # section-start displacement: its placeholder is zero and adding the
+            # instruction offset lands the call that many bytes past the target.
+            # That froze the pedal on the Blink probe's first callback (call at
+            # .audio+0x80 went to firmware_ok+0x80). Rule and TI cross-check:
+            # Leemuzhko/ZOOM_development SDK/LINKER_AND_BUILD.md, "Cross-section
+            # REL/PCR_S21 rule". A nonzero cross-section placeholder is not
+            # understood, so refuse it.
+            if (rtype == RT_PCR_S21 and rel.get('implicit') and sym['shndx'] != 0
+                    and sym['shndx'] != sec['idx']):
+                placeholder = (struct.unpack_from('<I', sec['data'], offset)[0] >> 7) & 0x1FFFFF
+                if placeholder:
+                    raise RuntimeError(
+                        f"cross-section CALLP at {sec['name']}+0x{offset:X} to {sym['name']!r} has a "
+                        f"nonzero placeholder (0x{placeholder:X}); not supported")
+                addend = 0
             target = sym_addr[rel['sym_idx']] + addend
             file_off = base_off + offset
             if rtype == RT_ABS_L16:
                 _patch_abs_l16(out_text, file_off, target)
+                dyn_relocs.append((TEXT_VA + file_off, rtype, target))
             elif rtype == RT_ABS_H16:
                 _patch_abs_h16(out_text, file_off, target)
+                dyn_relocs.append((TEXT_VA + file_off, rtype, target))
             elif rtype == RT_PCR_S21:
                 _patch_pcr_s21(out_text, file_off, target, TEXT_VA + file_off)
             else:
-                print(f"  SKIP unknown reloc type {rtype} at {sec['name']}+0x{offset:X}")
-                continue
+                raise RuntimeError(f"unsupported relocation type {rtype} at {sec['name']}+0x{offset:X}")
             n_ok += 1
         return n_ok
 
@@ -1496,7 +1686,7 @@ def link(cfg: LinkerConfig) -> None:
     # Exciter's 62-byte blob verbatim (Tag_ISA=C6740, ABI_DSBT/PID/PIC
     # all matching the bare-metal-non-DSBT model we actually produce).
     c6xabi_path = Path(__file__).resolve().parent / "c6xabi_attributes.bin"
-    c6xabi_attrs = c6xabi_path.read_bytes()
+    c6xabi_attrs = _local_stock_file(c6xabi_path).read_bytes()
 
     # Stock ZDL ELFs place .text at file offset 0x40 and put the program
     # header table near EOF, immediately before the section headers. Keep

@@ -1,24 +1,58 @@
 {
   "effect_name": "OTT",
   "comment": "Custom OTT-style multiband upward/downward compressor. This is not an Ableton or Airwindows port; it is a pedal-safe original design with Ableton-style macro controls.",
-
-  "audio_func_name": "Fx_DYN_OTT",
-
-  "gid": 1,
-  "gid_comment": "0x01 = Dynamics category.",
-
+  "audio_func_name": "Fx_DLY_OTT",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay -> Fx_DLY_; consolidated under DLY.",
   "fxid": 410,
   "fxid_comment": "0x019A in the custom effect range.",
-
   "fxid_version": "1.00",
   "flags_byte": 1,
-
   "params": [
-    {"name": "DryWet",   "type": "knob", "max": 100, "default": 50,  "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "comment": "Dry/wet blend for parallel OTT-style compression."},
-    {"name": "Time",     "type": "knob", "max": 100, "default": 50,  "scale": "linear", "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "comment": "Envelope and gain smoothing time. Lower is faster and more aggressive."},
-    {"name": "Output",   "type": "knob", "max": 100, "default": 50,  "scale": "gain",   "audio_min": 0.0, "audio_max": 2.0, "audio_default": 0.5, "comment": "Post-compressor output level. Center/default maps to unity gain."},
-    {"name": "SplitFrq", "type": "knob", "max": 100, "default": 50,  "scale": "freq",   "audio_min": 0.0, "audio_max": 1.0, "audio_default": 0.5, "comment": "Moves the low/high crossover pair together, similar to the split frequency controls on multiband dynamics."}
+    {
+      "name": "DryWet",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "scale": "linear",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.5,
+      "comment": "Dry/wet blend for parallel OTT-style compression."
+    },
+    {
+      "name": "Time",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "scale": "linear",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.5,
+      "comment": "Envelope and gain smoothing time. Lower is faster and more aggressive."
+    },
+    {
+      "name": "Output",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "scale": "gain",
+      "audio_min": 0.0,
+      "audio_max": 2.0,
+      "audio_default": 0.5,
+      "comment": "Post-compressor output level. Center/default maps to unity gain."
+    },
+    {
+      "name": "SplitFrq",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "scale": "freq",
+      "audio_min": 0.0,
+      "audio_max": 1.0,
+      "audio_default": 0.5,
+      "comment": "Moves the low/high crossover pair together, similar to the split frequency controls on multiband dynamics."
+    }
   ],
-
   "audio_nop": false
 }

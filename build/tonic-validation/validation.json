@@ -1,0 +1,35 @@
+{
+  "source_sha256": "f1128ba7853faa79003bbf0c5e1abf5a07b778e42307f6d509889f5d0455690f",
+  "state_bytes": 4196,
+  "checks": [
+    "Mix 0 exact stereo dry",
+    "all blocks at zero exact stereo unity in every mode",
+    "bypass exact stereo dry",
+    "undersized arena dry",
+    "four mode sweeps finite; full wet mono has no separate dry channel",
+    "order changes sound",
+    "one-bit bipolar output and gate closes on silence",
+    "phaser works independently",
+    "drive works independently",
+    "independent instances agree",
+    "mode/order transitions finite and bounded"
+  ],
+  "modes": {
+    "Decim": {
+      "rms_change": 0.11447182297706604,
+      "peak": 0.20045839250087738
+    },
+    "Crush": {
+      "rms_change": 0.006119158118963242,
+      "peak": 0.20312438905239105
+    },
+    "FM": {
+      "rms_change": 0.09964314848184586,
+      "peak": 0.2049979567527771
+    },
+    "Ring": {
+      "rms_change": 0.10733136534690857,
+      "peak": 0.20383161306381226
+    }
+  }
+}

@@ -1,18 +1,13 @@
 {
   "effect_name": "SyncPrV3",
-  "comment": "Replicates TapeEcho3's DLY_EP3_Calc_DelayTime algorithm INSIDE the audio function, with no handler patches at all. The LineSel handler does its normal job (read SYNC knob, normalize, post to UI via state[7]); the audio function on each block calls state[31] twice and state[24] once (using the firmware function pointers at fixed addresses c00b820c and c00d4b40), computes a delay value, and turns it into audible gain.\n\nPurpose: prove that (a) state[31] and state[24] are callable from audio context, and (b) the returned delay value tracks BPM when tap-tempo is used. If yes, the same call sequence can go into TapeEcho4 as the actual delay-time source — sync-aware delay without finding a BPM address.\n\nSlot hardcoded to 0: the probe MUST be loaded in slot 0 of the patch chain so that state[31](slot=0, B4=6) reads our own SYNC knob value.\n\nTest plan:\n  1. Load probe in SLOT 0. Unbypass. Set SYNC = 0 (OFF) — expect quiet/silent (free-time delay = raw_TIME + 10 = small number, so gain near 0).\n  2. Turn SYNC to 1 (smallest division). Expect some gain — state[24] returns the host's BPM-aware value, mapped to 0..2 gain via /1000 scaling.\n  3. Tap tempo at ~120 BPM, listen. Tap at ~60 BPM, listen. If the audible gain CHANGES between the two BPMs, the algorithm works and BPM is being applied by the host. If silent/constant, state[24] may have early-exited or the args are wrong.\n  4. Sweep SYNC through 2..15. Each division should give a different gain (different x = state[31] return → different y = state[24] return).\n\nRisks: state[31]/state[24] may not be callable from audio context. If the pedal freezes on first audio block after loading, that's the failure mode. Backup: move the algorithm to a custom handler (more work but matches TapeEcho3's actual structure).",
-
+  "comment": "Replicates TapeEcho3's DLY_EP3_Calc_DelayTime algorithm INSIDE the audio function, with no handler patches at all. The LineSel handler does its normal job (read SYNC knob, normalize, post to UI via state[7]); the audio function on each block calls state[31] twice and state[24] once (using the firmware function pointers at fixed addresses c00b820c and c00d4b40), computes a delay value, and turns it into audible gain.\n\nPurpose: prove that (a) state[31] and state[24] are callable from audio context, and (b) the returned delay value tracks BPM when tap-tempo is used. If yes, the same call sequence can go into TapeEcho4 as the actual delay-time source \u2014 sync-aware delay without finding a BPM address.\n\nSlot hardcoded to 0: the probe MUST be loaded in slot 0 of the patch chain so that state[31](slot=0, B4=6) reads our own SYNC knob value.\n\nTest plan:\n  1. Load probe in SLOT 0. Unbypass. Set SYNC = 0 (OFF) \u2014 expect quiet/silent (free-time delay = raw_TIME + 10 = small number, so gain near 0).\n  2. Turn SYNC to 1 (smallest division). Expect some gain \u2014 state[24] returns the host's BPM-aware value, mapped to 0..2 gain via /1000 scaling.\n  3. Tap tempo at ~120 BPM, listen. Tap at ~60 BPM, listen. If the audible gain CHANGES between the two BPMs, the algorithm works and BPM is being applied by the host. If silent/constant, state[24] may have early-exited or the args are wrong.\n  4. Sweep SYNC through 2..15. Each division should give a different gain (different x = state[31] return \u2192 different y = state[24] return).\n\nRisks: state[31]/state[24] may not be callable from audio context. If the pedal freezes on first audio block after loading, that's the failure mode. Backup: move the algorithm to a custom handler (more work but matches TapeEcho3's actual structure).",
   "audio_func_name": "Fx_FLT_SyncPrV3",
-
   "gid": 2,
   "gid_comment": "0x02 = Filter category. Same as BpmHunt and earlier SyncProbe series.",
-
-  "fxid": 416,
-  "fxid_comment": "0x01A0. Next after BpmHunt (0x019F).",
-
+  "fxid": 462,
+  "fxid_comment": "0x1CE. Reassigned from 416 to clear an fxid collision (audit 2026-08-18); every fxid in the tree is now unique.",
   "fxid_version": "1.00",
   "flags_byte": 1,
-
   "params": [
     {
       "name": "Sync",
@@ -20,13 +15,12 @@
       "max": 15,
       "default": 0,
       "flags": 40,
-      "flags_comment": "0x28 — the Pattern B tempo-sync bit. Required for the TAP UI (long-press the left knob to enter tap-tempo). Same flag as the rest of the SyncProbe family and BpmHunt.",
+      "flags_comment": "0x28 \u2014 the Pattern B tempo-sync bit. Required for the TAP UI (long-press the left knob to enter tap-tempo). Same flag as the rest of the SyncProbe family and BpmHunt.",
       "audio_min": 0.0,
       "audio_max": 1.0,
       "audio_default": 0.0,
       "comment": "The SYNC division. state[31](0, B4=6) reads this slot's current value, returning 0..15 (0 = OFF, 1..15 = division indices)."
     }
   ],
-
   "audio_nop": false
 }

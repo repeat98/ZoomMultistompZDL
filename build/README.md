@@ -31,6 +31,10 @@ ZoomMultistompZDL/
 │   ├── linesel_handlers.bin   # onf + knob1 + knob2 + RTS helpers (LineSel)
 │   ├── air_knob3_edit.bin     # knob3 edit handler (AIR mix_edit)
 │   ├── divf_rts.bin           # __c6xabi_divf RTS code
+│   ├── init_materialize.asm   # candidate _init that materializes params at load
+│   ├── gen_init_materialize.py  # assemble that -> byte templates in linker.py
+│   ├── disassemble_zdl.py     # any ZDL (ours or stock) -> dis6x listing
+│   ├── make_gallery_png.py    # dist/*.ZDL covers -> graphics/*.png
 │   └── README.md              # this file
 ├── src/
 │   └── airwindows/
@@ -86,7 +90,7 @@ A factory ZDL's ELF exports a fixed set of symbols, addressed by name in
 | `Fx_FLT_<Name>_init`                | One-shot init.                              |
 | `Fx_FLT_<Name>_onf`                 | On/Off handler (effect bypass logic).       |
 | `Fx_FLT_<Name>_<param>_edit`        | One per knob — runs when the user turns it. |
-| `picEffectType_<Name>`              | RLE-compressed 128×40 pixel art (`.const`). |
+| `picEffectType_<Name>`              | RLE-compressed 128×64 pixel art (`.const`). |
 | `effectTypeImageInfo`               | Layout struct: image size + knob positions. |
 | `_infoEffectTypeKnob_A_2`           | Knob bitmap descriptor (`.fardata`).        |
 | `_Fx_FLT_<Name>_Coe`                | Effect coefficients table.                  |
@@ -123,7 +127,7 @@ into the final read-only `.const` segment and resolves references to them.
 
 The "UI" is two things:
 
-1. A 128×40 1-bpp picture in `.const`, RLE-compressed. Editable as ASCII
+1. A 128×64 1-bpp picture in `.const`, RLE-compressed. Editable as ASCII
    art via `zoom-fx-modding-ref/diy/decode_picture.py` /
    `encode_picture.py`. Knob shapes are *not* baked into the picture —
    the firmware paints them on top using the `_infoEffectTypeKnob_A_2`
@@ -178,8 +182,8 @@ The pedal accepts a single firmware image, not loose ZDLs. Workflow:
 1. `python3 build_all.py hello` → `dist/HELLO.ZDL`.
 2. Open `Zoom-Firmware-Editor-master/ZoomFirmwareEditor.jar`.
 3. Load the official MS-70CDR firmware (the `.bin` Zoom distributes).
-   Backup blobs are in [firmware/](../firmware/) (`boot.bin`, `Main.bin`,
-   `FS.bin`, `Preset.bin`).
+   Backup blobs go in `firmware/` (`boot.bin`, `Main.bin`, `FS.bin`,
+   `Preset.bin`), kept locally ([STOCK-FILES.md](../docs/STOCK-FILES.md)).
 4. **Add** `HELLO.ZDL` to the FX list (do not replace `LINESEL.ZDL` —
    `sort_index = 250` lets HELLO sit alongside the originals).
 5. Save the modified firmware to a new `.bin`.
@@ -233,6 +237,21 @@ ELFs, multi-page pictures), they get added there.
   all six slots. It also seeds per-slot data fields, including `state[1]` from
   `c00ee8e8 + 4*slot`, so the remaining parameter bug is probably in those
   materialization/state sources rather than the DSP body.
+
+  **Update 2026-09-10.** Hardware bisect has narrowed this considerably. Our
+  `_init` frame executes fine at load (proved by a probe with zero calls in it);
+  what freezes is *calling an edit handler from `_init`*, because our generated
+  handlers tail-branch into `ctx[7]` and that pointer is not populated that
+  early. Stock handlers compute inline and return, which is why stock `_init`
+  can call them. Note this is consistent with the template-writer finding above:
+  `state[7]` is one of the fields it initializes, so the open question is *when*
+  it runs relative to `_init`. Full evidence in
+  [../docs/INIT-MATERIALIZATION.md](../docs/INIT-MATERIALIZATION.md) §11.
+
+* What `ctx[34]` and `ctx[35]` do. Every stock `_init` calls
+  `ctx[34](ctx[1], table, N)` and `ctx[35](ptr, 0, N)` *before* its handlers;
+  `ctx[34]` writes into the param block. Neither is modelled by the emulator, so
+  they cannot be studied there — only by reading firmware.
 * The `SonicStomp` struct layout is empirical — Exciter's
   `ofd_zdl.txt` shows it sits in `.const` at +0x250 but the field
   definitions aren't documented yet. For now we don't touch it.

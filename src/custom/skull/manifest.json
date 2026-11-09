@@ -1,0 +1,40 @@
+{
+  "effect_name": "Skull",
+  "comment": "A skull on the pedal screen that reacts to the signal (MS-70CDR 2.10, zvis): a shaded three-quarter skull (own 3D model, dithered): the jaw opens with level, the eyes light up, a shake on attacks, and at the very loudest it explodes and re-forms. Pass-through. Firmware facts: Leemuzhko's ZOOM_development SDK (credited, own code).",
+  "audio_func_name": "Fx_DLY_Skull",
+  "gid": 8,
+  "fxid": 416,
+  "fxid_version": "0.05",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Sense",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "comment": "How much signal it takes to open the jaw."
+    },
+    {
+      "name": "Decay",
+      "type": "knob",
+      "max": 100,
+      "default": 40,
+      "comment": "How fast the face relaxes after a note."
+    },
+    {
+      "name": "Shake",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "comment": "How hard the skull jolts on attacks (0 = never)."
+    },
+    {
+      "name": "Boom",
+      "type": "knob",
+      "max": 100,
+      "default": 50,
+      "comment": "At the very loudest the skull explodes and re-forms. 0 = never; higher = easier to set off."
+    }
+  ],
+  "audio_nop": false
+}

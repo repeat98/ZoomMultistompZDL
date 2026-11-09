@@ -44,8 +44,9 @@
   remaining issues are in the DSP.
 * **Diff against stock.** Before believing a load-bearing constant
   is right, find one stock ZDL that uses it. The
-  `stock_zdls/` directory has the 830-file stock corpus used for comparison
-  (not tracked in git — see [OBTAINING-REFERENCE-FILES.md](OBTAINING-REFERENCE-FILES.md)).
+  `stock_zdls/` directory holds the 830-file stock corpus used for
+  comparison; it is kept locally, not in the repository
+  ([STOCK-FILES.md](STOCK-FILES.md)).
 * **Don't touch `Dll_<Name>`.** It's a verbatim 200-byte copy of
   NoiseGate's entry function with 4 reloc points repatched. Earlier
   attempts at a smaller `Dll` body caused inconsistent freezes. The

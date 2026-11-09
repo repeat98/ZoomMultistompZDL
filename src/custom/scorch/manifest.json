@@ -1,0 +1,50 @@
+{
+  "effect_name": "Scorch",
+  "comment": "Scorch \u2014 aggressive high-gain amp + cab. Tight pre high-pass, cascaded asymmetric soft-clip stages with interstage filtering, a scoopable tone stack (Bass/Mid/Treble/Presence), and a synthesized 4x12-style cab via short FIR convolution. The realistic algorithmic stand-in for NAM-style amp tone. Desktop preview implements the full DSP; pedal C port is staged (a baked cab IR FIR + clipping).",
+  "gid": 3,
+  "gid_comment": "0x03 = Drive category. NOTE: on MS-70CDR a custom Drive effect may need a stock Drive installed to appear in the device browser.",
+  "fxid": 457,
+  "fxid_comment": "0x01C9. Above the repo's used range; distinct from the other customs. Verify uniqueness before flashing.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Gain",
+      "max": 100,
+      "default": 70,
+      "comment": "Preamp gain / amount of high-gain distortion."
+    },
+    {
+      "name": "Bass",
+      "max": 100,
+      "default": 55,
+      "comment": "Low shelf (~120 Hz)."
+    },
+    {
+      "name": "Mid",
+      "max": 100,
+      "default": 30,
+      "comment": "Mid peak (~700 Hz). Low = scooped metal voicing."
+    },
+    {
+      "name": "Treble",
+      "max": 100,
+      "default": 60,
+      "comment": "High shelf (~3 kHz)."
+    },
+    {
+      "name": "Presence",
+      "max": 100,
+      "default": 65,
+      "comment": "Presence peak (~4 kHz) \u2014 bite/edge."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet crossfade. Renamed from 'Level' so every effect in the pack ends with the same control."
+    }
+  ],
+  "audio_nop": true,
+  "audio_nop_comment": "Pedal C port starts as a UI-only smoke build; full DSP validated on desktop first."
+}

@@ -1,0 +1,39 @@
+{
+  "effect_name": "GenLoss",
+  "comment": "PEDAL BUILD manifest for GenLoss (3-knob). build.py reads THIS file. Drive and mix are baked; dropouts deferred. Hiss is now a knob.",
+  "audio_func_name": "Fx_DLY_GenLoss",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category -> SONAME prefix ZDL_DLY_. Grouped under DLY (fewest stock effects = easy to find).",
+  "fxid": 456,
+  "fxid_comment": "0x01C8. Verify uniqueness before flashing.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Wow",
+      "max": 100,
+      "default": 72,
+      "comment": "params[5]. Wow & flutter + pitch instability."
+    },
+    {
+      "name": "Tone",
+      "max": 100,
+      "default": 52,
+      "comment": "params[6]. Bandwidth / brightness (low-pass)."
+    },
+    {
+      "name": "Hiss",
+      "max": 100,
+      "default": 2,
+      "comment": "params[7]. Tape hiss / noise-floor level."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet crossfade. GenLoss previously had NO level or mix control at all -- its last knob was Hiss, a noise amount -- so it was the one effect you could not sit against the dry signal."
+    }
+  ],
+  "audio_nop": false,
+  "audio_nop_comment": "Set true for a UI-only smoke build before trusting the DSP."
+}

@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "engine": "NAMLite block engine from 0.12",
+  "sha256": "5c5e34dc60b0f7c8080b5228cc4205ea6fe5ca6852993577ce167b88729f50a7",
+  "bytes": 18766,
+  "weights_offset": 8836,
+  "weights_count": 1871,
+  "version_offset": 68,
+  "output_version": "0.13",
+  "sample_rate": 44100
+}

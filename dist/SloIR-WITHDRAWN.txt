@@ -1,0 +1,3 @@
+SloIR0.01 and load-only0.02 both freeze when selected; both withdrawn.
+CabIR0.03 is a separate short cabinet test using the same effect ID908.
+See CabIR.NOTES.txt. It is not a working Slö replacement.

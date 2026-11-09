@@ -1,0 +1,17 @@
+{
+  "effect_name": "Tonic",
+  "comment": "Experimental Bitters-inspired multi-effect: distortion, sine phaser, and one of decimation, bitcrushing, pitch vibrato or ring modulation. Two chain orders. Independent implementation, not an exact emulation.",
+  "gid": 8,
+  "fxid": 499,
+  "fxid_version": "0.01",
+  "flags_byte": 1,
+  "audio_func_name": "Fx_DLY_Tonic",
+  "params": [
+    {"name":"Mode", "max":100, "default":12, "comment":"Four named regions: Decim, Crush, FM, Ring."},
+    {"name":"Amount", "max":100, "default":25, "comment":"Selected processor strength; zero bypasses it."},
+    {"name":"Drive", "max":100, "default":0, "comment":"Gain-compensated cubic distortion; zero bypasses it."},
+    {"name":"Phase", "max":100, "default":0, "comment":"Six-stage sine-swept phaser, up to 20 Hz; zero bypasses it."},
+    {"name":"Order", "max":100, "default":0, "comment":"Fwd: Drive-Phase-Mode. Rev: Mode-Phase-Drive."},
+    {"name":"Mix", "max":100, "default":50, "comment":"Stereo dry to mono processed wet; exact dry at zero."}
+  ]
+}

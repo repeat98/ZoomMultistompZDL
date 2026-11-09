@@ -1,0 +1,50 @@
+{
+  "effect_name": "Stasis",
+  "comment": "Per-instance crossfade-loop freeze. Capture 0 uses stomp edges; 1 releases; 2 captures and holds independently of bypass. Idle passes untouched stereo. No capture on load.",
+  "gid": 8,
+  "gid_comment": "0x08 = Delay category, matching the rest of the release pack.",
+  "fxid": 440,
+  "fxid_comment": "0x1B8. Free: unused by stock effects, not a retired custom alias, and clear of the fxid collisions audited on 2026-08-18.",
+  "fxid_version": "1.02",
+  "flags_byte": 1,
+  "audio_func_name": "Fx_DLY_Stasis",
+  "audio_nop": false,
+  "params": [
+    {
+      "name": "Length",
+      "max": 100,
+      "default": 35,
+      "comment": "Loop length, ~60 ms .. ~1.4 s, and live. The stomp always captures the full 1.4 s looking BACKWARDS (Stasis records while the slot is off and stops when it is on), and Length chooses how much of that loops, ending at the moment you stomped. Was latched at capture in v1-v2, which made it dead while the hold was running."
+    },
+    {
+      "name": "Blur",
+      "max": 100,
+      "default": 50,
+      "comment": "Crossfade at the loop seam, as a FRACTION of the loop (~2%..40%), so it does the same audible thing at any Length. As an absolute sample count its whole sweep moved the crossfade 0.4%..6.5% of the loop at long Lengths -- inaudible."
+    },
+    {
+      "name": "Decay",
+      "max": 100,
+      "default": 100,
+      "comment": "How the hold fades. Fully up is genuinely infinite."
+    },
+    {
+      "name": "Tone",
+      "max": 100,
+      "default": 55,
+      "comment": "Low-pass on the held layer only; the dry stays open."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "True dry/wet blend while held. 100 is wet only; idle passes dry at unity. Short capture/release ramps."
+    },
+    {
+      "name": "Capture",
+      "max": 2,
+      "default": 0,
+      "comment": "0=stomp; 1=live/release; 2=capture/hold. Toggle 1 then 2 to capture again. Explicit mode ignores bypass; use Capture=1 to release. No freeze on patch load."
+    }
+  ]
+}

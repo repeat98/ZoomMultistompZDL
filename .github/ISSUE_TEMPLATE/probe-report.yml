@@ -1,0 +1,79 @@
+name: Probe report — a pedal this project has not mapped
+description: Results from docs/PROBING-A-NEW-PEDAL.md, for a "+" model or any Zoom pedal other than the MS-70CDR.
+title: "[probe] "
+labels: ["probe-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for running these. Please paste **raw output** rather than a summary
+        of it — several dead ends in this project came from someone reporting a
+        conclusion instead of the data, and the conclusion being wrong.
+
+        A partial report is still useful. If you only did one of the three checks,
+        submit that; leave the rest blank.
+
+        Guide: [docs/PROBING-A-NEW-PEDAL.md](../blob/main/docs/PROBING-A-NEW-PEDAL.md)
+  - type: input
+    id: model
+    attributes:
+      label: Pedal model
+      placeholder: "MS-70CDR+, MS-50G+, MS-60B+, G1 Four, ..."
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware version
+      description: Shown on the pedal, or in the identity reply from check 2.
+      placeholder: "2.10"
+    validations:
+      required: false
+  - type: textarea
+    id: inspect
+    attributes:
+      label: "Check 1 — inspect_zd2.py output"
+      description: >
+        `python3 build/inspect_zd2.py Effect.ZD2` for two or three files.
+        Paste the whole thing, including the per-block line — the spread is what
+        decides this, not the single entropy number.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: identity
+    attributes:
+      label: "Check 2 — identity reply"
+      description: "The `identity: f0 7e ...` line from the editor log, verbatim."
+      render: text
+    validations:
+      required: false
+  - type: dropdown
+    id: dump
+    attributes:
+      label: "Check 3 — did a patch dump come back?"
+      options:
+        - "Not tried"
+        - "Yes — 146 bytes"
+        - "Yes — a different length"
+        - "No, nothing came back"
+    validations:
+      required: true
+  - type: textarea
+    id: diag
+    attributes:
+      label: Editor diagnostics
+      description: >
+        Show diagnostics → Copy diag, after connecting and attempting a read.
+        This carries the raw patch bytes, which on an unmapped model is the single
+        most valuable thing in this report.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Where the .ZD2 files came from, what Zoom's own software does with this pedal, anything that surprised you.
+    validations:
+      required: false

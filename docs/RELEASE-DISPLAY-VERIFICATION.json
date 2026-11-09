@@ -1,0 +1,146 @@
+[
+  {
+    "effect": "Arrakis",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Corrupt",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Dissolve",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Dustbox",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Flower",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Galactic",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "GenLoss",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Gyre",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Howl",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Hydra",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": [
+      "Div"
+    ]
+  },
+  {
+    "effect": "Klang",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Mangle",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Microlm",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Oxide",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Rewire",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": [
+      "Route"
+    ]
+  },
+  {
+    "effect": "Rooms",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": [
+      "Mode"
+    ]
+  },
+  {
+    "effect": "Scorch",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Shatter",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  },
+  {
+    "effect": "Spiral",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": [
+      "Div"
+    ]
+  },
+  {
+    "effect": "Spool",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": [
+      "Div"
+    ]
+  },
+  {
+    "effect": "Stasis",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": [
+      "Capture"
+    ]
+  },
+  {
+    "effect": "Taffy",
+    "headings": "<=5 chars",
+    "cover": "128x64",
+    "labels": []
+  }
+]

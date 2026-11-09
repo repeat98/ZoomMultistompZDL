@@ -53,31 +53,6 @@ enum {
     VT_BEZ_TOTAL
 };
 
-typedef struct VerbTinyState {
-    uint32_t magic;
-    uint32_t version;
-    uint32_t initialized;
-    uint32_t clearIndex;
-
-    float aL[VERBTINY_LINES][VERBTINY_LINE_LEN];
-    float aR[VERBTINY_LINES][VERBTINY_LINE_LEN];
-    float bL[VERBTINY_LINES][VERBTINY_LINE_LEN];
-    float bR[VERBTINY_LINES][VERBTINY_LINE_LEN];
-
-    int cL[VERBTINY_LINES];
-    int cR[VERBTINY_LINES];
-
-    float fL[4];
-    float fR[4];
-    float gL[4];
-    float gR[4];
-
-    float bez[VT_BEZ_TOTAL];
-    float bezF[VT_BEZ_TOTAL];
-    uint32_t fpdL;
-    uint32_t fpdR;
-} VerbTinyState;
-
 #define VT_DELAY_A 136
 #define VT_DELAY_B 52
 #define VT_DELAY_C 53
@@ -94,6 +69,56 @@ typedef struct VerbTinyState {
 #define VT_DELAY_N 191
 #define VT_DELAY_O 1263
 #define VT_DELAY_P 103
+
+#define VT_HEAD 2
+#define VT_OFF_A 0
+#define VT_OFF_B (VT_OFF_A + VT_DELAY_A + VT_HEAD)
+#define VT_OFF_C (VT_OFF_B + VT_DELAY_B + VT_HEAD)
+#define VT_OFF_D (VT_OFF_C + VT_DELAY_C + VT_HEAD)
+#define VT_OFF_E (VT_OFF_D + VT_DELAY_D + VT_HEAD)
+#define VT_OFF_F (VT_OFF_E + VT_DELAY_E + VT_HEAD)
+#define VT_OFF_G (VT_OFF_F + VT_DELAY_F + VT_HEAD)
+#define VT_OFF_H (VT_OFF_G + VT_DELAY_G + VT_HEAD)
+#define VT_OFF_I (VT_OFF_H + VT_DELAY_H + VT_HEAD)
+#define VT_OFF_J (VT_OFF_I + VT_DELAY_I + VT_HEAD)
+#define VT_OFF_K (VT_OFF_J + VT_DELAY_J + VT_HEAD)
+#define VT_OFF_L (VT_OFF_K + VT_DELAY_K + VT_HEAD)
+#define VT_OFF_M (VT_OFF_L + VT_DELAY_L + VT_HEAD)
+#define VT_OFF_N (VT_OFF_M + VT_DELAY_M + VT_HEAD)
+#define VT_OFF_O (VT_OFF_N + VT_DELAY_N + VT_HEAD)
+#define VT_OFF_P (VT_OFF_O + VT_DELAY_O + VT_HEAD)
+#define VT_LINESUM (VT_OFF_P + VT_DELAY_P + VT_HEAD)
+
+/* Per-line delay segments packed into one flat array (each line uses only
+ * 0..VT_DELAY_x). Was [16][MAX_DELAY+5] for every line ~353 KB; now ~145 KB,
+ * identical math. LN() resolves a line's base inside the flat buffer. */
+#define LN(arr, X) (st->arr + VT_OFF_##X)
+
+typedef struct VerbTinyState {
+    uint32_t magic;
+    uint32_t version;
+    uint32_t initialized;
+    uint32_t clearIndex;
+
+    float aL[VT_LINESUM];
+    float aR[VT_LINESUM];
+    float bL[VT_LINESUM];
+    float bR[VT_LINESUM];
+
+    int cL[VERBTINY_LINES];
+    int cR[VERBTINY_LINES];
+
+    float fL[4];
+    float fR[4];
+    float gL[4];
+    float gR[4];
+
+    float bez[VT_BEZ_TOTAL];
+    float bezF[VT_BEZ_TOTAL];
+    uint32_t fpdL;
+    uint32_t fpdR;
+} VerbTinyState;
+
 
 static inline uintptr_t align4(uintptr_t x)
 {
@@ -129,7 +154,7 @@ static inline float vt_param_norm(float raw, float fallback_norm, int group_empt
     return zoom_clamp01(fallback_norm);
 }
 
-static inline float vt_tap(float line[VERBTINY_LINE_LEN], int count, int delay)
+static inline float vt_tap(float *line, int count, int delay)
 {
     int idx = count - ((count > delay) ? delay + 1 : 0);
     return line[idx];
@@ -142,10 +167,10 @@ static inline void vt_inc(int *counter, int delay)
 }
 
 static inline void vt_householder_write(
-    float dst0[VERBTINY_LINE_LEN],
-    float dst1[VERBTINY_LINE_LEN],
-    float dst2[VERBTINY_LINE_LEN],
-    float dst3[VERBTINY_LINE_LEN],
+    float *dst0,
+    float *dst1,
+    float *dst2,
+    float *dst3,
     int c0, int c1, int c2, int c3,
     float hA, float hB, float hC, float hD)
 {
@@ -230,32 +255,32 @@ static inline void vt_process_sample(VerbTinyState *st, float *sampleL, float *s
 
         st->bez[VT_BEZ_CYCLE] = 0.0f;
 
-        st->aL[VT_A][st->cL[VT_A]] = mainSampleL + (st->fR[0] * reg4n);
-        st->aL[VT_B][st->cL[VT_B]] = mainSampleL + (st->fR[1] * reg4n);
-        st->aL[VT_C][st->cL[VT_C]] = mainSampleL + (st->fR[2] * reg4n);
-        st->aL[VT_D][st->cL[VT_D]] = mainSampleL + (st->fR[3] * reg4n);
-        st->bL[VT_A][st->cL[VT_A]] = dualmonoSampleL + (st->gL[0] * reg4n);
-        st->bL[VT_B][st->cL[VT_B]] = dualmonoSampleL + (st->gL[1] * reg4n);
-        st->bL[VT_C][st->cL[VT_C]] = dualmonoSampleL + (st->gL[2] * reg4n);
-        st->bL[VT_D][st->cL[VT_D]] = dualmonoSampleL + (st->gL[3] * reg4n);
+        LN(aL,A)[st->cL[VT_A]] = mainSampleL + (st->fR[0] * reg4n);
+        LN(aL,B)[st->cL[VT_B]] = mainSampleL + (st->fR[1] * reg4n);
+        LN(aL,C)[st->cL[VT_C]] = mainSampleL + (st->fR[2] * reg4n);
+        LN(aL,D)[st->cL[VT_D]] = mainSampleL + (st->fR[3] * reg4n);
+        LN(bL,A)[st->cL[VT_A]] = dualmonoSampleL + (st->gL[0] * reg4n);
+        LN(bL,B)[st->cL[VT_B]] = dualmonoSampleL + (st->gL[1] * reg4n);
+        LN(bL,C)[st->cL[VT_C]] = dualmonoSampleL + (st->gL[2] * reg4n);
+        LN(bL,D)[st->cL[VT_D]] = dualmonoSampleL + (st->gL[3] * reg4n);
 
         vt_inc(&st->cL[VT_A], VT_DELAY_A);
         vt_inc(&st->cL[VT_B], VT_DELAY_B);
         vt_inc(&st->cL[VT_C], VT_DELAY_C);
         vt_inc(&st->cL[VT_D], VT_DELAY_D);
 
-        hA = vt_tap(st->aL[VT_A], st->cL[VT_A], VT_DELAY_A);
-        hB = vt_tap(st->aL[VT_B], st->cL[VT_B], VT_DELAY_B);
-        hC = vt_tap(st->aL[VT_C], st->cL[VT_C], VT_DELAY_C);
-        hD = vt_tap(st->aL[VT_D], st->cL[VT_D], VT_DELAY_D);
-        vt_householder_write(st->aL[VT_E], st->aL[VT_F], st->aL[VT_G], st->aL[VT_H],
+        hA = vt_tap(LN(aL,A), st->cL[VT_A], VT_DELAY_A);
+        hB = vt_tap(LN(aL,B), st->cL[VT_B], VT_DELAY_B);
+        hC = vt_tap(LN(aL,C), st->cL[VT_C], VT_DELAY_C);
+        hD = vt_tap(LN(aL,D), st->cL[VT_D], VT_DELAY_D);
+        vt_householder_write(LN(aL,E), LN(aL,F), LN(aL,G), LN(aL,H),
                              st->cL[VT_E], st->cL[VT_F], st->cL[VT_G], st->cL[VT_H],
                              hA, hB, hC, hD);
-        hA = vt_tap(st->bL[VT_A], st->cL[VT_A], VT_DELAY_A);
-        hB = vt_tap(st->bL[VT_B], st->cL[VT_B], VT_DELAY_B);
-        hC = vt_tap(st->bL[VT_C], st->cL[VT_C], VT_DELAY_C);
-        hD = vt_tap(st->bL[VT_D], st->cL[VT_D], VT_DELAY_D);
-        vt_householder_write(st->bL[VT_E], st->bL[VT_F], st->bL[VT_G], st->bL[VT_H],
+        hA = vt_tap(LN(bL,A), st->cL[VT_A], VT_DELAY_A);
+        hB = vt_tap(LN(bL,B), st->cL[VT_B], VT_DELAY_B);
+        hC = vt_tap(LN(bL,C), st->cL[VT_C], VT_DELAY_C);
+        hD = vt_tap(LN(bL,D), st->cL[VT_D], VT_DELAY_D);
+        vt_householder_write(LN(bL,E), LN(bL,F), LN(bL,G), LN(bL,H),
                              st->cL[VT_E], st->cL[VT_F], st->cL[VT_G], st->cL[VT_H],
                              hA, hB, hC, hD);
 
@@ -264,18 +289,18 @@ static inline void vt_process_sample(VerbTinyState *st, float *sampleL, float *s
         vt_inc(&st->cL[VT_G], VT_DELAY_G);
         vt_inc(&st->cL[VT_H], VT_DELAY_H);
 
-        hA = vt_tap(st->aL[VT_E], st->cL[VT_E], VT_DELAY_E);
-        hB = vt_tap(st->aL[VT_F], st->cL[VT_F], VT_DELAY_F);
-        hC = vt_tap(st->aL[VT_G], st->cL[VT_G], VT_DELAY_G);
-        hD = vt_tap(st->aL[VT_H], st->cL[VT_H], VT_DELAY_H);
-        vt_householder_write(st->aL[VT_I], st->aL[VT_J], st->aL[VT_K], st->aL[VT_L],
+        hA = vt_tap(LN(aL,E), st->cL[VT_E], VT_DELAY_E);
+        hB = vt_tap(LN(aL,F), st->cL[VT_F], VT_DELAY_F);
+        hC = vt_tap(LN(aL,G), st->cL[VT_G], VT_DELAY_G);
+        hD = vt_tap(LN(aL,H), st->cL[VT_H], VT_DELAY_H);
+        vt_householder_write(LN(aL,I), LN(aL,J), LN(aL,K), LN(aL,L),
                              st->cL[VT_I], st->cL[VT_J], st->cL[VT_K], st->cL[VT_L],
                              hA, hB, hC, hD);
-        hA = vt_tap(st->bL[VT_E], st->cL[VT_E], VT_DELAY_E);
-        hB = vt_tap(st->bL[VT_F], st->cL[VT_F], VT_DELAY_F);
-        hC = vt_tap(st->bL[VT_G], st->cL[VT_G], VT_DELAY_G);
-        hD = vt_tap(st->bL[VT_H], st->cL[VT_H], VT_DELAY_H);
-        vt_householder_write(st->bL[VT_I], st->bL[VT_J], st->bL[VT_K], st->bL[VT_L],
+        hA = vt_tap(LN(bL,E), st->cL[VT_E], VT_DELAY_E);
+        hB = vt_tap(LN(bL,F), st->cL[VT_F], VT_DELAY_F);
+        hC = vt_tap(LN(bL,G), st->cL[VT_G], VT_DELAY_G);
+        hD = vt_tap(LN(bL,H), st->cL[VT_H], VT_DELAY_H);
+        vt_householder_write(LN(bL,I), LN(bL,J), LN(bL,K), LN(bL,L),
                              st->cL[VT_I], st->cL[VT_J], st->cL[VT_K], st->cL[VT_L],
                              hA, hB, hC, hD);
 
@@ -284,18 +309,18 @@ static inline void vt_process_sample(VerbTinyState *st, float *sampleL, float *s
         vt_inc(&st->cL[VT_K], VT_DELAY_K);
         vt_inc(&st->cL[VT_L], VT_DELAY_L);
 
-        hA = vt_tap(st->aL[VT_I], st->cL[VT_I], VT_DELAY_I);
-        hB = vt_tap(st->aL[VT_J], st->cL[VT_J], VT_DELAY_J);
-        hC = vt_tap(st->aL[VT_K], st->cL[VT_K], VT_DELAY_K);
-        hD = vt_tap(st->aL[VT_L], st->cL[VT_L], VT_DELAY_L);
-        vt_householder_write(st->aL[VT_M], st->aL[VT_N], st->aL[VT_O], st->aL[VT_P],
+        hA = vt_tap(LN(aL,I), st->cL[VT_I], VT_DELAY_I);
+        hB = vt_tap(LN(aL,J), st->cL[VT_J], VT_DELAY_J);
+        hC = vt_tap(LN(aL,K), st->cL[VT_K], VT_DELAY_K);
+        hD = vt_tap(LN(aL,L), st->cL[VT_L], VT_DELAY_L);
+        vt_householder_write(LN(aL,M), LN(aL,N), LN(aL,O), LN(aL,P),
                              st->cL[VT_M], st->cL[VT_N], st->cL[VT_O], st->cL[VT_P],
                              hA, hB, hC, hD);
-        hA = vt_tap(st->bL[VT_I], st->cL[VT_I], VT_DELAY_I);
-        hB = vt_tap(st->bL[VT_J], st->cL[VT_J], VT_DELAY_J);
-        hC = vt_tap(st->bL[VT_K], st->cL[VT_K], VT_DELAY_K);
-        hD = vt_tap(st->bL[VT_L], st->cL[VT_L], VT_DELAY_L);
-        vt_householder_write(st->bL[VT_M], st->bL[VT_N], st->bL[VT_O], st->bL[VT_P],
+        hA = vt_tap(LN(bL,I), st->cL[VT_I], VT_DELAY_I);
+        hB = vt_tap(LN(bL,J), st->cL[VT_J], VT_DELAY_J);
+        hC = vt_tap(LN(bL,K), st->cL[VT_K], VT_DELAY_K);
+        hD = vt_tap(LN(bL,L), st->cL[VT_L], VT_DELAY_L);
+        vt_householder_write(LN(bL,M), LN(bL,N), LN(bL,O), LN(bL,P),
                              st->cL[VT_M], st->cL[VT_N], st->cL[VT_O], st->cL[VT_P],
                              hA, hB, hC, hD);
 
@@ -304,20 +329,20 @@ static inline void vt_process_sample(VerbTinyState *st, float *sampleL, float *s
         vt_inc(&st->cL[VT_O], VT_DELAY_O);
         vt_inc(&st->cL[VT_P], VT_DELAY_P);
 
-        hA = vt_tap(st->aL[VT_M], st->cL[VT_M], VT_DELAY_M);
-        hB = vt_tap(st->aL[VT_N], st->cL[VT_N], VT_DELAY_N);
-        hC = vt_tap(st->aL[VT_O], st->cL[VT_O], VT_DELAY_O);
-        hD = vt_tap(st->aL[VT_P], st->cL[VT_P], VT_DELAY_P);
+        hA = vt_tap(LN(aL,M), st->cL[VT_M], VT_DELAY_M);
+        hB = vt_tap(LN(aL,N), st->cL[VT_N], VT_DELAY_N);
+        hC = vt_tap(LN(aL,O), st->cL[VT_O], VT_DELAY_O);
+        hD = vt_tap(LN(aL,P), st->cL[VT_P], VT_DELAY_P);
         st->fL[0] = hA - (hB + hC + hD);
         st->fL[1] = hB - (hA + hC + hD);
         st->fL[2] = hC - (hA + hB + hD);
         st->fL[3] = hD - (hA + hB + hC);
         mainSampleL = (hA + hB + hC + hD) * 0.125f;
 
-        hA = vt_tap(st->bL[VT_M], st->cL[VT_M], VT_DELAY_M);
-        hB = vt_tap(st->bL[VT_N], st->cL[VT_N], VT_DELAY_N);
-        hC = vt_tap(st->bL[VT_O], st->cL[VT_O], VT_DELAY_O);
-        hD = vt_tap(st->bL[VT_P], st->cL[VT_P], VT_DELAY_P);
+        hA = vt_tap(LN(bL,M), st->cL[VT_M], VT_DELAY_M);
+        hB = vt_tap(LN(bL,N), st->cL[VT_N], VT_DELAY_N);
+        hC = vt_tap(LN(bL,O), st->cL[VT_O], VT_DELAY_O);
+        hD = vt_tap(LN(bL,P), st->cL[VT_P], VT_DELAY_P);
         st->gL[0] = hA - (hB + hC + hD);
         st->gL[1] = hB - (hA + hC + hD);
         st->gL[2] = hC - (hA + hB + hD);
@@ -327,32 +352,32 @@ static inline void vt_process_sample(VerbTinyState *st, float *sampleL, float *s
         mainSampleR = st->bez[VT_BEZ_SAMPR];
         dualmonoSampleR = st->bez[VT_BEZ_SAMPL];
 
-        st->aR[VT_D][st->cR[VT_D]] = mainSampleR + (st->fL[0] * reg4n);
-        st->aR[VT_H][st->cR[VT_H]] = mainSampleR + (st->fL[1] * reg4n);
-        st->aR[VT_L][st->cR[VT_L]] = mainSampleR + (st->fL[2] * reg4n);
-        st->aR[VT_P][st->cR[VT_P]] = mainSampleR + (st->fL[3] * reg4n);
-        st->bR[VT_D][st->cR[VT_D]] = dualmonoSampleR + (st->gR[0] * reg4n);
-        st->bR[VT_H][st->cR[VT_H]] = dualmonoSampleR + (st->gR[1] * reg4n);
-        st->bR[VT_L][st->cR[VT_L]] = dualmonoSampleR + (st->gR[2] * reg4n);
-        st->bR[VT_P][st->cR[VT_P]] = dualmonoSampleR + (st->gR[3] * reg4n);
+        LN(aR,D)[st->cR[VT_D]] = mainSampleR + (st->fL[0] * reg4n);
+        LN(aR,H)[st->cR[VT_H]] = mainSampleR + (st->fL[1] * reg4n);
+        LN(aR,L)[st->cR[VT_L]] = mainSampleR + (st->fL[2] * reg4n);
+        LN(aR,P)[st->cR[VT_P]] = mainSampleR + (st->fL[3] * reg4n);
+        LN(bR,D)[st->cR[VT_D]] = dualmonoSampleR + (st->gR[0] * reg4n);
+        LN(bR,H)[st->cR[VT_H]] = dualmonoSampleR + (st->gR[1] * reg4n);
+        LN(bR,L)[st->cR[VT_L]] = dualmonoSampleR + (st->gR[2] * reg4n);
+        LN(bR,P)[st->cR[VT_P]] = dualmonoSampleR + (st->gR[3] * reg4n);
 
         vt_inc(&st->cR[VT_D], VT_DELAY_D);
         vt_inc(&st->cR[VT_H], VT_DELAY_H);
         vt_inc(&st->cR[VT_L], VT_DELAY_L);
         vt_inc(&st->cR[VT_P], VT_DELAY_P);
 
-        hA = vt_tap(st->aR[VT_D], st->cR[VT_D], VT_DELAY_D);
-        hB = vt_tap(st->aR[VT_H], st->cR[VT_H], VT_DELAY_H);
-        hC = vt_tap(st->aR[VT_L], st->cR[VT_L], VT_DELAY_L);
-        hD = vt_tap(st->aR[VT_P], st->cR[VT_P], VT_DELAY_P);
-        vt_householder_write(st->aR[VT_C], st->aR[VT_G], st->aR[VT_K], st->aR[VT_O],
+        hA = vt_tap(LN(aR,D), st->cR[VT_D], VT_DELAY_D);
+        hB = vt_tap(LN(aR,H), st->cR[VT_H], VT_DELAY_H);
+        hC = vt_tap(LN(aR,L), st->cR[VT_L], VT_DELAY_L);
+        hD = vt_tap(LN(aR,P), st->cR[VT_P], VT_DELAY_P);
+        vt_householder_write(LN(aR,C), LN(aR,G), LN(aR,K), LN(aR,O),
                              st->cR[VT_C], st->cR[VT_G], st->cR[VT_K], st->cR[VT_O],
                              hA, hB, hC, hD);
-        hA = vt_tap(st->bR[VT_D], st->cR[VT_D], VT_DELAY_D);
-        hB = vt_tap(st->bR[VT_H], st->cR[VT_H], VT_DELAY_H);
-        hC = vt_tap(st->bR[VT_L], st->cR[VT_L], VT_DELAY_L);
-        hD = vt_tap(st->bR[VT_P], st->cR[VT_P], VT_DELAY_P);
-        vt_householder_write(st->bR[VT_C], st->bR[VT_G], st->bR[VT_K], st->bR[VT_O],
+        hA = vt_tap(LN(bR,D), st->cR[VT_D], VT_DELAY_D);
+        hB = vt_tap(LN(bR,H), st->cR[VT_H], VT_DELAY_H);
+        hC = vt_tap(LN(bR,L), st->cR[VT_L], VT_DELAY_L);
+        hD = vt_tap(LN(bR,P), st->cR[VT_P], VT_DELAY_P);
+        vt_householder_write(LN(bR,C), LN(bR,G), LN(bR,K), LN(bR,O),
                              st->cR[VT_C], st->cR[VT_G], st->cR[VT_K], st->cR[VT_O],
                              hA, hB, hC, hD);
 
@@ -361,18 +386,18 @@ static inline void vt_process_sample(VerbTinyState *st, float *sampleL, float *s
         vt_inc(&st->cR[VT_K], VT_DELAY_K);
         vt_inc(&st->cR[VT_O], VT_DELAY_O);
 
-        hA = vt_tap(st->aR[VT_C], st->cR[VT_C], VT_DELAY_C);
-        hB = vt_tap(st->aR[VT_G], st->cR[VT_G], VT_DELAY_G);
-        hC = vt_tap(st->aR[VT_K], st->cR[VT_K], VT_DELAY_K);
-        hD = vt_tap(st->aR[VT_O], st->cR[VT_O], VT_DELAY_O);
-        vt_householder_write(st->aR[VT_B], st->aR[VT_F], st->aR[VT_J], st->aR[VT_N],
+        hA = vt_tap(LN(aR,C), st->cR[VT_C], VT_DELAY_C);
+        hB = vt_tap(LN(aR,G), st->cR[VT_G], VT_DELAY_G);
+        hC = vt_tap(LN(aR,K), st->cR[VT_K], VT_DELAY_K);
+        hD = vt_tap(LN(aR,O), st->cR[VT_O], VT_DELAY_O);
+        vt_householder_write(LN(aR,B), LN(aR,F), LN(aR,J), LN(aR,N),
                              st->cR[VT_B], st->cR[VT_F], st->cR[VT_J], st->cR[VT_N],
                              hA, hB, hC, hD);
-        hA = vt_tap(st->bR[VT_C], st->cR[VT_C], VT_DELAY_C);
-        hB = vt_tap(st->bR[VT_G], st->cR[VT_G], VT_DELAY_G);
-        hC = vt_tap(st->bR[VT_K], st->cR[VT_K], VT_DELAY_K);
-        hD = vt_tap(st->bR[VT_O], st->cR[VT_O], VT_DELAY_O);
-        vt_householder_write(st->bR[VT_B], st->bR[VT_F], st->bR[VT_J], st->bR[VT_N],
+        hA = vt_tap(LN(bR,C), st->cR[VT_C], VT_DELAY_C);
+        hB = vt_tap(LN(bR,G), st->cR[VT_G], VT_DELAY_G);
+        hC = vt_tap(LN(bR,K), st->cR[VT_K], VT_DELAY_K);
+        hD = vt_tap(LN(bR,O), st->cR[VT_O], VT_DELAY_O);
+        vt_householder_write(LN(bR,B), LN(bR,F), LN(bR,J), LN(bR,N),
                              st->cR[VT_B], st->cR[VT_F], st->cR[VT_J], st->cR[VT_N],
                              hA, hB, hC, hD);
 
@@ -381,18 +406,18 @@ static inline void vt_process_sample(VerbTinyState *st, float *sampleL, float *s
         vt_inc(&st->cR[VT_J], VT_DELAY_J);
         vt_inc(&st->cR[VT_N], VT_DELAY_N);
 
-        hA = vt_tap(st->aR[VT_B], st->cR[VT_B], VT_DELAY_B);
-        hB = vt_tap(st->aR[VT_F], st->cR[VT_F], VT_DELAY_F);
-        hC = vt_tap(st->aR[VT_J], st->cR[VT_J], VT_DELAY_J);
-        hD = vt_tap(st->aR[VT_N], st->cR[VT_N], VT_DELAY_N);
-        vt_householder_write(st->aR[VT_A], st->aR[VT_E], st->aR[VT_I], st->aR[VT_M],
+        hA = vt_tap(LN(aR,B), st->cR[VT_B], VT_DELAY_B);
+        hB = vt_tap(LN(aR,F), st->cR[VT_F], VT_DELAY_F);
+        hC = vt_tap(LN(aR,J), st->cR[VT_J], VT_DELAY_J);
+        hD = vt_tap(LN(aR,N), st->cR[VT_N], VT_DELAY_N);
+        vt_householder_write(LN(aR,A), LN(aR,E), LN(aR,I), LN(aR,M),
                              st->cR[VT_A], st->cR[VT_E], st->cR[VT_I], st->cR[VT_M],
                              hA, hB, hC, hD);
-        hA = vt_tap(st->bR[VT_B], st->cR[VT_B], VT_DELAY_B);
-        hB = vt_tap(st->bR[VT_F], st->cR[VT_F], VT_DELAY_F);
-        hC = vt_tap(st->bR[VT_J], st->cR[VT_J], VT_DELAY_J);
-        hD = vt_tap(st->bR[VT_N], st->cR[VT_N], VT_DELAY_N);
-        vt_householder_write(st->bR[VT_A], st->bR[VT_E], st->bR[VT_I], st->bR[VT_M],
+        hA = vt_tap(LN(bR,B), st->cR[VT_B], VT_DELAY_B);
+        hB = vt_tap(LN(bR,F), st->cR[VT_F], VT_DELAY_F);
+        hC = vt_tap(LN(bR,J), st->cR[VT_J], VT_DELAY_J);
+        hD = vt_tap(LN(bR,N), st->cR[VT_N], VT_DELAY_N);
+        vt_householder_write(LN(bR,A), LN(bR,E), LN(bR,I), LN(bR,M),
                              st->cR[VT_A], st->cR[VT_E], st->cR[VT_I], st->cR[VT_M],
                              hA, hB, hC, hD);
 
@@ -401,20 +426,20 @@ static inline void vt_process_sample(VerbTinyState *st, float *sampleL, float *s
         vt_inc(&st->cR[VT_I], VT_DELAY_I);
         vt_inc(&st->cR[VT_M], VT_DELAY_M);
 
-        hA = vt_tap(st->aR[VT_A], st->cR[VT_A], VT_DELAY_A);
-        hB = vt_tap(st->aR[VT_E], st->cR[VT_E], VT_DELAY_E);
-        hC = vt_tap(st->aR[VT_I], st->cR[VT_I], VT_DELAY_I);
-        hD = vt_tap(st->aR[VT_M], st->cR[VT_M], VT_DELAY_M);
+        hA = vt_tap(LN(aR,A), st->cR[VT_A], VT_DELAY_A);
+        hB = vt_tap(LN(aR,E), st->cR[VT_E], VT_DELAY_E);
+        hC = vt_tap(LN(aR,I), st->cR[VT_I], VT_DELAY_I);
+        hD = vt_tap(LN(aR,M), st->cR[VT_M], VT_DELAY_M);
         st->fR[0] = hA - (hB + hC + hD);
         st->fR[1] = hB - (hA + hC + hD);
         st->fR[2] = hC - (hA + hB + hD);
         st->fR[3] = hD - (hA + hB + hC);
         mainSampleR = (hA + hB + hC + hD) * 0.125f;
 
-        hA = vt_tap(st->bR[VT_A], st->cR[VT_A], VT_DELAY_A);
-        hB = vt_tap(st->bR[VT_E], st->cR[VT_E], VT_DELAY_E);
-        hC = vt_tap(st->bR[VT_I], st->cR[VT_I], VT_DELAY_I);
-        hD = vt_tap(st->bR[VT_M], st->cR[VT_M], VT_DELAY_M);
+        hA = vt_tap(LN(bR,A), st->cR[VT_A], VT_DELAY_A);
+        hB = vt_tap(LN(bR,E), st->cR[VT_E], VT_DELAY_E);
+        hC = vt_tap(LN(bR,I), st->cR[VT_I], VT_DELAY_I);
+        hD = vt_tap(LN(bR,M), st->cR[VT_M], VT_DELAY_M);
         st->gR[0] = hA - (hB + hC + hD);
         st->gR[1] = hB - (hA + hC + hD);
         st->gR[2] = hC - (hA + hB + hD);

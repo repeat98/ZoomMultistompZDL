@@ -1,0 +1,50 @@
+{
+  "effect_name": "GenLoss",
+  "comment": "GenLoss \u2014 tape/VHS generation-loss degradation (Chase Bliss Gen Loss / Shallow Water vibe). Wow & flutter pitch warble, bandwidth loss (low-pass + sub roll-off), tape saturation, hiss, and random dropouts/warble. Desktop preview implements the full DSP; pedal C port is staged.",
+  "gid": 6,
+  "gid_comment": "0x06 = Modulation category (warble/lo-fi modulation).",
+  "fxid": 456,
+  "fxid_comment": "0x01C8. Above the repo's used range; distinct from the other customs. Verify uniqueness before flashing.",
+  "fxid_version": "1.00",
+  "flags_byte": 1,
+  "params": [
+    {
+      "name": "Wow",
+      "max": 100,
+      "default": 45,
+      "comment": "Wow & flutter depth \u2014 slow + fast pitch warble."
+    },
+    {
+      "name": "Tone",
+      "max": 100,
+      "default": 40,
+      "comment": "Bandwidth / brightness. Low = dark worn tape, high = open."
+    },
+    {
+      "name": "Hiss",
+      "max": 100,
+      "default": 30,
+      "comment": "Tape hiss / noise-floor level."
+    },
+    {
+      "name": "Drive",
+      "max": 100,
+      "default": 45,
+      "comment": "Tape saturation / compression."
+    },
+    {
+      "name": "Wobble",
+      "max": 100,
+      "default": 35,
+      "comment": "Random dropouts + pitch instability (worn/damaged tape)."
+    },
+    {
+      "name": "Mix",
+      "max": 100,
+      "default": 50,
+      "comment": "Dry/wet blend."
+    }
+  ],
+  "audio_nop": true,
+  "audio_nop_comment": "Pedal C port starts as a UI-only smoke build; full DSP validated on desktop first."
+}
