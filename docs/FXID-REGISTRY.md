@@ -85,8 +85,9 @@ section "IDs used by other collections" was added.
 | 946 | 8 | TapeEcho4 | `src/airwindows/tapeecho4` | Ships as TEcho4.ZDL. Was 409 until 2026-10-29 (issue #8) |
 | 410 | 1 | OTT | `src/custom/ott` | Hardware unverified |
 
-Retired: **409 / gid 8** (TapeEcho4 until 2026-10-29). Spool.ZDL uses it;
-never reuse it.
+Retired: **409 / gid 8** (TapeEcho4 until 2026-10-29) and **469 / gid 1**
+(Pump It's previous ID). Old patches and pedals may still refer to these IDs;
+never reuse them.
 
 ### Hardware probe effects (not in dist/)
 
@@ -116,15 +117,18 @@ note the warnings below.
 
 ## IDs used by other collections
 
-Checked 2026-10-29 by reading the header bytes (gid at 60, fxid at 64–65)
-of each collection's published ZDLs, plus their manifests and ID notes for
-IDs that are generated or not yet in a release. No third-party file is
+Checked 2026-11-08 by reading the header bytes (gid at 60, fxid at 64–65)
+of 352 published ZDLs in the current default branches of the collections
+listed below. None uses fxid 947, 948, or 949. The source-only and generated
+reservations listed below do not include those IDs. No third-party file is
 stored in this repo. Ranges are inclusive. `build/fxid_check.py` reads this
 table, so keep one `gid` per row and only numbers, commas and ranges in the
 `fxid` column.
 
 | gid | fxid | Effects | Source |
 |-----|------|---------|--------|
+| 1 | 469 | Pump It (retired; previous build) | gramclark/zoom-ms @ 4cf2b5f, `dist/SideCmp.ZDL` |
+| 1 | 947 | Pump It | gramclark/zoom-ms @ 0aa8fe2, `dist/SideCmp.ZDL` |
 | 8 | 403, 408, 409, 414–416, 440, 449–452, 454–459, 461, 463, 465–468, 470, 472, 473, 484, 490, 499 | Oxide, Galactic, **Spool**, Scope, Ring, Skull, Stasis, Spiral, Microlm, Flower, Shatter, Corrupt, Klang, GenLoss, Scorch, Howl, Hydra, Dissolve, Dustbox, Rewire, Taffy, Loop, Spectrum, Mangle, Rooms, Arrakis, Gyre, Scrub/Rooms6, Tonic | themanro/ZoomMultistompZDL @ 71f4582, `dist/*.ZDL`, `build/selector-pilot/*.ZDL` |
 | 8 | 402, 404, 405, 410–413, 443, 496, 498, 908–913, 920–922, 929 | TapeHack, Lush, Room, OTT, Redraw, CoverRW, Blink, Reel, MatProb, NAMLite and NAM/CabIR probes (source only, not in its `dist/`) | themanro/ZoomMultistompZDL @ 71f4582, `src/*/*/manifest*.json`, `tools/effects_db.json` (`probes`) |
 | 8 | 453, 460, 462, 464, 469, 471, 474–483 | Old IDs of renamed effects, still on pedals and in patches | themanro/ZoomMultistompZDL @ 71f4582, `tools/effects_db.json` (`legacy`) |
@@ -164,7 +168,7 @@ probes use some of 908–929. TapeEcho4 now takes 946.
 
 ## Next available fxid for a new release effect
 
-Checked 2026-10-29: **947 – 949** in gid 8 are unused by this repo and every
+Checked 2026-11-08: **948 – 949** in gid 8 are unused by this repo and every
 collection above, in every gid. Elsewhere in 403–957 the space is used or
 reserved by themanro's pack; agree an ID with that project before taking one
 from its reserved ranges.
