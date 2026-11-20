@@ -1,0 +1,264 @@
+{
+  "target": "Zoom MS-70CDR, OS 2.10",
+  "sourceRevision": "aee98c53d7b568cbb55bb927aefbdc9b4e739f3e",
+  "runtimeRevision": "32f3d6877d892409c6defeeeec57040ad004d31f",
+  "compiler": "TI C6000 8.5.0.LTS",
+  "flags": {
+    "ZDL_OWN_RUNTIME": "1",
+    "ZDL_MATERIALIZE_INIT": "0"
+  },
+  "effects": [
+    {
+      "id": "spiral",
+      "name": "Spiral",
+      "source": "src/custom/spiral",
+      "file": "Spiral.ZDL",
+      "version": "1.0.0",
+      "tag": "spiral-1.00",
+      "sha256": "7982e70502a23cf3f7862f7f5c4e83a2aaf8a26e115444a98e97db47d75ffd71"
+    },
+    {
+      "id": "hydra",
+      "name": "Hydra",
+      "source": "src/custom/hydra",
+      "file": "Hydra.ZDL",
+      "version": "1.0.0",
+      "tag": "hydra-1.00",
+      "sha256": "5e93e918f46005be8e73557c01fc7f51d266b7e3ffc0a0b2937a21b35bc5a519"
+    },
+    {
+      "id": "spool",
+      "name": "Spool",
+      "source": "src/airwindows/tapeecho4",
+      "file": "Spool.ZDL",
+      "version": "1.2.0",
+      "tag": "spool-1.02",
+      "sha256": "18c7cfc2494453074a0c4e68ee27706c3f46b37673b55a725c1ce1aa7a5f88dc"
+    },
+    {
+      "id": "dissolve",
+      "name": "Dissolve",
+      "source": "src/custom/dissolve",
+      "file": "Dissolve.ZDL",
+      "version": "2.0.0",
+      "tag": "dissolve-2.00",
+      "sha256": "375d3b5da9efd8629ce210f553e74917cf9847c961ece5862c2f3c628fcf891d"
+    },
+    {
+      "id": "chopdly",
+      "name": "Chopdly",
+      "source": "src/custom/chopdly",
+      "file": "Chopdly.ZDL",
+      "version": "1.4.0",
+      "tag": "chopdly-1.04",
+      "sha256": "22d0052c79b01dcef092b968905f1c7a5287b6c83a54c8609f73bd718082450b"
+    },
+    {
+      "id": "droplets",
+      "name": "Droplets",
+      "source": "src/custom/droplets",
+      "file": "Droplets.ZDL",
+      "version": "0.3.0",
+      "tag": "droplets-0.03",
+      "sha256": "8f04eef9234caef2427aa62866fd89e4fdf0440e9ac1a04aafdaa61a49e909ef"
+    },
+    {
+      "id": "gyre",
+      "name": "Gyre",
+      "source": "src/custom/gyre",
+      "file": "Gyre.ZDL",
+      "version": "1.0.0",
+      "tag": "gyre-1.00",
+      "sha256": "c7de68b262567e37ecec35a4cdae49b0caf88e0b1ffc495d358b78975c0b621a"
+    },
+    {
+      "id": "galactic",
+      "name": "Galactic",
+      "source": "src/airwindows/galactic",
+      "file": "Galactic.ZDL",
+      "version": "1.2.0",
+      "tag": "galactic-1.02",
+      "sha256": "7f41a7fe6f1e685abd2aa93f117d58cd62ea9749a722ebb2671006550a3f0353"
+    },
+    {
+      "id": "rooms",
+      "name": "Rooms",
+      "source": "src/custom/rooms",
+      "file": "Rooms.ZDL",
+      "version": "2.0.0",
+      "tag": "rooms-2.00",
+      "sha256": "8a08e4048e640ade0c2dbeb6562cc77578b1aa3924a323427c16ede754e5ec1b"
+    },
+    {
+      "id": "horizon",
+      "name": "Horizon",
+      "source": "src/custom/horizon",
+      "file": "Horizon.ZDL",
+      "version": "0.3.0",
+      "tag": "horizon-0.03",
+      "sha256": "e7422a884ad56e13346f2dc186da4e3b2599beee756ebeac2a08970208e600d2"
+    },
+    {
+      "id": "horizonl",
+      "name": "HorizonL",
+      "source": "src/custom/horizonl",
+      "file": "HorizonL.ZDL",
+      "version": "0.2.0",
+      "tag": "horizonl-0.02",
+      "sha256": "ca0d9022243ab343ce115aba55560074de6ea30b8e20fdee496f097ed413ee3b"
+    },
+    {
+      "id": "arrakis",
+      "name": "Arrakis",
+      "source": "src/custom/arrakis",
+      "file": "Arrakis.ZDL",
+      "version": "2.0.0",
+      "tag": "arrakis-2.00",
+      "sha256": "5c7957d9d2970378439adcada6dc504dba07118597c70fb7370a13d257294a32"
+    },
+    {
+      "id": "taffy",
+      "name": "Taffy",
+      "source": "src/custom/taffy",
+      "file": "Taffy.ZDL",
+      "version": "3.0.0",
+      "tag": "taffy-3.00",
+      "sha256": "6dd61dca204c34e8701c614796475c676843382cee8a82f6f675624c09b839ee"
+    },
+    {
+      "id": "genloss",
+      "name": "GenLoss",
+      "source": "src/custom/genloss",
+      "file": "GenLoss.ZDL",
+      "version": "1.0.0",
+      "tag": "genloss-1.00",
+      "sha256": "04ca88ae2dc7f4e2c2c8d0fe349434736b2ccf49cc75f7b69793369d8264696e"
+    },
+    {
+      "id": "shatter",
+      "name": "Shatter",
+      "source": "src/custom/shatter",
+      "file": "Shatter.ZDL",
+      "version": "2.0.0",
+      "tag": "shatter-2.00",
+      "sha256": "9d80c0b591d920b70f3e7457d0f709e99e2dfa80f41052dece3b95463346eaf0"
+    },
+    {
+      "id": "dustbox",
+      "name": "Dustbox",
+      "source": "src/custom/dustbox",
+      "file": "Dustbox.ZDL",
+      "version": "1.0.0",
+      "tag": "dustbox-1.00",
+      "sha256": "46edd0332f2cd18dcebee93ad43e0dc66221719b4f3fdd12df27c8ac3ba58928"
+    },
+    {
+      "id": "corrupt",
+      "name": "Corrupt",
+      "source": "src/custom/corrupt",
+      "file": "Corrupt.ZDL",
+      "version": "2.0.0",
+      "tag": "corrupt-2.00",
+      "sha256": "6b97d1d821a1fdce23d2522f4e8abb20a15dea44935ba579dd6c4555ced326a4"
+    },
+    {
+      "id": "oxide",
+      "name": "Oxide",
+      "source": "src/airwindows/totape9",
+      "file": "Oxide.ZDL",
+      "version": "1.1.0",
+      "tag": "oxide-1.01",
+      "sha256": "8f07a8b6d226e980157c45b5b3ebaa1e8ce1f9461d42b9833cbcbdb6daa7d172"
+    },
+    {
+      "id": "deform",
+      "name": "Deform",
+      "source": "src/custom/deform",
+      "file": "Deform.ZDL",
+      "version": "0.4.0",
+      "tag": "deform-0.04",
+      "sha256": "9d2daaaccf6808ab09e4c3b215007c052d86a25cedde6d90eee5503a0c904369"
+    },
+    {
+      "id": "rewire",
+      "name": "Rewire",
+      "source": "src/custom/rewire",
+      "file": "Rewire.ZDL",
+      "version": "1.0.0",
+      "tag": "rewire-1.00",
+      "sha256": "fc2297e2665799e58ba1323654fc055eef033dd8f70308ef7359a03ab5949864"
+    },
+    {
+      "id": "tonic",
+      "name": "Tonic",
+      "source": "src/custom/tonic",
+      "file": "Tonic.ZDL",
+      "version": "0.1.0",
+      "tag": "tonic-0.01",
+      "sha256": "388343ba778aa7b89709b0aa3363ec4c4c936a19f511c2de9ceaaf37813cc7a8"
+    },
+    {
+      "id": "flower",
+      "name": "Flower",
+      "source": "src/custom/flower",
+      "file": "Flower.ZDL",
+      "version": "2.0.0",
+      "tag": "flower-2.00",
+      "sha256": "3075e592e86fe95ff9744112a7997766aac5df127108653dd81746ee7d64ae15"
+    },
+    {
+      "id": "klang",
+      "name": "Klang",
+      "source": "src/custom/klang",
+      "file": "Klang.ZDL",
+      "version": "2.0.0",
+      "tag": "klang-2.00",
+      "sha256": "2f64691a4ab840a2094d558d5f02809ff1c4ca22b8b8cc61ff71a01486335173"
+    },
+    {
+      "id": "howl",
+      "name": "Howl",
+      "source": "src/custom/howl",
+      "file": "Howl.ZDL",
+      "version": "2.0.0",
+      "tag": "howl-2.00",
+      "sha256": "2f8a67f2fc75d1bc37961c7f02db4ef24493362c80786c6e6400b1810254a341"
+    },
+    {
+      "id": "carillon",
+      "name": "Carillon",
+      "source": "src/custom/carillon",
+      "file": "Carillon.ZDL",
+      "version": "0.4.0",
+      "tag": "carillon-0.04",
+      "sha256": "327646298c5f164a3df3cd31fee16ebd802331edfb143b2bd3680c85ddcd1f1b"
+    },
+    {
+      "id": "chimera",
+      "name": "Chimera",
+      "source": "src/custom/chimera",
+      "file": "Chimera.ZDL",
+      "version": "0.3.0",
+      "tag": "chimera-0.03",
+      "sha256": "59ba2eb3252fce589fa8741e0fb14c868ee6be238817ab8317ede5f2874a0704"
+    },
+    {
+      "id": "ring",
+      "name": "Ring",
+      "source": "src/custom/ring",
+      "file": "Ring.ZDL",
+      "version": "0.3.0",
+      "tag": "ring-0.03",
+      "sha256": "7be0ab44802cad6e3ebe08f94c23c51e0dcafc4e0ccaaf9ce596b336ad2d094c"
+    },
+    {
+      "id": "skull",
+      "name": "Skull",
+      "source": "src/custom/skull",
+      "file": "Skull.ZDL",
+      "version": "0.6.0",
+      "tag": "skull-0.06",
+      "sha256": "20655be1d98570066a255273296696aeef19675f68a9b184fb6033911384f008"
+    }
+  ]
+}
